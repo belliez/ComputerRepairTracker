@@ -488,7 +488,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 <FormControl>
                   <RadioGroup
                     onValueChange={(value) => field.onChange(parseInt(value))}
-                    defaultValue={field.value.toString()}
+                    defaultValue={field.value ? field.value.toString() : "2"}
                     className="flex space-x-2"
                   >
                     <FormItem className="flex items-center space-x-1">
