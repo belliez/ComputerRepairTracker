@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Repair } from "@shared/schema";
+import { Repair, Customer, Device } from "@shared/schema";
 import StatusBadge from "./status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -156,8 +156,10 @@ export default function RepairList({
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {/* Device information is loaded with relations */}
-                      {repair.deviceId}
+                      {devices?.find(d => d.id === repair.deviceId) 
+                        ? `${devices.find(d => d.id === repair.deviceId)?.brand} ${devices.find(d => d.id === repair.deviceId)?.model}`
+                        : `Device #${repair.deviceId}`
+                      }
                     </div>
                     <div className="text-xs text-gray-500">
                       {repair.issue}
