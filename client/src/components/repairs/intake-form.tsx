@@ -156,7 +156,19 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       }
     },
     onSuccess: () => {
+      // Invalidate all queries that start with '/api/repairs'
       queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
+      
+      // Also invalidate any filtered repair queries
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const queryKey = query.queryKey;
+          return Array.isArray(queryKey) && 
+                 queryKey.length > 0 && 
+                 queryKey[0] === "/api/repairs";
+        }
+      });
+      
       toast({
         title: repairId ? "Repair updated" : "Repair created",
         description: repairId 

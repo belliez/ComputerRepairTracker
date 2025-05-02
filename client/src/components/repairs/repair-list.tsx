@@ -41,6 +41,16 @@ export default function RepairList({
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
 
+  // Get customer data for displaying names
+  const { data: customers } = useQuery<Customer[]>({
+    queryKey: ["/api/customers"],
+  });
+
+  // Get device data for displaying details
+  const { data: devices } = useQuery<Device[]>({
+    queryKey: ["/api/devices"],
+  });
+
   const { data: repairs, isLoading } = useQuery<Repair[]>({
     queryKey: [
       "/api/repairs",
@@ -137,8 +147,10 @@ export default function RepairList({
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="text-sm font-medium text-gray-900">
-                        {/* Customer name is loaded with relations */}
-                        {repair.customerId}
+                        {customers?.find(c => c.id === repair.customerId)
+                          ? `${customers.find(c => c.id === repair.customerId)?.firstName} ${customers.find(c => c.id === repair.customerId)?.lastName}`
+                          : `Customer #${repair.customerId}`
+                        }
                       </div>
                     </div>
                   </TableCell>
