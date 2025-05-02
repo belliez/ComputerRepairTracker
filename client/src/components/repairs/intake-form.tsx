@@ -678,6 +678,15 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
           onCustomerCreated={handleCustomerCreated}
         />
       )}
+
+      {showNewDeviceForm && selectedCustomerId && (
+        <DeviceForm
+          customerId={selectedCustomerId}
+          isOpen={showNewDeviceForm}
+          onClose={() => setShowNewDeviceForm(false)}
+          onDeviceCreated={handleDeviceCreated}
+        />
+      )}
     </>
   );
 }
