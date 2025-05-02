@@ -36,6 +36,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import CustomerForm from "@/components/customers/customer-form";
+import DeviceForm from "@/components/devices/device-form";
 
 // Form steps
 type FormStep = "customer" | "device" | "service";
@@ -49,6 +50,7 @@ interface IntakeFormProps {
 export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProps) {
   const [currentStep, setCurrentStep] = useState<FormStep>("customer");
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
+  const [showNewDeviceForm, setShowNewDeviceForm] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -204,8 +206,13 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   };
 
   const handleNewDevice = () => {
-    // This would open a device form component
-    // For now just move to the service step
+    setShowNewDeviceForm(true);
+  };
+
+  const handleDeviceCreated = (deviceId: number) => {
+    setShowNewDeviceForm(false);
+    setSelectedDeviceId(deviceId);
+    queryClient.invalidateQueries({ queryKey: ["/api/devices"] });
     setCurrentStep("service");
   };
 
