@@ -1,0 +1,814 @@
+import express, { type Express, Request, Response } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { z } from "zod";
+import {
+  insertCustomerSchema,
+  insertDeviceSchema,
+  insertInventoryItemSchema,
+  insertInvoiceSchema,
+  insertQuoteSchema,
+  insertRepairItemSchema,
+  insertRepairSchema,
+  insertTechnicianSchema,
+  repairStatuses,
+} from "@shared/schema";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // API routes prefix
+  const apiRouter = express.Router();
+  app.use("/api", apiRouter);
+
+  // Customers
+  apiRouter.get("/customers", async (req: Request, res: Response) => {
+    try {
+      const customers = await storage.getCustomers();
+      res.json(customers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch customers" });
+    }
+  });
+
+  apiRouter.get("/customers/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const customer = await storage.getCustomer(id);
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      res.json(customer);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch customer" });
+    }
+  });
+
+  apiRouter.post("/customers", async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertCustomerSchema.parse(req.body);
+      const customer = await storage.createCustomer(validatedData);
+      res.status(201).json(customer);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid customer data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create customer" });
+    }
+  });
+
+  apiRouter.put("/customers/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const validatedData = insertCustomerSchema.partial().parse(req.body);
+      const updatedCustomer = await storage.updateCustomer(id, validatedData);
+      
+      if (!updatedCustomer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      res.json(updatedCustomer);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid customer data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update customer" });
+    }
+  });
+
+  apiRouter.delete("/customers/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const success = await storage.deleteCustomer(id);
+      if (!success) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete customer" });
+    }
+  });
+
+  // Devices
+  apiRouter.get("/devices", async (req: Request, res: Response) => {
+    try {
+      const customerId = req.query.customerId ? parseInt(req.query.customerId as string) : undefined;
+      
+      if (customerId) {
+        const devices = await storage.getDevicesByCustomer(customerId);
+        return res.json(devices);
+      }
+      
+      const devices = await storage.getDevices();
+      res.json(devices);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch devices" });
+    }
+  });
+
+  apiRouter.get("/devices/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const device = await storage.getDevice(id);
+      if (!device) {
+        return res.status(404).json({ error: "Device not found" });
+      }
+
+      res.json(device);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch device" });
+    }
+  });
+
+  apiRouter.post("/devices", async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertDeviceSchema.parse(req.body);
+      const device = await storage.createDevice(validatedData);
+      res.status(201).json(device);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid device data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create device" });
+    }
+  });
+
+  apiRouter.put("/devices/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const validatedData = insertDeviceSchema.partial().parse(req.body);
+      const updatedDevice = await storage.updateDevice(id, validatedData);
+      
+      if (!updatedDevice) {
+        return res.status(404).json({ error: "Device not found" });
+      }
+
+      res.json(updatedDevice);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid device data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update device" });
+    }
+  });
+
+  apiRouter.delete("/devices/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const success = await storage.deleteDevice(id);
+      if (!success) {
+        return res.status(404).json({ error: "Device not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete device" });
+    }
+  });
+
+  // Technicians
+  apiRouter.get("/technicians", async (req: Request, res: Response) => {
+    try {
+      const technicians = await storage.getTechnicians();
+      res.json(technicians);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch technicians" });
+    }
+  });
+
+  apiRouter.get("/technicians/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const technician = await storage.getTechnician(id);
+      if (!technician) {
+        return res.status(404).json({ error: "Technician not found" });
+      }
+
+      res.json(technician);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch technician" });
+    }
+  });
+
+  apiRouter.post("/technicians", async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertTechnicianSchema.parse(req.body);
+      const technician = await storage.createTechnician(validatedData);
+      res.status(201).json(technician);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid technician data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create technician" });
+    }
+  });
+
+  apiRouter.put("/technicians/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const validatedData = insertTechnicianSchema.partial().parse(req.body);
+      const updatedTechnician = await storage.updateTechnician(id, validatedData);
+      
+      if (!updatedTechnician) {
+        return res.status(404).json({ error: "Technician not found" });
+      }
+
+      res.json(updatedTechnician);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid technician data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update technician" });
+    }
+  });
+
+  apiRouter.delete("/technicians/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const success = await storage.deleteTechnician(id);
+      if (!success) {
+        return res.status(404).json({ error: "Technician not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete technician" });
+    }
+  });
+
+  // Inventory Items
+  apiRouter.get("/inventory", async (req: Request, res: Response) => {
+    try {
+      const items = await storage.getInventoryItems();
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch inventory items" });
+    }
+  });
+
+  apiRouter.get("/inventory/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const item = await storage.getInventoryItem(id);
+      if (!item) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+
+      res.json(item);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch inventory item" });
+    }
+  });
+
+  apiRouter.post("/inventory", async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertInventoryItemSchema.parse(req.body);
+      const item = await storage.createInventoryItem(validatedData);
+      res.status(201).json(item);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid inventory item data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create inventory item" });
+    }
+  });
+
+  apiRouter.put("/inventory/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const validatedData = insertInventoryItemSchema.partial().parse(req.body);
+      const updatedItem = await storage.updateInventoryItem(id, validatedData);
+      
+      if (!updatedItem) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+
+      res.json(updatedItem);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid inventory item data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update inventory item" });
+    }
+  });
+
+  apiRouter.delete("/inventory/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const success = await storage.deleteInventoryItem(id);
+      if (!success) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete inventory item" });
+    }
+  });
+
+  apiRouter.post("/inventory/:id/adjust", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const { quantity } = req.body;
+      if (typeof quantity !== 'number') {
+        return res.status(400).json({ error: "Quantity must be a number" });
+      }
+
+      const updatedItem = await storage.adjustInventoryQuantity(id, quantity);
+      if (!updatedItem) {
+        return res.status(404).json({ error: "Inventory item not found" });
+      }
+
+      res.json(updatedItem);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to adjust inventory quantity" });
+    }
+  });
+
+  // Repairs
+  apiRouter.get("/repairs", async (req: Request, res: Response) => {
+    try {
+      const customerId = req.query.customerId ? parseInt(req.query.customerId as string) : undefined;
+      const technicianId = req.query.technicianId ? parseInt(req.query.technicianId as string) : undefined;
+      const status = req.query.status as string;
+      
+      if (customerId) {
+        const repairs = await storage.getRepairsByCustomer(customerId);
+        return res.json(repairs);
+      }
+      
+      if (technicianId) {
+        const repairs = await storage.getRepairsByTechnician(technicianId);
+        return res.json(repairs);
+      }
+      
+      if (status && repairStatuses.includes(status as any)) {
+        const repairs = await storage.getRepairsByStatus(status as any);
+        return res.json(repairs);
+      }
+      
+      const repairs = await storage.getRepairs();
+      res.json(repairs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch repairs" });
+    }
+  });
+
+  apiRouter.get("/repairs/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const repair = await storage.getRepair(id);
+      if (!repair) {
+        return res.status(404).json({ error: "Repair not found" });
+      }
+
+      res.json(repair);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch repair" });
+    }
+  });
+
+  apiRouter.get("/repairs/:id/details", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const repairDetails = await storage.getRepairWithRelations(id);
+      if (!repairDetails) {
+        return res.status(404).json({ error: "Repair not found" });
+      }
+
+      res.json(repairDetails);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch repair details" });
+    }
+  });
+
+  apiRouter.post("/repairs", async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertRepairSchema.parse(req.body);
+      const repair = await storage.createRepair(validatedData);
+      res.status(201).json(repair);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid repair data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create repair" });
+    }
+  });
+
+  apiRouter.put("/repairs/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      // Allow partial updates for repair
+      const validatedData = insertRepairSchema.partial().parse(req.body);
+      const updatedRepair = await storage.updateRepair(id, validatedData);
+      
+      if (!updatedRepair) {
+        return res.status(404).json({ error: "Repair not found" });
+      }
+
+      res.json(updatedRepair);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid repair data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update repair" });
+    }
+  });
+
+  apiRouter.delete("/repairs/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const success = await storage.deleteRepair(id);
+      if (!success) {
+        return res.status(404).json({ error: "Repair not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete repair" });
+    }
+  });
+
+  // Repair Items
+  apiRouter.get("/repairs/:repairId/items", async (req: Request, res: Response) => {
+    try {
+      const repairId = parseInt(req.params.repairId);
+      if (isNaN(repairId)) {
+        return res.status(400).json({ error: "Invalid repair ID format" });
+      }
+
+      const items = await storage.getRepairItems(repairId);
+      res.json(items);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch repair items" });
+    }
+  });
+
+  apiRouter.post("/repairs/:repairId/items", async (req: Request, res: Response) => {
+    try {
+      const repairId = parseInt(req.params.repairId);
+      if (isNaN(repairId)) {
+        return res.status(400).json({ error: "Invalid repair ID format" });
+      }
+
+      const repair = await storage.getRepair(repairId);
+      if (!repair) {
+        return res.status(404).json({ error: "Repair not found" });
+      }
+
+      const validatedData = insertRepairItemSchema.parse({
+        ...req.body,
+        repairId,
+      });
+
+      const item = await storage.createRepairItem(validatedData);
+      res.status(201).json(item);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid repair item data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create repair item" });
+    }
+  });
+
+  apiRouter.put("/repairs/:repairId/items/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const repairId = parseInt(req.params.repairId);
+      if (isNaN(id) || isNaN(repairId)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const repair = await storage.getRepair(repairId);
+      if (!repair) {
+        return res.status(404).json({ error: "Repair not found" });
+      }
+
+      const validatedData = insertRepairItemSchema.partial().parse(req.body);
+      const updatedItem = await storage.updateRepairItem(id, validatedData);
+      
+      if (!updatedItem) {
+        return res.status(404).json({ error: "Repair item not found" });
+      }
+
+      res.json(updatedItem);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid repair item data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update repair item" });
+    }
+  });
+
+  apiRouter.delete("/repairs/:repairId/items/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const repairId = parseInt(req.params.repairId);
+      if (isNaN(id) || isNaN(repairId)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const repair = await storage.getRepair(repairId);
+      if (!repair) {
+        return res.status(404).json({ error: "Repair not found" });
+      }
+
+      const success = await storage.deleteRepairItem(id);
+      if (!success) {
+        return res.status(404).json({ error: "Repair item not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete repair item" });
+    }
+  });
+
+  // Quotes
+  apiRouter.get("/quotes", async (req: Request, res: Response) => {
+    try {
+      const repairId = req.query.repairId ? parseInt(req.query.repairId as string) : undefined;
+      
+      if (repairId) {
+        const quotes = await storage.getQuotesByRepair(repairId);
+        return res.json(quotes);
+      }
+      
+      const quotes = await storage.getQuotes();
+      res.json(quotes);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch quotes" });
+    }
+  });
+
+  apiRouter.get("/quotes/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const quote = await storage.getQuote(id);
+      if (!quote) {
+        return res.status(404).json({ error: "Quote not found" });
+      }
+
+      res.json(quote);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch quote" });
+    }
+  });
+
+  apiRouter.post("/quotes", async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertQuoteSchema.parse(req.body);
+      const quote = await storage.createQuote(validatedData);
+      res.status(201).json(quote);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid quote data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create quote" });
+    }
+  });
+
+  apiRouter.put("/quotes/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const validatedData = insertQuoteSchema.partial().parse(req.body);
+      const updatedQuote = await storage.updateQuote(id, validatedData);
+      
+      if (!updatedQuote) {
+        return res.status(404).json({ error: "Quote not found" });
+      }
+
+      res.json(updatedQuote);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid quote data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update quote" });
+    }
+  });
+
+  apiRouter.delete("/quotes/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const success = await storage.deleteQuote(id);
+      if (!success) {
+        return res.status(404).json({ error: "Quote not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete quote" });
+    }
+  });
+
+  // Invoices
+  apiRouter.get("/invoices", async (req: Request, res: Response) => {
+    try {
+      const repairId = req.query.repairId ? parseInt(req.query.repairId as string) : undefined;
+      
+      if (repairId) {
+        const invoices = await storage.getInvoicesByRepair(repairId);
+        return res.json(invoices);
+      }
+      
+      const invoices = await storage.getInvoices();
+      res.json(invoices);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch invoices" });
+    }
+  });
+
+  apiRouter.get("/invoices/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      res.json(invoice);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch invoice" });
+    }
+  });
+
+  apiRouter.post("/invoices", async (req: Request, res: Response) => {
+    try {
+      const validatedData = insertInvoiceSchema.parse(req.body);
+      const invoice = await storage.createInvoice(validatedData);
+      res.status(201).json(invoice);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid invoice data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create invoice" });
+    }
+  });
+
+  apiRouter.put("/invoices/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const validatedData = insertInvoiceSchema.partial().parse(req.body);
+      const updatedInvoice = await storage.updateInvoice(id, validatedData);
+      
+      if (!updatedInvoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      res.json(updatedInvoice);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid invoice data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to update invoice" });
+    }
+  });
+
+  apiRouter.delete("/invoices/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const success = await storage.deleteInvoice(id);
+      if (!success) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete invoice" });
+    }
+  });
+
+  // Mark invoice as paid
+  apiRouter.post("/invoices/:id/pay", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const { paymentMethod } = req.body;
+      if (!paymentMethod) {
+        return res.status(400).json({ error: "Payment method is required" });
+      }
+
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      const updatedInvoice = await storage.updateInvoice(id, {
+        status: "paid",
+        datePaid: new Date(),
+        paymentMethod,
+      });
+
+      // Also update the repair status to completed if it's ready for pickup
+      const repair = await storage.getRepair(invoice.repairId);
+      if (repair && repair.status === "ready_for_pickup") {
+        await storage.updateRepair(repair.id, {
+          status: "completed",
+          actualCompletionDate: new Date(),
+        });
+      }
+
+      res.json(updatedInvoice);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to process payment" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
