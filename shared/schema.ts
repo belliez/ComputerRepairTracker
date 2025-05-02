@@ -23,7 +23,7 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
 // Devices
 export const devices = pgTable("devices", {
   id: serial("id").primaryKey(),
-  customerId: integer("customer_id").notNull(),
+  customerId: integer("customer_id").notNull().references(() => customers.id),
   type: text("type").notNull(), // laptop, desktop, tablet, etc.
   brand: text("brand").notNull(),
   model: text("model").notNull(),
@@ -89,9 +89,9 @@ export const repairStatuses = [
 export const repairs = pgTable("repairs", {
   id: serial("id").primaryKey(),
   ticketNumber: text("ticket_number").notNull().unique(),
-  customerId: integer("customer_id").notNull(),
-  deviceId: integer("device_id").notNull(),
-  technicianId: integer("technician_id"),
+  customerId: integer("customer_id").notNull().references(() => customers.id),
+  deviceId: integer("device_id").notNull().references(() => devices.id),
+  technicianId: integer("technician_id").references(() => technicians.id),
   status: text("status").$type<(typeof repairStatuses)[number]>().notNull().default("intake"),
   issue: text("issue").notNull(),
   notes: text("notes"),
@@ -115,8 +115,8 @@ export const insertRepairSchema = createInsertSchema(repairs).omit({
 // Repair Items (parts or services added to a repair)
 export const repairItems = pgTable("repair_items", {
   id: serial("id").primaryKey(),
-  repairId: integer("repair_id").notNull(),
-  inventoryItemId: integer("inventory_item_id"),
+  repairId: integer("repair_id").notNull().references(() => repairs.id),
+  inventoryItemId: integer("inventory_item_id").references(() => inventoryItems.id),
   description: text("description").notNull(),
   quantity: integer("quantity").notNull().default(1),
   unitPrice: doublePrecision("unit_price").notNull(),
