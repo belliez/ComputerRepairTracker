@@ -2,6 +2,7 @@ import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
+import { initializeDemo } from "./init-db";
 import {
   insertCustomerSchema,
   insertDeviceSchema,
@@ -15,6 +16,14 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize demo data
+  try {
+    await initializeDemo();
+    console.log("Database initialization completed");
+  } catch (error) {
+    console.error("Error initializing database:", error);
+  }
+  
   // API routes prefix
   const apiRouter = express.Router();
   app.use("/api", apiRouter);
