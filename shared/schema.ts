@@ -131,7 +131,7 @@ export const insertRepairItemSchema = createInsertSchema(repairItems).omit({
 // Quotes
 export const quotes = pgTable("quotes", {
   id: serial("id").primaryKey(),
-  repairId: integer("repair_id").notNull(),
+  repairId: integer("repair_id").notNull().references(() => repairs.id),
   quoteNumber: text("quote_number").notNull().unique(),
   dateCreated: timestamp("date_created").notNull().defaultNow(),
   expirationDate: timestamp("expiration_date"),
@@ -149,7 +149,7 @@ export const insertQuoteSchema = createInsertSchema(quotes).omit({
 // Invoices
 export const invoices = pgTable("invoices", {
   id: serial("id").primaryKey(),
-  repairId: integer("repair_id").notNull(),
+  repairId: integer("repair_id").notNull().references(() => repairs.id),
   invoiceNumber: text("invoice_number").notNull().unique(),
   dateIssued: timestamp("date_issued").notNull().defaultNow(),
   datePaid: timestamp("date_paid"),
