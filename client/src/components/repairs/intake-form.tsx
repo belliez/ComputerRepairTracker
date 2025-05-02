@@ -694,6 +694,12 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                   const formValues = form.getValues();
                   console.log("Form values:", formValues);
                   
+                  // Generate a ticket number if this is a new repair
+                  const currentDate = new Date();
+                  const year = currentDate.getFullYear().toString().slice(-2);
+                  const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                  const ticketNumber = `RT-${year}${month}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+                  
                   // Create submission data with required customer and device
                   const apiData = {
                     ...formValues,
@@ -704,7 +710,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                     priorityLevel: Number(formValues.priorityLevel || 3),
                     technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
                     notes: formValues.notes || "",
-                    isUnderWarranty: Boolean(formValues.isUnderWarranty)
+                    isUnderWarranty: Boolean(formValues.isUnderWarranty),
+                    ticketNumber: repairId ? undefined : ticketNumber // Only add for new repairs
                   };
                   
                   console.log("Submitting repair data:", apiData);
