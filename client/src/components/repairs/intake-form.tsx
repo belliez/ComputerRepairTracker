@@ -166,9 +166,10 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       onClose();
     },
     onError: (error) => {
+      console.error("Mutation Error:", error);
       toast({
         title: "Error",
-        description: `Failed to ${repairId ? "update" : "create"} repair: ${error.message}`,
+        description: `Failed to ${repairId ? "update" : "create"} repair. Check the browser console for details.`,
         variant: "destructive",
       });
     },
@@ -227,42 +228,46 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     console.log("Form submission values:", values);
     
-    // Create a copy of the form values and ensure required fields are set
-    const formData = { 
-      ...values,
-      customerId: selectedCustomerId,
-      deviceId: selectedDeviceId,
-      status: values.status || "intake"
-    };
-    
-    // Make sure required fields are set
-    if (!formData.customerId || !formData.deviceId || !formData.issue) {
-      console.error("Missing required fields", { 
-        customerId: formData.customerId, 
-        deviceId: formData.deviceId, 
-        issue: formData.issue 
-      });
+    try {
+      // Create submission data with required customer and device
+      const apiData = {
+        ...values,
+        customerId: Number(selectedCustomerId),
+        deviceId: Number(selectedDeviceId),
+        issue: values.issue || "",
+        status: values.status || "intake",
+        priorityLevel: Number(values.priorityLevel || 3),
+        technicianId: values.technicianId ? Number(values.technicianId) : null,
+        notes: values.notes || "",
+        isUnderWarranty: Boolean(values.isUnderWarranty)
+      };
       
-      // Show error toast
+      // Validate required fields manually
+      if (!apiData.customerId || !apiData.deviceId || !apiData.issue.trim()) {
+        console.error("Missing required fields", { 
+          customerId: apiData.customerId, 
+          deviceId: apiData.deviceId, 
+          issue: apiData.issue 
+        });
+        
+        toast({
+          title: "Missing information",
+          description: "Please make sure all required fields are filled out.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      console.log("Submitting repair data:", apiData);
+      mutation.mutate(apiData);
+    } catch (error) {
+      console.error("Error in form submission:", error);
       toast({
-        title: "Missing information",
-        description: "Please make sure all required fields are filled out.",
+        title: "Error",
+        description: "An error occurred while submitting the form. Please try again.",
         variant: "destructive"
       });
-      return;
     }
-    
-    // Cast the data to ensure proper types for API
-    const apiData = {
-      ...formData,
-      customerId: Number(formData.customerId),
-      deviceId: Number(formData.deviceId),
-      priorityLevel: Number(formData.priorityLevel || 3),
-      technicianId: formData.technicianId ? Number(formData.technicianId) : null
-    };
-    
-    console.log("Mutating with values:", apiData);
-    mutation.mutate(apiData);
   };
 
   const renderStepIndicator = () => {
@@ -683,8 +688,28 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             
             {currentStep === "service" ? (
               <Button 
-                type="submit"
-                form="repair-form"
+                type="button"
+                onClick={() => {
+                  // Get form values directly
+                  const formValues = form.getValues();
+                  console.log("Form values:", formValues);
+                  
+                  // Create submission data with required customer and device
+                  const apiData = {
+                    ...formValues,
+                    customerId: Number(selectedCustomerId),
+                    deviceId: Number(selectedDeviceId),
+                    issue: formValues.issue || "",
+                    status: formValues.status || "intake",
+                    priorityLevel: Number(formValues.priorityLevel || 3),
+                    technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
+                    notes: formValues.notes || "",
+                    isUnderWarranty: Boolean(formValues.isUnderWarranty)
+                  };
+                  
+                  console.log("Submitting repair data:", apiData);
+                  mutation.mutate(apiData);
+                }}
                 disabled={mutation.isPending}
               >
                 {mutation.isPending ? (
