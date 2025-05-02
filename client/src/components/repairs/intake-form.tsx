@@ -435,8 +435,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 <FormItem>
                   <FormLabel>Assign Technician</FormLabel>
                   <Select
-                    onValueChange={(value) => field.onChange(parseInt(value))}
-                    value={field.value?.toString() || ""}
+                    onValueChange={(value) => field.onChange(value === "0" ? null : parseInt(value))}
+                    value={field.value?.toString() || "0"}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -444,7 +444,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">Unassigned</SelectItem>
+                      <SelectItem value="0">Unassigned</SelectItem>
                       {technicians?.map((tech) => (
                         <SelectItem key={tech.id} value={tech.id.toString()}>
                           {tech.firstName} {tech.lastName} - {tech.role}
