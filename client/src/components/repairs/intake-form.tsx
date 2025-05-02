@@ -81,7 +81,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
     customerId: z.number().nullable().optional(),  // We'll handle this in onSubmit
     deviceId: z.number().nullable().optional(),    // We'll handle this in onSubmit
     technicianId: z.number().nullable().optional(),
-    status: z.enum(repairStatuses as [string, ...string[]]).optional().default("intake"),
+    status: z.enum(repairStatuses as unknown as [string, ...string[]]).optional().default("intake"),
     issue: z.string().min(1, "Issue description is required"),
     priorityLevel: z.number().min(1).max(5).default(3),
     estimatedCompletionDate: z.string().optional().nullable(),
@@ -252,8 +252,17 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       return;
     }
     
-    console.log("Mutating with values:", formData);
-    mutation.mutate(formData);
+    // Cast the data to ensure proper types for API
+    const apiData = {
+      ...formData,
+      customerId: Number(formData.customerId),
+      deviceId: Number(formData.deviceId),
+      priorityLevel: Number(formData.priorityLevel || 3),
+      technicianId: formData.technicianId ? Number(formData.technicianId) : null
+    };
+    
+    console.log("Mutating with values:", apiData);
+    mutation.mutate(apiData);
   };
 
   const renderStepIndicator = () => {
