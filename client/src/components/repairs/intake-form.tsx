@@ -78,13 +78,13 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
 
   // Form validation schema
   const formSchema = insertRepairSchema.extend({
-    customerId: z.number().min(1, "Customer is required"),
-    deviceId: z.number().min(1, "Device is required"),
-    technicianId: z.number().optional(),
-    status: z.enum(repairStatuses as [string, ...string[]]),
+    customerId: z.number().nullable().optional(),  // We'll handle this in onSubmit
+    deviceId: z.number().nullable().optional(),    // We'll handle this in onSubmit
+    technicianId: z.number().nullable().optional(),
+    status: z.enum(repairStatuses as [string, ...string[]]).optional().default("intake"),
     issue: z.string().min(1, "Issue description is required"),
-    priorityLevel: z.number().min(1).max(5),
-    estimatedCompletionDate: z.string().optional(),
+    priorityLevel: z.number().min(1).max(5).default(3),
+    estimatedCompletionDate: z.string().optional().nullable(),
   });
 
   // Form initialization
@@ -225,7 +225,35 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   };
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    mutation.mutate(values);
+    console.log("Form submission values:", values);
+    
+    // Create a copy of the form values and ensure required fields are set
+    const formData = { 
+      ...values,
+      customerId: selectedCustomerId,
+      deviceId: selectedDeviceId,
+      status: values.status || "intake"
+    };
+    
+    // Make sure required fields are set
+    if (!formData.customerId || !formData.deviceId || !formData.issue) {
+      console.error("Missing required fields", { 
+        customerId: formData.customerId, 
+        deviceId: formData.deviceId, 
+        issue: formData.issue 
+      });
+      
+      // Show error toast
+      toast({
+        title: "Missing information",
+        description: "Please make sure all required fields are filled out.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    console.log("Mutating with values:", formData);
+    mutation.mutate(formData);
   };
 
   const renderStepIndicator = () => {
@@ -644,7 +672,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             
             {currentStep === "service" ? (
               <Button 
-                type="submit"
+                type="button"
                 onClick={form.handleSubmit(onSubmit)}
                 disabled={mutation.isPending}
               >
