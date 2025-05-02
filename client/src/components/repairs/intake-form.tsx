@@ -441,7 +441,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   const renderServiceStep = () => {
     return (
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form id="repair-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div>
             <h3 className="text-lg font-medium text-gray-900">Service Details</h3>
             <p className="mt-1 text-sm text-gray-500">Provide information about the repair service needed.</p>
@@ -457,6 +457,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                   <Textarea 
                     placeholder="Describe the problem in detail..." 
                     {...field} 
+                    value={field.value || ""}
                   />
                 </FormControl>
                 <FormMessage />
@@ -601,7 +602,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
                   <FormControl>
                     <Checkbox
-                      checked={field.value}
+                      checked={field.value || false}
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
@@ -626,6 +627,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                   <Textarea 
                     placeholder="Add any additional information or special instructions..." 
                     {...field} 
+                    value={field.value || ""}
                   />
                 </FormControl>
                 <FormMessage />
@@ -681,8 +683,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             
             {currentStep === "service" ? (
               <Button 
-                type="button"
-                onClick={form.handleSubmit(onSubmit)}
+                type="submit"
+                form="repair-form"
                 disabled={mutation.isPending}
               >
                 {mutation.isPending ? (
