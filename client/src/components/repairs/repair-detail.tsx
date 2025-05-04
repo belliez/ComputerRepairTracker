@@ -41,7 +41,8 @@ import InvoiceForm from "./invoice-form";
 import IntakeForm from "./intake-form";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil } from "lucide-react";
+import { Pencil, Plus, Trash2, Edit } from "lucide-react";
+import RepairItemForm from "./repair-item-form";
 
 interface RepairDetailProps {
   repairId: number;
@@ -54,6 +55,8 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showRepairItemForm, setShowRepairItemForm] = useState(false);
+  const [currentEditingItem, setCurrentEditingItem] = useState<any>(null);
   const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -122,6 +125,39 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
 
   const handleEditRepair = () => {
     setShowEditForm(true);
+  };
+  
+  const handleAddRepairItem = () => {
+    setCurrentEditingItem(null);
+    setShowRepairItemForm(true);
+  };
+  
+  const handleEditRepairItem = (item: any) => {
+    setCurrentEditingItem(item);
+    setShowRepairItemForm(true);
+  };
+  
+  const handleDeleteRepairItem = async (itemId: number) => {
+    if (!confirm("Are you sure you want to delete this item?")) return;
+    
+    try {
+      await apiRequest("DELETE", `/api/repairs/${repairId}/items/${itemId}`, {});
+      
+      toast({
+        title: "Item deleted",
+        description: "The item has been removed from the repair",
+      });
+      
+      // Refresh the data
+      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+    } catch (error) {
+      console.error("Failed to delete repair item:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the repair item",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) {
@@ -439,6 +475,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                           <TableHead className="text-right">Quantity</TableHead>
                           <TableHead className="text-right">Total</TableHead>
                           <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -473,6 +510,25 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                                 {item.isCompleted ? "Completed" : "Pending"}
                               </Badge>
                             </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button 
+                                  onClick={() => handleEditRepairItem(item)} 
+                                  variant="ghost" 
+                                  size="icon"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  onClick={() => handleDeleteRepairItem(item.id)} 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -497,8 +553,8 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                       </div>
                     )}
                   </div>
-                  <Button disabled>
-                    <i className="fas fa-plus mr-1"></i> Add Item
+                  <Button onClick={handleAddRepairItem}>
+                    <Plus className="h-4 w-4 mr-1" /> Add Item
                   </Button>
                 </CardFooter>
               </Card>
