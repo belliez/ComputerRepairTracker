@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { RepairWithRelations } from "@/types";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2, Printer, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { printDocument, createQuoteDocument, createInvoiceDocument } from "@/lib/print-utils";
 import { 
   AlertDialog,
   AlertDialogAction, 
@@ -215,6 +216,128 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
     setDeleteItemType("invoice");
     setDeleteItemId(invoiceId);
     setShowDeleteDialog(true);
+  };
+  
+  // Print quote handler
+  const handlePrintQuote = (quote: any) => {
+    if (!repair || !repair.customer) return;
+    
+    try {
+      const quoteDocument = createQuoteDocument(
+        quote, 
+        repair.customer, 
+        repair, 
+        repairItems || []
+      );
+      
+      printDocument(quoteDocument);
+      
+      toast({
+        title: "Print initiated",
+        description: "Quote print preview has been opened"
+      });
+    } catch (error) {
+      console.error("Error printing quote:", error);
+      toast({
+        title: "Print error",
+        description: "Failed to generate print preview",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Email quote handler
+  const emailQuoteMutation = useMutation({
+    mutationFn: async (quoteId: number) => {
+      return apiRequest("POST", `/api/quotes/${quoteId}/email`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email sent",
+        description: "Quote was successfully emailed to the customer",
+      });
+    },
+    onError: (error: any) => {
+      // Check if this is a configuration error
+      if (error.response?.status === 400 && error.response?.data?.message?.includes("SENDGRID_API_KEY")) {
+        toast({
+          title: "Email configuration required",
+          description: "SendGrid API key is not configured. Please set up email settings.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Email error",
+          description: "Failed to send quote email. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }
+  });
+  
+  const handleEmailQuote = (quoteId: number) => {
+    emailQuoteMutation.mutate(quoteId);
+  };
+  
+  // Print invoice handler
+  const handlePrintInvoice = (invoice: any) => {
+    if (!repair || !repair.customer) return;
+    
+    try {
+      const invoiceDocument = createInvoiceDocument(
+        invoice, 
+        repair.customer, 
+        repair, 
+        repairItems || []
+      );
+      
+      printDocument(invoiceDocument);
+      
+      toast({
+        title: "Print initiated",
+        description: "Invoice print preview has been opened"
+      });
+    } catch (error) {
+      console.error("Error printing invoice:", error);
+      toast({
+        title: "Print error",
+        description: "Failed to generate print preview",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  // Email invoice handler
+  const emailInvoiceMutation = useMutation({
+    mutationFn: async (invoiceId: number) => {
+      return apiRequest("POST", `/api/invoices/${invoiceId}/email`, {});
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email sent",
+        description: "Invoice was successfully emailed to the customer",
+      });
+    },
+    onError: (error: any) => {
+      // Check if this is a configuration error
+      if (error.response?.status === 400 && error.response?.data?.message?.includes("SENDGRID_API_KEY")) {
+        toast({
+          title: "Email configuration required",
+          description: "SendGrid API key is not configured. Please set up email settings.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Email error",
+          description: "Failed to send invoice email. Please try again.",
+          variant: "destructive"
+        });
+      }
+    }
+  });
+  
+  const handleEmailInvoice = (invoiceId: number) => {
+    emailInvoiceMutation.mutate(invoiceId);
   };
   
   const handleConfirmDelete = async () => {
@@ -792,11 +915,28 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                           )}
                           
                           <div className="flex flex-wrap gap-2 mt-4">
-                            <Button variant="outline">
-                              <i className="fas fa-print mr-1"></i> Print Quote
+                            <Button 
+                              variant="outline"
+                              onClick={() => handlePrintQuote(quote)}
+                              disabled={emailQuoteMutation.isPending}
+                            >
+                              <Printer className="h-4 w-4 mr-1" /> Print Quote
                             </Button>
-                            <Button variant="outline">
-                              <i className="fas fa-envelope mr-1"></i> Email to Customer
+                            <Button 
+                              variant="outline"
+                              onClick={() => handleEmailQuote(quote.id)}
+                              disabled={emailQuoteMutation.isPending}
+                            >
+                              {emailQuoteMutation.isPending && quote.id === emailQuoteMutation.variables ? (
+                                <span className="flex items-center">
+                                  <div className="animate-spin h-4 w-4 mr-1 border-2 border-t-transparent rounded-full"></div>
+                                  Sending...
+                                </span>
+                              ) : (
+                                <>
+                                  <Mail className="h-4 w-4 mr-1" /> Email to Customer
+                                </>
+                              )}
                             </Button>
                             <Button 
                               variant="outline" 
@@ -921,11 +1061,28 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                           )}
 
                           <div className="flex flex-wrap gap-2 mt-4">
-                            <Button variant="outline">
-                              <i className="fas fa-print mr-1"></i> Print Invoice
+                            <Button 
+                              variant="outline"
+                              onClick={() => handlePrintInvoice(invoice)}
+                              disabled={emailInvoiceMutation.isPending}
+                            >
+                              <Printer className="h-4 w-4 mr-1" /> Print Invoice
                             </Button>
-                            <Button variant="outline">
-                              <i className="fas fa-envelope mr-1"></i> Email to Customer
+                            <Button 
+                              variant="outline"
+                              onClick={() => handleEmailInvoice(invoice.id)}
+                              disabled={emailInvoiceMutation.isPending}
+                            >
+                              {emailInvoiceMutation.isPending && invoice.id === emailInvoiceMutation.variables ? (
+                                <span className="flex items-center">
+                                  <div className="animate-spin h-4 w-4 mr-1 border-2 border-t-transparent rounded-full"></div>
+                                  Sending...
+                                </span>
+                              ) : (
+                                <>
+                                  <Mail className="h-4 w-4 mr-1" /> Email to Customer
+                                </>
+                              )}
                             </Button>
                             {invoice.status !== "paid" && (
                               <Button>
