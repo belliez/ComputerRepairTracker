@@ -712,6 +712,28 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                   const month = String(currentDate.getMonth() + 1).padStart(2, '0');
                   const ticketNumber = `RT-${year}${month}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
                   
+                  // Validate device selection
+                  if (!selectedDeviceId) {
+                    toast({
+                      title: "Device Required",
+                      description: "Please select a device for this repair",
+                      variant: "destructive"
+                    });
+                    // Go back to device selection step
+                    setCurrentStep("device");
+                    return;
+                  }
+                  
+                  // Validate that issue is not empty
+                  if (!formValues.issue || formValues.issue.trim() === "") {
+                    toast({
+                      title: "Issue Description Required",
+                      description: "Please provide a description of the issue",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+
                   // Create submission data with required customer and device
                   const apiData = {
                     ...formValues,
@@ -723,7 +745,9 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                     technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
                     notes: formValues.notes || "",
                     isUnderWarranty: Boolean(formValues.isUnderWarranty),
-                    ticketNumber: repairId ? undefined : ticketNumber // Only add for new repairs
+                    // For new repairs, always provide a ticket number
+                    // For existing repairs, don't include ticketNumber to avoid schema validation errors
+                    ...(repairId ? {} : { ticketNumber })
                   };
                   
                   console.log("Submitting repair data:", apiData);
