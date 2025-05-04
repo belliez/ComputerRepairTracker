@@ -62,10 +62,21 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
 
   const handleStatusChange = async (newStatus: string) => {
     try {
-      await apiRequest("PUT", `/api/repairs/${repairId}`, {
+      // Don't update if it's already the current status
+      if (repair.status === newStatus) return;
+
+      // Make the API request
+      const updatedRepair = await apiRequest("PUT", `/api/repairs/${repairId}`, {
         status: newStatus
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+
+      // Immediately update the repair data in the cache
+      queryClient.setQueryData([`/api/repairs/${repairId}/details`], {
+        ...repair,
+        status: newStatus
+      });
+
+      // Also update the repair list
       queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
       
       toast({
@@ -73,6 +84,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
         description: "The repair status has been updated successfully",
       });
     } catch (error) {
+      console.error("Failed to update repair status:", error);
       toast({
         title: "Error",
         description: "Failed to update repair status",
