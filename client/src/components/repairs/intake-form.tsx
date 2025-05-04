@@ -76,15 +76,18 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
     enabled: !!selectedCustomerId,
   });
 
-  // Form validation schema
-  const formSchema = insertRepairSchema.extend({
-    customerId: z.number().nullable().optional(),  // We'll handle this in onSubmit
-    deviceId: z.number().nullable().optional(),    // We'll handle this in onSubmit
-    technicianId: z.number().nullable().optional(),
-    status: z.enum(repairStatuses as unknown as [string, ...string[]]).optional().default("intake"),
+  // Form validation schema - closely aligns with the server schema
+  const formSchema = z.object({
+    customerId: z.number().positive("Customer is required"),
+    deviceId: z.number().positive("Device is required"),
+    technicianId: z.number().nullable(),
+    status: z.enum(repairStatuses as unknown as [string, ...string[]]).default("intake"),
     issue: z.string().min(1, "Issue description is required"),
+    notes: z.string().optional().nullable(),
     priorityLevel: z.number().min(1).max(5).default(3),
+    isUnderWarranty: z.boolean().default(false),
     estimatedCompletionDate: z.string().optional().nullable(),
+    ticketNumber: z.string().optional(), // Will be generated for new repairs
   });
 
   // Form initialization
@@ -241,6 +244,12 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
     console.log("Form submission values:", values);
     
     try {
+      // Generate a ticket number for new repairs
+      const currentDate = new Date();
+      const year = currentDate.getFullYear().toString().slice(-2);
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+      const ticketNumber = `RT-${year}${month}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+      
       // Create submission data with required customer and device
       const apiData = {
         ...values,
@@ -253,6 +262,11 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
         notes: values.notes || "",
         isUnderWarranty: Boolean(values.isUnderWarranty)
       };
+      
+      // For new repairs, add ticket number
+      if (!repairId) {
+        apiData.ticketNumber = ticketNumber;
+      }
       
       // Validate required fields manually
       if (!apiData.customerId || !apiData.deviceId || !apiData.issue.trim()) {
@@ -271,7 +285,16 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       }
       
       console.log("Submitting repair data:", apiData);
-      mutation.mutate(apiData);
+      mutation.mutate(apiData, {
+        onError: (error: any) => {
+          console.error("Error creating repair:", error);
+          toast({
+            title: "Failed to create repair",
+            description: error?.message || "An unknown error occurred",
+            variant: "destructive"
+          });
+        }
+      });
     } catch (error) {
       console.error("Error in form submission:", error);
       toast({
@@ -751,7 +774,17 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                   };
                   
                   console.log("Submitting repair data:", apiData);
-                  mutation.mutate(apiData);
+                  mutation.mutate(apiData, {
+                    onError: (error: any) => {
+                      console.error("Error creating repair:", error);
+                      // Display a more detailed error message
+                      toast({
+                        title: "Failed to create repair",
+                        description: error?.message || "An unknown error occurred",
+                        variant: "destructive"
+                      });
+                    }
+                  });
                 }}
                 disabled={mutation.isPending}
               >
