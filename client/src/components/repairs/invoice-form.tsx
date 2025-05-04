@@ -114,7 +114,7 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
       tax: taxAmount,
       total,
       status: "unpaid",
-      paymentMethod: undefined,
+      paymentMethod: "none",
       notes: approvedQuote?.notes || "",
     },
   });
@@ -290,7 +290,7 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Not Paid Yet</SelectItem>
+                          <SelectItem value="none">Not Paid Yet</SelectItem>
                           <SelectItem value="Credit Card">Credit Card</SelectItem>
                           <SelectItem value="Debit Card">Debit Card</SelectItem>
                           <SelectItem value="Cash">Cash</SelectItem>
