@@ -327,7 +327,8 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                           <Textarea 
                             placeholder="Add any notes or terms for the customer..."
                             className="h-32"
-                            {...field} 
+                            {...field}
+                            value={field.value || ''}
                           />
                         </FormControl>
                         <FormMessage />
@@ -348,7 +349,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                             <span className="mr-1">$</span>
                             <Input
                               {...field}
-                              value={field.value.toFixed(2)}
+                              value={field.value ? field.value.toFixed(2) : '0.00'}
                               disabled
                             />
                           </div>
@@ -369,7 +370,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                             <span className="mr-1">$</span>
                             <Input
                               {...field}
-                              value={field.value.toFixed(2)}
+                              value={field.value ? field.value.toFixed(2) : '0.00'}
                               disabled
                             />
                           </div>
@@ -390,7 +391,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                             <span className="mr-1">$</span>
                             <Input
                               {...field}
-                              value={field.value.toFixed(2)}
+                              value={field.value ? field.value.toFixed(2) : '0.00'}
                               className="font-bold"
                               disabled
                             />
