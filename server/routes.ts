@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { initializeDemo } from "./init-db";
+import { sendEmail, generateQuoteEmail, generateInvoiceEmail, EmailData } from "./email";
 import {
   insertCustomerSchema,
   insertDeviceSchema,
@@ -837,6 +838,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedInvoice);
     } catch (error) {
       res.status(500).json({ error: "Failed to process payment" });
+    }
+  });
+
+  // Email Quote to Customer
+  apiRouter.post("/quotes/:id/email", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid quote ID format" });
+      }
+
+      const quote = await storage.getQuote(id);
+      if (!quote) {
+        return res.status(404).json({ error: "Quote not found" });
+      }
+
+      // Get the repair
+      const repair = await storage.getRepair(quote.repairId);
+      if (!repair) {
+        return res.status(404).json({ error: "Repair not found" });
+      }
+
+      // Get the customer
+      const customer = await storage.getCustomer(repair.customerId);
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      // Get repair items
+      const items = await storage.getRepairItems(repair.id);
+
+      // Generate email HTML
+      const emailHtml = generateQuoteEmail(quote, customer, repair, items);
+
+      // Setup email data
+      const emailData: EmailData = {
+        to: customer.email,
+        from: process.env.SENDGRID_FROM_EMAIL || "service@repairshop.com", // Should be configured in .env
+        subject: `Quote #${quote.quoteNumber} for your repair`,
+        html: emailHtml
+      };
+
+      // Send email
+      const success = await sendEmail(emailData);
+      if (!success) {
+        if (!process.env.SENDGRID_API_KEY) {
+          return res.status(400).json({ 
+            error: "Email configuration missing", 
+            message: "SENDGRID_API_KEY is not configured"
+          });
+        }
+        return res.status(500).json({ error: "Failed to send email" });
+      }
+
+      res.json({ success: true, message: "Quote email sent successfully" });
+    } catch (error) {
+      console.error("Error sending quote email:", error);
+      res.status(500).json({ error: "Failed to send quote email" });
+    }
+  });
+
+  // Email Invoice to Customer
+  apiRouter.post("/invoices/:id/email", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid invoice ID format" });
+      }
+
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      // Get the repair
+      const repair = await storage.getRepair(invoice.repairId);
+      if (!repair) {
+        return res.status(404).json({ error: "Repair not found" });
+      }
+
+      // Get the customer
+      const customer = await storage.getCustomer(repair.customerId);
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      // Get repair items
+      const items = await storage.getRepairItems(repair.id);
+
+      // Generate email HTML
+      const emailHtml = generateInvoiceEmail(invoice, customer, repair, items);
+
+      // Setup email data
+      const emailData: EmailData = {
+        to: customer.email,
+        from: process.env.SENDGRID_FROM_EMAIL || "service@repairshop.com", // Should be configured in .env
+        subject: `Invoice #${invoice.invoiceNumber} for your repair`,
+        html: emailHtml
+      };
+
+      // Send email
+      const success = await sendEmail(emailData);
+      if (!success) {
+        if (!process.env.SENDGRID_API_KEY) {
+          return res.status(400).json({ 
+            error: "Email configuration missing", 
+            message: "SENDGRID_API_KEY is not configured"
+          });
+        }
+        return res.status(500).json({ error: "Failed to send email" });
+      }
+
+      res.json({ success: true, message: "Invoice email sent successfully" });
+    } catch (error) {
+      console.error("Error sending invoice email:", error);
+      res.status(500).json({ error: "Failed to send invoice email" });
     }
   });
 
