@@ -59,16 +59,16 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
     enabled: !!invoiceId,
   });
 
-  // Get repair items if creating a new invoice
+  // Get repair items for both new and edit modes
   const { data: repairItems, isLoading: isLoadingItems } = useQuery<RepairItem[]>({
     queryKey: [`/api/repairs/${repairId}/items`],
-    enabled: !!repairId && !invoiceId,
+    enabled: !!repairId,
   });
 
-  // Get quotes for this repair to use data from approved quote
+  // Get quotes for this repair to use data from approved quote - available for both new and edit modes
   const { data: quotes, isLoading: isLoadingQuotes } = useQuery<Quote[]>({
     queryKey: [`/api/quotes`, { repairId }],
-    enabled: !!repairId && !invoiceId,
+    enabled: !!repairId,
   });
 
   // Get the latest approved quote if available

@@ -53,9 +53,10 @@ interface QuoteFormProps {
 export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteFormProps) {
   const { toast } = useToast();
 
-  // Get repair items to calculate the quote
+  // Get repair items to calculate the quote - always fetch for both new and edit
   const { data: repairItems, isLoading: isLoadingItems } = useQuery<RepairItem[]>({
     queryKey: [`/api/repairs/${repairId}/items`],
+    enabled: !!repairId,
   });
 
   // Get existing quote if editing
