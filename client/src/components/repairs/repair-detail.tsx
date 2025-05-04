@@ -201,22 +201,27 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
         description: "The item has been removed from the repair",
       });
       
-      // Invalidate and immediately refetch the repair items
-      await queryClient.invalidateQueries({ 
-        queryKey: [`/api/repairs/${repairId}/items`],
-        refetchType: 'active'
-      });
+      console.log("Deleting item, preparing to update UI...");
       
-      // Force refetch to update the UI
-      await queryClient.refetchQueries({ 
-        queryKey: [`/api/repairs/${repairId}/items`],
-        exact: true
-      });
+      // Update local state to remove the item immediately for optimistic UI
+      if (repairItems) {
+        const updatedItems = repairItems.filter(item => item.id !== itemId);
+        console.log("Filtered items after delete:", updatedItems);
+      }
+
+      // Explicitly refetch repair items to update the UI
+      await refetchRepairItems();
+      console.log("Repair items explicitly refetched after delete");
       
-      // Also invalidate the repair details
+      // Also invalidate and refetch the repair details
       await queryClient.invalidateQueries({ 
         queryKey: [`/api/repairs/${repairId}/details`],
         refetchType: 'active'
+      });
+      
+      await queryClient.refetchQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        exact: true
       });
     } catch (error) {
       console.error("Failed to delete repair item:", error);
