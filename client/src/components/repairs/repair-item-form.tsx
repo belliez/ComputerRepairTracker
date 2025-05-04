@@ -129,9 +129,21 @@ export default function RepairItemForm({
         });
       }
 
-      // Invalidate queries to refresh the data
-      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
+      // Invalidate and immediately refetch queries to refresh the data
+      await queryClient.invalidateQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        refetchType: 'active',
+      });
+      await queryClient.refetchQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        exact: true
+      });
+      
+      // Also invalidate the general repairs list
+      queryClient.invalidateQueries({ 
+        queryKey: ["/api/repairs"],
+        refetchType: 'active'
+      });
       
       // Close the form
       onClose();

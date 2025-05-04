@@ -89,8 +89,23 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
         status: newStatus
       });
 
-      // Invalidate the queries to ensure we get fresh data on next load
-      queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
+      // Invalidate and immediately refetch the queries to ensure UI updates
+      await queryClient.invalidateQueries({ 
+        queryKey: ["/api/repairs"],
+        refetchType: 'active' 
+      });
+      
+      // Also invalidate the details query
+      await queryClient.invalidateQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        refetchType: 'active'
+      });
+      
+      // Force refetch the details query to update the UI
+      await queryClient.refetchQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        exact: true
+      });
       
       toast({
         title: "Status updated",
@@ -104,8 +119,11 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
         setCurrentStatus(repair.status);
       }
       
-      // And refresh the data
-      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      // Force refresh the data
+      await queryClient.refetchQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        exact: true 
+      });
       
       toast({
         title: "Error",
@@ -148,8 +166,17 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
         description: "The item has been removed from the repair",
       });
       
-      // Refresh the data
-      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      // Invalidate and immediately refetch the details
+      await queryClient.invalidateQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        refetchType: 'active'
+      });
+      
+      // Force refetch to update the UI
+      await queryClient.refetchQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        exact: true
+      });
     } catch (error) {
       console.error("Failed to delete repair item:", error);
       toast({
