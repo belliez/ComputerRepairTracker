@@ -102,7 +102,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       priorityLevel: 3,
       isUnderWarranty: false,
       technicianId: undefined,
-      // estimatedCompletionDate removed to avoid validation errors
+      estimatedCompletionDate: "", // Added back with empty string default
     },
   });
 
@@ -251,11 +251,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       const ticketNumber = `RT-${year}${month}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
       
       // Create submission data with required customer and device
-      // IMPORTANT: Remove some fields to avoid validation issues
-      const { estimatedCompletionDate, ...restValues } = values;
-      
       const apiData = {
-        ...restValues,
+        ...values,
         customerId: Number(selectedCustomerId),
         deviceId: Number(selectedDeviceId),
         issue: values.issue || "",
@@ -263,8 +260,11 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
         priorityLevel: Number(values.priorityLevel || 3),
         technicianId: values.technicianId ? Number(values.technicianId) : null,
         notes: values.notes || "",
-        isUnderWarranty: Boolean(values.isUnderWarranty)
-        // Omit estimatedCompletionDate - will be set to null by default in DB
+        isUnderWarranty: Boolean(values.isUnderWarranty),
+        // Format the date properly if it exists
+        estimatedCompletionDate: values.estimatedCompletionDate && values.estimatedCompletionDate.trim() !== "" 
+          ? new Date(values.estimatedCompletionDate).toISOString()
+          : null
       };
       
       // For new repairs, add ticket number
@@ -618,8 +618,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
           />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Temporarily disabled due to validation issues */}
-            {/* <FormField
+            <FormField
               control={form.control}
               name="estimatedCompletionDate"
               render={({ field }) => (
@@ -638,7 +637,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                   <FormMessage />
                 </FormItem>
               )}
-            /> */}
+            />
             
             <FormField
               control={form.control}
@@ -773,6 +772,10 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                     technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
                     notes: formValues.notes || "",
                     isUnderWarranty: Boolean(formValues.isUnderWarranty),
+                    // Process the estimated completion date
+                    estimatedCompletionDate: formValues.estimatedCompletionDate && formValues.estimatedCompletionDate.trim() !== "" 
+                      ? new Date(formValues.estimatedCompletionDate).toISOString()
+                      : null,
                     // For new repairs, always provide a ticket number
                     // For existing repairs, don't include ticketNumber to avoid schema validation errors
                     ...(repairId ? {} : { ticketNumber })
