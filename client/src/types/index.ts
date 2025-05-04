@@ -82,6 +82,7 @@ export interface RepairWithRelations extends Repair {
   quote?: Quote;
   quotes?: Quote[];
   invoice?: Invoice;
+  invoices?: Invoice[];
 }
 
 // Navigation item type

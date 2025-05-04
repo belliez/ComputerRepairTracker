@@ -351,7 +351,9 @@ export class DatabaseStorage implements IStorage {
       // Return all quotes, not just approved ones
       quote: quoteList.length > 0 ? quoteList[0] : null,
       quotes: quoteList,
-      invoice: invoiceList[0], // Just get the first invoice if any
+      // Return all invoices, not just the first one
+      invoice: invoiceList.length > 0 ? invoiceList[0] : null,
+      invoices: invoiceList,
     };
   }
 }

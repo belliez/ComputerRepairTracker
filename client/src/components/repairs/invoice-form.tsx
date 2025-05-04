@@ -167,10 +167,21 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
         return apiRequest("POST", "/api/invoices", invoiceData);
       }
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Invalidate queries first
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+      
       if (repairId) {
-        queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+        // Invalidate and immediately force refetch the repair details
+        await queryClient.invalidateQueries({ 
+          queryKey: [`/api/repairs/${repairId}/details`]
+        });
+        
+        // Force an immediate refetch of the repair details
+        await queryClient.refetchQueries({ 
+          queryKey: [`/api/repairs/${repairId}/details`],
+          exact: true
+        });
       }
       
       toast({

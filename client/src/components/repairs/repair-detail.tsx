@@ -749,83 +749,95 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
             {/* Invoice Tab */}
             <TabsContent value="invoice">
               <Card>
-                <CardHeader>
-                  <CardTitle>Invoice</CardTitle>
-                  <CardDescription>
-                    Invoice and payment information
-                  </CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Invoices</CardTitle>
+                    <CardDescription>
+                      Invoice and payment information
+                    </CardDescription>
+                  </div>
+                  {canCreateInvoice && (
+                    <Button onClick={handleCreateInvoice} className="ml-auto">
+                      <Plus className="h-4 w-4 mr-1" /> New Invoice
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent>
-                  {repair.invoice ? (
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="text-xl font-medium">Invoice #{repair.invoice.invoiceNumber}</div>
-                          <div className="text-sm text-gray-500">
-                            Issued on {format(new Date(repair.invoice.dateIssued), "MMMM d, yyyy")}
+                  {repair.invoices && repair.invoices.length > 0 ? (
+                    <div className="space-y-8">
+                      {repair.invoices.map((invoice, index) => (
+                        <div key={invoice.id} className="space-y-4">
+                          {index > 0 && <Separator className="my-6" />}
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="text-xl font-medium">Invoice #{invoice.invoiceNumber}</div>
+                              <div className="text-sm text-gray-500">
+                                Issued on {format(new Date(invoice.dateIssued), "MMMM d, yyyy")}
+                              </div>
+                              {invoice.datePaid && (
+                                <div className="text-sm text-gray-500">
+                                  Paid on {format(new Date(invoice.datePaid), "MMMM d, yyyy")}
+                                </div>
+                              )}
+                            </div>
+                            <Badge className={
+                              invoice.status === "paid" 
+                                ? "bg-green-100 text-green-800 border-green-300" 
+                                : invoice.status === "partial"
+                                  ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                  : "bg-red-100 text-red-800 border-red-300"
+                            }>
+                              {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                            </Badge>
                           </div>
-                          {repair.invoice.datePaid && (
-                            <div className="text-sm text-gray-500">
-                              Paid on {format(new Date(repair.invoice.datePaid), "MMMM d, yyyy")}
+
+                          <Separator />
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <div className="text-sm font-medium text-gray-500">Subtotal</div>
+                              <div className="text-lg">${invoice.subtotal.toFixed(2)}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-500">Tax</div>
+                              <div className="text-lg">${invoice.tax?.toFixed(2) || "0.00"}</div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="text-sm font-medium text-gray-500">Total</div>
+                            <div className="text-2xl font-bold">${invoice.total.toFixed(2)}</div>
+                          </div>
+
+                          {invoice.paymentMethod && invoice.paymentMethod !== 'none' && (
+                            <div>
+                              <div className="text-sm font-medium text-gray-500">Payment Method</div>
+                              <div className="text-gray-700">{invoice.paymentMethod}</div>
                             </div>
                           )}
+
+                          {invoice.notes && (
+                            <div>
+                              <div className="text-sm font-medium text-gray-500">Notes</div>
+                              <div className="text-gray-700">{invoice.notes}</div>
+                            </div>
+                          )}
+
+                          <div className="flex space-x-2 mt-4">
+                            <Button variant="outline">
+                              <i className="fas fa-print mr-1"></i> Print Invoice
+                            </Button>
+                            <Button variant="outline">
+                              <i className="fas fa-envelope mr-1"></i> Email to Customer
+                            </Button>
+                            {invoice.status !== "paid" && (
+                              <Button>
+                                <i className="fas fa-check-circle mr-1"></i> Mark as Paid
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                        <Badge className={
-                          repair.invoice.status === "paid" 
-                            ? "bg-green-100 text-green-800 border-green-300" 
-                            : repair.invoice.status === "partial"
-                              ? "bg-yellow-100 text-yellow-800 border-yellow-300"
-                              : "bg-red-100 text-red-800 border-red-300"
-                        }>
-                          {repair.invoice.status.charAt(0).toUpperCase() + repair.invoice.status.slice(1)}
-                        </Badge>
-                      </div>
-
-                      <Separator />
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm font-medium text-gray-500">Subtotal</div>
-                          <div className="text-lg">${repair.invoice.subtotal.toFixed(2)}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-500">Tax</div>
-                          <div className="text-lg">${repair.invoice.tax?.toFixed(2) || "0.00"}</div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm font-medium text-gray-500">Total</div>
-                        <div className="text-2xl font-bold">${repair.invoice.total.toFixed(2)}</div>
-                      </div>
-
-                      {repair.invoice.paymentMethod && (
-                        <div>
-                          <div className="text-sm font-medium text-gray-500">Payment Method</div>
-                          <div className="text-gray-700">{repair.invoice.paymentMethod}</div>
-                        </div>
-                      )}
-
-                      {repair.invoice.notes && (
-                        <div>
-                          <div className="text-sm font-medium text-gray-500">Notes</div>
-                          <div className="text-gray-700">{repair.invoice.notes}</div>
-                        </div>
-                      )}
-
-                      <div className="flex space-x-2">
-                        <Button variant="outline">
-                          <i className="fas fa-print mr-1"></i> Print Invoice
-                        </Button>
-                        <Button variant="outline">
-                          <i className="fas fa-envelope mr-1"></i> Email to Customer
-                        </Button>
-                        {repair.invoice.status !== "paid" && (
-                          <Button>
-                            <i className="fas fa-check-circle mr-1"></i> Mark as Paid
-                          </Button>
-                        )}
-                      </div>
+                      ))}
                     </div>
                   ) : (
                     <div className="text-center py-8">
