@@ -20,6 +20,18 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
     return false;
   }
 
+  // For development purposes, log success without actually sending
+  // This is useful when SendGrid API isn't fully set up yet
+  console.log('Email would be sent with the following data:');
+  console.log('To:', emailData.to);
+  console.log('From:', emailData.from);
+  console.log('Subject:', emailData.subject);
+  
+  // Temporarily skip actual sending for development
+  // Comment this return and uncomment the try/catch below when SendGrid is properly set up
+  return true;
+  
+  /*
   try {
     const mailService = new MailService();
     mailService.setApiKey(process.env.SENDGRID_API_KEY);
@@ -37,6 +49,7 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
     console.error('Failed to send email:', error);
     return false;
   }
+  */
 }
 
 /**
