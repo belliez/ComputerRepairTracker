@@ -2,6 +2,26 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { RepairWithRelations } from "@/types";
+
+// Define RepairItem interface if not already defined elsewhere
+interface RepairItem {
+  id: number;
+  repairId: number;
+  inventoryItemId: number | null;
+  description: string;
+  itemType: "part" | "service";
+  unitPrice: number;
+  quantity: number;
+  isCompleted: boolean;
+  inventoryItem?: {
+    id: number;
+    name: string;
+    sku: string;
+    description: string;
+    unitPrice: number;
+    quantityInStock: number;
+  } | null;
+}
 import { 
   Dialog,
   DialogContent,
@@ -60,8 +80,14 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const { data: repair, isLoading } = useQuery<RepairWithRelations>({
+  const { data: repair, isLoading: isLoadingRepair } = useQuery<RepairWithRelations>({
     queryKey: [`/api/repairs/${repairId}/details`],
+  });
+
+  // Fetch repair items separately for better real-time updates
+  const { data: repairItems, isLoading: isLoadingItems } = useQuery<RepairItem[]>({
+    queryKey: [`/api/repairs/${repairId}/items`],
+    enabled: !!repairId,
   });
   
   // Initialize the current status from the repair data
@@ -187,6 +213,8 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
     }
   };
 
+  const isLoading = isLoadingRepair || isLoadingItems;
+  
   if (isLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
