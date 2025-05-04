@@ -260,7 +260,11 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
         priorityLevel: Number(values.priorityLevel || 3),
         technicianId: values.technicianId ? Number(values.technicianId) : null,
         notes: values.notes || "",
-        isUnderWarranty: Boolean(values.isUnderWarranty)
+        isUnderWarranty: Boolean(values.isUnderWarranty),
+        // Convert string date to proper ISO date if it exists
+        estimatedCompletionDate: values.estimatedCompletionDate 
+          ? new Date(values.estimatedCompletionDate).toISOString() 
+          : undefined
       };
       
       // For new repairs, add ticket number
