@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { initializeDemo } from "./init-db";
 import { sendEmail, generateQuoteEmail, generateInvoiceEmail, EmailData } from "./email";
+import Stripe from "stripe";
 import {
   insertCustomerSchema,
   insertDeviceSchema,
