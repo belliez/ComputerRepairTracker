@@ -641,71 +641,83 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
             {/* Quotes Tab */}
             <TabsContent value="quotes">
               <Card>
-                <CardHeader>
-                  <CardTitle>Quote</CardTitle>
-                  <CardDescription>
-                    Quote details for customer approval
-                  </CardDescription>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Quotes</CardTitle>
+                    <CardDescription>
+                      Quote details for customer approval
+                    </CardDescription>
+                  </div>
+                  {canCreateQuote && (
+                    <Button onClick={handleCreateQuote} className="ml-auto">
+                      <Plus className="h-4 w-4 mr-1" /> New Quote
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent>
-                  {repair.quote ? (
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="text-xl font-medium">Quote #{repair.quote.quoteNumber}</div>
-                          <div className="text-sm text-gray-500">
-                            Created on {format(new Date(repair.quote.dateCreated), "MMMM d, yyyy")}
+                  {repair.quotes && repair.quotes.length > 0 ? (
+                    <div className="space-y-8">
+                      {repair.quotes.map((quote, index) => (
+                        <div key={quote.id} className="space-y-4">
+                          {index > 0 && <Separator className="my-6" />}
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="text-xl font-medium">Quote #{quote.quoteNumber}</div>
+                              <div className="text-sm text-gray-500">
+                                Created on {format(new Date(quote.dateCreated), "MMMM d, yyyy")}
+                              </div>
+                              {quote.expirationDate && (
+                                <div className="text-sm text-gray-500">
+                                  Expires on {format(new Date(quote.expirationDate), "MMMM d, yyyy")}
+                                </div>
+                              )}
+                            </div>
+                            <Badge className={
+                              quote.status === "approved" 
+                                ? "bg-green-100 text-green-800 border-green-300" 
+                                : quote.status === "rejected"
+                                  ? "bg-red-100 text-red-800 border-red-300"
+                                  : "bg-yellow-100 text-yellow-800 border-yellow-300"
+                            }>
+                              {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+                            </Badge>
                           </div>
-                          {repair.quote.expirationDate && (
-                            <div className="text-sm text-gray-500">
-                              Expires on {format(new Date(repair.quote.expirationDate), "MMMM d, yyyy")}
+
+                          <Separator />
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <div className="text-sm font-medium text-gray-500">Subtotal</div>
+                              <div className="text-lg">${quote.subtotal.toFixed(2)}</div>
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-500">Tax</div>
+                              <div className="text-lg">${quote.tax?.toFixed(2) || "0.00"}</div>
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="text-sm font-medium text-gray-500">Total</div>
+                            <div className="text-2xl font-bold">${quote.total.toFixed(2)}</div>
+                          </div>
+
+                          {quote.notes && (
+                            <div>
+                              <div className="text-sm font-medium text-gray-500">Notes</div>
+                              <div className="text-gray-700">{quote.notes}</div>
                             </div>
                           )}
+                          
+                          <div className="flex space-x-2 mt-4">
+                            <Button variant="outline">
+                              <i className="fas fa-print mr-1"></i> Print Quote
+                            </Button>
+                            <Button variant="outline">
+                              <i className="fas fa-envelope mr-1"></i> Email to Customer
+                            </Button>
+                          </div>
                         </div>
-                        <Badge className={
-                          repair.quote.status === "approved" 
-                            ? "bg-green-100 text-green-800 border-green-300" 
-                            : repair.quote.status === "rejected"
-                              ? "bg-red-100 text-red-800 border-red-300"
-                              : "bg-yellow-100 text-yellow-800 border-yellow-300"
-                        }>
-                          {repair.quote.status.charAt(0).toUpperCase() + repair.quote.status.slice(1)}
-                        </Badge>
-                      </div>
-
-                      <Separator />
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <div className="text-sm font-medium text-gray-500">Subtotal</div>
-                          <div className="text-lg">${repair.quote.subtotal.toFixed(2)}</div>
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-gray-500">Tax</div>
-                          <div className="text-lg">${repair.quote.tax?.toFixed(2) || "0.00"}</div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="text-sm font-medium text-gray-500">Total</div>
-                        <div className="text-2xl font-bold">${repair.quote.total.toFixed(2)}</div>
-                      </div>
-
-                      {repair.quote.notes && (
-                        <div>
-                          <div className="text-sm font-medium text-gray-500">Notes</div>
-                          <div className="text-gray-700">{repair.quote.notes}</div>
-                        </div>
-                      )}
-
-                      <div className="flex space-x-2">
-                        <Button variant="outline">
-                          <i className="fas fa-print mr-1"></i> Print Quote
-                        </Button>
-                        <Button variant="outline">
-                          <i className="fas fa-envelope mr-1"></i> Email to Customer
-                        </Button>
-                      </div>
+                      ))}
                     </div>
                   ) : (
                     <div className="text-center py-8">

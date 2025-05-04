@@ -348,7 +348,9 @@ export class DatabaseStorage implements IStorage {
       device,
       technician,
       items: itemsWithInventory,
-      quote: quoteList.find(q => q.status === "approved"),
+      // Return all quotes, not just approved ones
+      quote: quoteList.length > 0 ? quoteList[0] : null,
+      quotes: quoteList,
       invoice: invoiceList[0], // Just get the first invoice if any
     };
   }
