@@ -58,7 +58,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
 
   // Get existing repair if we're editing
   const { data: repair, isLoading: isLoadingRepair } = useQuery({
-    queryKey: ["/api/repairs", repairId],
+    queryKey: [`/api/repairs/${repairId}/details`],
     enabled: !!repairId,
   });
 
@@ -109,9 +109,12 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   // Update form with repair data if editing
   useEffect(() => {
     if (repair) {
+      console.log("Editing repair:", repair);
+      
       setSelectedCustomerId(repair.customerId);
       setSelectedDeviceId(repair.deviceId);
       
+      // When editing, set all values from the existing repair
       form.reset({
         customerId: repair.customerId,
         deviceId: repair.deviceId,
@@ -126,10 +129,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
           : undefined,
       });
 
-      // Move to device step if customer is already set
-      if (repair.customerId) {
-        setCurrentStep("device");
-      }
+      // When editing an existing repair, skip straight to the service details step
+      setCurrentStep("service");
     }
   }, [repair, form]);
 
@@ -149,12 +150,14 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
 
   // Create or update repair mutation
   const mutation = useMutation({
-    mutationFn: async (values: z.infer<typeof formSchema>) => {
+    mutationFn: async (values: any) => {
       if (repairId) {
         // Update existing repair
+        console.log(`Updating repair #${repairId} with:`, values);
         return apiRequest("PUT", `/api/repairs/${repairId}`, values);
       } else {
         // Create new repair
+        console.log(`Creating new repair with:`, values);
         return apiRequest("POST", "/api/repairs", values);
       }
     },
@@ -162,13 +165,22 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       // Invalidate all queries that start with '/api/repairs'
       queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
       
-      // Also invalidate any filtered repair queries
+      // Also invalidate specific repair queries
+      if (repairId) {
+        queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      }
+      
+      // Invalidate any filtered repair queries
       queryClient.invalidateQueries({ 
         predicate: (query) => {
           const queryKey = query.queryKey;
-          return Array.isArray(queryKey) && 
-                 queryKey.length > 0 && 
-                 queryKey[0] === "/api/repairs";
+          if (!Array.isArray(queryKey)) return false;
+          
+          const firstKey = queryKey[0];
+          if (typeof firstKey !== 'string') return false;
+          
+          return firstKey.startsWith('/api/repairs');
         }
       });
       
@@ -177,6 +189,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
         description: repairId 
           ? "The repair has been updated successfully" 
           : "The repair has been created successfully",
+        variant: "default",
       });
       onClose();
     },
@@ -762,25 +775,40 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                     return;
                   }
 
-                  // Create submission data with required customer and device
-                  // IMPORTANT: Create a new object WITHOUT spreading formValues
-                  // to have complete control over what gets sent to the server
-                  const apiData = {
-                    customerId: Number(selectedCustomerId),
-                    deviceId: Number(selectedDeviceId),
-                    issue: formValues.issue || "",
-                    // Ensure status is always "intake" for new repairs or whatever is selected for existing ones
-                    status: repairId ? (formValues.status || "intake") : "intake",
-                    priorityLevel: Number(formValues.priorityLevel || 3),
-                    technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
-                    notes: formValues.notes || "",
-                    isUnderWarranty: Boolean(formValues.isUnderWarranty),
-                    // Omit the date field for now to avoid validation issues
-                    // Will implement it later once the basic functionality works
-                    // For new repairs, always provide a ticket number
-                    // For existing repairs, don't include ticketNumber to avoid schema validation errors
-                    ...(repairId ? {} : { ticketNumber })
-                  };
+                  // Create submission data differently based on whether we're creating or updating
+                  let apiData;
+                  
+                  if (repairId) {
+                    // When updating, only send the fields that are editable
+                    apiData = {
+                      status: formValues.status,
+                      priorityLevel: Number(formValues.priorityLevel || 3),
+                      technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
+                      issue: formValues.issue || "",
+                      notes: formValues.notes || "",
+                      isUnderWarranty: Boolean(formValues.isUnderWarranty),
+                      // We can safely update customer and device IDs too
+                      customerId: Number(selectedCustomerId),
+                      deviceId: Number(selectedDeviceId),
+                      // Include estimated completion date if provided
+                      estimatedCompletionDate: formValues.estimatedCompletionDate && formValues.estimatedCompletionDate.trim() !== "" 
+                        ? formValues.estimatedCompletionDate
+                        : null
+                    };
+                  } else {
+                    // For new repairs, include all the required fields
+                    apiData = {
+                      customerId: Number(selectedCustomerId),
+                      deviceId: Number(selectedDeviceId),
+                      issue: formValues.issue || "",
+                      status: "intake", // Always "intake" for new repairs
+                      priorityLevel: Number(formValues.priorityLevel || 3),
+                      technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
+                      notes: formValues.notes || "",
+                      isUnderWarranty: Boolean(formValues.isUnderWarranty),
+                      ticketNumber // New repairs get a ticket number
+                    };
+                  }
                   
                   console.log("Submitting repair data:", apiData);
                   mutation.mutate(apiData, {
