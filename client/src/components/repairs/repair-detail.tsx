@@ -38,8 +38,10 @@ import { Separator } from "@/components/ui/separator";
 import StatusBadge from "./status-badge";
 import QuoteForm from "./quote-form";
 import InvoiceForm from "./invoice-form";
+import IntakeForm from "./intake-form";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { Pencil } from "lucide-react";
 
 interface RepairDetailProps {
   repairId: number;
@@ -51,6 +53,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   const [activeTab, setActiveTab] = useState("details");
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const { toast } = useToast();
 
   const { data: repair, isLoading } = useQuery<RepairWithRelations>({
@@ -84,6 +87,10 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
 
   const handleCreateInvoice = () => {
     setShowInvoiceForm(true);
+  };
+
+  const handleEditRepair = () => {
+    setShowEditForm(true);
   };
 
   if (isLoading) {
@@ -133,7 +140,18 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                   Created on {format(new Date(repair.intakeDate), "MMMM d, yyyy")}
                 </DialogDescription>
               </div>
-              <StatusBadge status={repair.status} className="text-sm py-1 px-3" />
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleEditRepair}
+                  className="flex items-center"
+                >
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+                <StatusBadge status={repair.status} className="text-sm py-1 px-3" />
+              </div>
             </div>
           </DialogHeader>
 
