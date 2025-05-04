@@ -80,6 +80,7 @@ export interface RepairWithRelations extends Repair {
   technician?: Technician;
   items?: (RepairItem & { inventoryItem?: InventoryItem })[];
   quote?: Quote;
+  quotes?: Quote[];
   invoice?: Invoice;
 }
 
