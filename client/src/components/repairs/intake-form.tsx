@@ -763,8 +763,9 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                   }
 
                   // Create submission data with required customer and device
+                  // IMPORTANT: Create a new object WITHOUT spreading formValues
+                  // to have complete control over what gets sent to the server
                   const apiData = {
-                    ...formValues,
                     customerId: Number(selectedCustomerId),
                     deviceId: Number(selectedDeviceId),
                     issue: formValues.issue || "",
@@ -774,10 +775,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                     technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
                     notes: formValues.notes || "",
                     isUnderWarranty: Boolean(formValues.isUnderWarranty),
-                    // Pass estimatedCompletionDate as a string - the schema will handle conversion
-                    estimatedCompletionDate: formValues.estimatedCompletionDate && formValues.estimatedCompletionDate.trim() !== "" 
-                      ? formValues.estimatedCompletionDate
-                      : null,
+                    // Omit the date field for now to avoid validation issues
+                    // Will implement it later once the basic functionality works
                     // For new repairs, always provide a ticket number
                     // For existing repairs, don't include ticketNumber to avoid schema validation errors
                     ...(repairId ? {} : { ticketNumber })

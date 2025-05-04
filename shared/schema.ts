@@ -115,15 +115,19 @@ const baseInsertRepairSchema = createInsertSchema(repairs).omit({
 
 // Then extend it to handle the date conversion
 export const insertRepairSchema = baseInsertRepairSchema.extend({
-  // Override estimatedCompletionDate to accept both Date objects and ISO strings
-  estimatedCompletionDate: z.string().nullable().optional().transform(val => {
-    if (!val) return null;
-    try {
-      return new Date(val);
-    } catch (e) {
-      return null;
-    }
-  })
+  // Override estimatedCompletionDate to accept null or undefined
+  estimatedCompletionDate: z.union([
+    z.null(),
+    z.undefined(),
+    z.date(),
+    z.string().transform(val => {
+      try {
+        return new Date(val);
+      } catch (e) {
+        return null;
+      }
+    })
+  ])
 });
 
 // Repair Items (parts or services added to a repair)
