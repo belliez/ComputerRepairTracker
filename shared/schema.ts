@@ -105,11 +105,25 @@ export const repairs = pgTable("repairs", {
   totalCost: doublePrecision("total_cost"),
 });
 
-export const insertRepairSchema = createInsertSchema(repairs).omit({
+// First create the base schema
+const baseInsertRepairSchema = createInsertSchema(repairs).omit({
   id: true,
   actualCompletionDate: true,
   customerApproval: true,
   totalCost: true,
+});
+
+// Then extend it to handle the date conversion
+export const insertRepairSchema = baseInsertRepairSchema.extend({
+  // Override estimatedCompletionDate to accept both Date objects and ISO strings
+  estimatedCompletionDate: z.string().nullable().optional().transform(val => {
+    if (!val) return null;
+    try {
+      return new Date(val);
+    } catch (e) {
+      return null;
+    }
+  })
 });
 
 // Repair Items (parts or services added to a repair)

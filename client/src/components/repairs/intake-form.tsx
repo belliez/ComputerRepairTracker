@@ -774,9 +774,9 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                     technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
                     notes: formValues.notes || "",
                     isUnderWarranty: Boolean(formValues.isUnderWarranty),
-                    // Process the estimated completion date
+                    // Pass estimatedCompletionDate as a string - the schema will handle conversion
                     estimatedCompletionDate: formValues.estimatedCompletionDate && formValues.estimatedCompletionDate.trim() !== "" 
-                      ? new Date(formValues.estimatedCompletionDate).toISOString()
+                      ? formValues.estimatedCompletionDate
                       : null,
                     // For new repairs, always provide a ticket number
                     // For existing repairs, don't include ticketNumber to avoid schema validation errors
