@@ -66,15 +66,10 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   // Form validation schema
   const formSchema = insertQuoteSchema.extend({
     expirationDate: z.union([
-      z.null(),
-      z.undefined(),
       z.string(),
-      z.date()
-    ]).optional(),
-    dateCreated: z.union([
-      z.string(),
-      z.date()
-    ])
+      z.null()
+    ]).nullish(),
+    dateCreated: z.string()
   });
 
   // Form initialization
@@ -96,18 +91,25 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   // Update form with existing quote data if editing
   useEffect(() => {
     if (existingQuote) {
-      const { id, ...quoteData } = existingQuote;
+      // Extract data safely
+      const quoteData = existingQuote as any;
       
       // Format dates for input fields
       const dateCreated = new Date(quoteData.dateCreated).toISOString().split('T')[0];
       const expirationDate = quoteData.expirationDate 
         ? new Date(quoteData.expirationDate).toISOString().split('T')[0]
-        : undefined;
+        : null;
       
       form.reset({
-        ...quoteData,
+        repairId: quoteData.repairId,
+        quoteNumber: quoteData.quoteNumber,
         dateCreated,
         expirationDate,
+        subtotal: quoteData.subtotal,
+        tax: quoteData.tax,
+        total: quoteData.total,
+        status: quoteData.status,
+        notes: quoteData.notes || "",
       });
     }
   }, [existingQuote, form]);
@@ -233,7 +235,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                         <Input 
                           type="date" 
                           {...field} 
-                          value={field.value || ''}
+                          value={typeof field.value === 'string' ? field.value : ''}
                         />
                       </FormControl>
                       <FormDescription>
@@ -259,7 +261,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                                 ? "bg-red-100 text-red-800 border-red-300"
                                 : "bg-yellow-100 text-yellow-800 border-yellow-300"
                           }>
-                            {field.value.charAt(0).toUpperCase() + field.value.slice(1)}
+                            {field.value ? field.value.charAt(0).toUpperCase() + field.value.slice(1) : 'Pending'}
                           </Badge>
                         </div>
                       </FormControl>

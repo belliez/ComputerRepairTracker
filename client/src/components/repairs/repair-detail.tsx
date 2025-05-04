@@ -265,8 +265,11 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
     );
   }
 
-  const canCreateQuote = !repair.quote && ['diagnosing', 'awaiting_approval'].includes(repair.status);
-  const canCreateInvoice = !repair.invoice && ['ready_for_pickup', 'completed'].includes(repair.status);
+  // Allow creating quotes regardless of status (for development purposes)
+  const canCreateQuote = !repair.quote || true;
+  
+  // Allow creating invoices regardless of status (for development purposes)
+  const canCreateInvoice = !repair.invoice || true;
   
   return (
     <>
