@@ -134,8 +134,16 @@ export default function RepairItemForm({
         queryKey: [`/api/repairs/${repairId}/details`],
         refetchType: 'active',
       });
+      
+      // Invalidate and immediately refetch repair items
+      await queryClient.invalidateQueries({ 
+        queryKey: [`/api/repairs/${repairId}/items`],
+        refetchType: 'active',
+      });
+      
+      // Force refetch the repair items
       await queryClient.refetchQueries({ 
-        queryKey: [`/api/repairs/${repairId}/details`],
+        queryKey: [`/api/repairs/${repairId}/items`],
         exact: true
       });
       

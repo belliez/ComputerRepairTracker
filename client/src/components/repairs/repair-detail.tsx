@@ -192,16 +192,22 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
         description: "The item has been removed from the repair",
       });
       
-      // Invalidate and immediately refetch the details
+      // Invalidate and immediately refetch the repair items
       await queryClient.invalidateQueries({ 
-        queryKey: [`/api/repairs/${repairId}/details`],
+        queryKey: [`/api/repairs/${repairId}/items`],
         refetchType: 'active'
       });
       
       // Force refetch to update the UI
       await queryClient.refetchQueries({ 
-        queryKey: [`/api/repairs/${repairId}/details`],
+        queryKey: [`/api/repairs/${repairId}/items`],
         exact: true
+      });
+      
+      // Also invalidate the repair details
+      await queryClient.invalidateQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        refetchType: 'active'
       });
     } catch (error) {
       console.error("Failed to delete repair item:", error);
@@ -520,7 +526,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {repair.items && repair.items.length > 0 ? (
+                  {repairItems && repairItems.length > 0 ? (
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -534,7 +540,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {repair.items.map((item) => (
+                        {repairItems.map((item) => (
                           <TableRow key={item.id}>
                             <TableCell className="font-medium">
                               {item.description}
@@ -602,9 +608,9 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                 </CardContent>
                 <CardFooter className="flex justify-between">
                   <div>
-                    {repair.items && repair.items.length > 0 && (
+                    {repairItems && repairItems.length > 0 && (
                       <div className="text-right font-medium">
-                        Total: ${repair.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0).toFixed(2)}
+                        Total: ${repairItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0).toFixed(2)}
                       </div>
                     )}
                   </div>
