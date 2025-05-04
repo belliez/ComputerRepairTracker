@@ -547,7 +547,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                   <FormLabel>Status</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(value)}
-                    defaultValue={field.value}
+                    defaultValue="intake"
+                    value={field.value || "intake"}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -767,7 +768,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                     customerId: Number(selectedCustomerId),
                     deviceId: Number(selectedDeviceId),
                     issue: formValues.issue || "",
-                    status: formValues.status || "intake",
+                    // Ensure status is always "intake" for new repairs or whatever is selected for existing ones
+                    status: repairId ? (formValues.status || "intake") : "intake",
                     priorityLevel: Number(formValues.priorityLevel || 3),
                     technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
                     notes: formValues.notes || "",
