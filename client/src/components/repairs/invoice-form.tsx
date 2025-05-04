@@ -32,16 +32,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import EditableLineItems from "./editable-line-items";
 
 interface InvoiceFormProps {
   repairId?: number | null;
@@ -317,39 +309,30 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
                 />
               </div>
 
-              {repairItems && repairItems.length > 0 && (
-                <div className="border rounded-md overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead className="text-right">Price</TableHead>
-                        <TableHead className="text-right">Quantity</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {repairItems.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.description}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={
-                              item.itemType === "part" 
-                                ? "bg-blue-100 text-blue-800 border-blue-300" 
-                                : "bg-purple-100 text-purple-800 border-purple-300"
-                            }>
-                              {item.itemType === "part" ? "Part" : "Service"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{item.quantity}</TableCell>
-                          <TableCell className="text-right">${(item.unitPrice * item.quantity).toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+              {/* Replace with editable line items */}
+              {repairItems && (
+                <EditableLineItems 
+                  items={repairItems.map(item => ({
+                    id: item.id,
+                    description: item.description,
+                    itemType: item.itemType as "part" | "service",
+                    unitPrice: item.unitPrice,
+                    quantity: item.quantity,
+                    total: item.unitPrice * item.quantity
+                  }))}
+                  onChange={(updatedItems) => {
+                    // Calculate new totals
+                    const taxRate = 0.0825; // 8.25% tax
+                    const newSubtotal = updatedItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+                    const newTaxAmount = newSubtotal * taxRate;
+                    const newTotal = newSubtotal + newTaxAmount;
+                    
+                    form.setValue("subtotal", newSubtotal);
+                    form.setValue("tax", newTaxAmount);
+                    form.setValue("total", newTotal);
+                  }}
+                  readOnly={false}
+                />
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

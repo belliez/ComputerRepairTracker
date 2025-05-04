@@ -32,16 +32,8 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import EditableLineItems from "./editable-line-items";
 
 interface QuoteFormProps {
   repairId: number;
@@ -296,46 +288,30 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                 />
               </div>
 
-              <div className="border rounded-md overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                      <TableHead className="text-right">Quantity</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {repairItems?.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-gray-500 py-4">
-                          No items added to this repair yet
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      repairItems?.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium">{item.description}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className={
-                              item.itemType === "part" 
-                                ? "bg-blue-100 text-blue-800 border-blue-300" 
-                                : "bg-purple-100 text-purple-800 border-purple-300"
-                            }>
-                              {item.itemType === "part" ? "Part" : "Service"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
-                          <TableCell className="text-right">{item.quantity}</TableCell>
-                          <TableCell className="text-right">${(item.unitPrice * item.quantity).toFixed(2)}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+              {/* Use the new EditableLineItems component */}
+              {repairItems && (
+                <EditableLineItems 
+                  items={repairItems.map(item => ({
+                    id: item.id,
+                    description: item.description,
+                    itemType: item.itemType as "part" | "service",
+                    unitPrice: item.unitPrice,
+                    quantity: item.quantity,
+                    total: item.unitPrice * item.quantity
+                  }))}
+                  onChange={(updatedItems) => {
+                    // We'll use this to update the form subtotals
+                    const newSubtotal = updatedItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+                    const newTaxAmount = newSubtotal * taxRate;
+                    const newTotal = newSubtotal + newTaxAmount;
+                    
+                    form.setValue("subtotal", newSubtotal);
+                    form.setValue("tax", newTaxAmount);
+                    form.setValue("total", newTotal);
+                  }}
+                  readOnly={false}
+                />
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2">
