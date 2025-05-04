@@ -102,7 +102,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       priorityLevel: 3,
       isUnderWarranty: false,
       technicianId: undefined,
-      estimatedCompletionDate: undefined,
+      // estimatedCompletionDate removed to avoid validation errors
     },
   });
 
@@ -251,8 +251,11 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       const ticketNumber = `RT-${year}${month}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
       
       // Create submission data with required customer and device
+      // IMPORTANT: Remove some fields to avoid validation issues
+      const { estimatedCompletionDate, ...restValues } = values;
+      
       const apiData = {
-        ...values,
+        ...restValues,
         customerId: Number(selectedCustomerId),
         deviceId: Number(selectedDeviceId),
         issue: values.issue || "",
@@ -260,11 +263,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
         priorityLevel: Number(values.priorityLevel || 3),
         technicianId: values.technicianId ? Number(values.technicianId) : null,
         notes: values.notes || "",
-        isUnderWarranty: Boolean(values.isUnderWarranty),
-        // Convert string date to proper ISO date if it exists
-        estimatedCompletionDate: values.estimatedCompletionDate 
-          ? new Date(values.estimatedCompletionDate).toISOString() 
-          : undefined
+        isUnderWarranty: Boolean(values.isUnderWarranty)
+        // Omit estimatedCompletionDate - will be set to null by default in DB
       };
       
       // For new repairs, add ticket number
@@ -618,7 +618,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
           />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormField
+            {/* Temporarily disabled due to validation issues */}
+            {/* <FormField
               control={form.control}
               name="estimatedCompletionDate"
               render={({ field }) => (
@@ -637,7 +638,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            /> */}
             
             <FormField
               control={form.control}
