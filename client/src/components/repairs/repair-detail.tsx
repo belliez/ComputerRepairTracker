@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { RepairWithRelations } from "@/types";
-import { Pencil, Plus, Trash2, Printer, Mail } from "lucide-react";
+import { Pencil, Plus, Trash2, Printer, Mail, CreditCard, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { printDocument, createQuoteDocument, createInvoiceDocument } from "@/lib/print-utils";
@@ -75,6 +75,7 @@ import InvoiceForm from "./invoice-form";
 import IntakeForm from "./intake-form";
 import { Edit } from "lucide-react";
 import RepairItemForm from "./repair-item-form";
+import PaymentForm from "../payments/payment-form";
 
 interface RepairDetailProps {
   repairId: number;
@@ -95,6 +96,8 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteItemType, setDeleteItemType] = useState<"quote" | "invoice" | null>(null);
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [currentInvoice, setCurrentInvoice] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -436,6 +439,51 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
         description: "Failed to delete the repair item",
         variant: "destructive",
       });
+    }
+  };
+  
+  // Payment handlers
+  const handleOnlinePayment = (invoice: any) => {
+    setCurrentInvoice(invoice);
+    setShowPaymentForm(true);
+  };
+  
+  const markAsPaidMutation = useMutation({
+    mutationFn: async (invoiceId: number) => {
+      return apiRequest("POST", `/api/invoices/${invoiceId}/pay`, {
+        paymentMethod: "in_person",
+        paymentDate: new Date().toISOString()
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Payment recorded",
+        description: "Invoice has been marked as paid",
+      });
+      
+      // Refresh data
+      queryClient.invalidateQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        refetchType: 'active'
+      });
+      
+      queryClient.refetchQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        exact: true
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to mark invoice as paid",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  const handleMarkAsPaid = (invoiceId: number) => {
+    if (confirm('Are you sure you want to mark this invoice as paid?')) {
+      markAsPaidMutation.mutate(invoiceId);
     }
   };
 
@@ -1085,9 +1133,20 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                               )}
                             </Button>
                             {invoice.status !== "paid" && (
-                              <Button>
-                                <i className="fas fa-check-circle mr-1"></i> Mark as Paid
-                              </Button>
+                              <>
+                                <Button
+                                  onClick={() => handleOnlinePayment(invoice)}
+                                  variant="default"
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <CreditCard className="h-4 w-4 mr-1" /> Pay Online
+                                </Button>
+                                <Button
+                                  onClick={() => handleMarkAsPaid(invoice.id)}
+                                >
+                                  <Check className="h-4 w-4 mr-1" /> Mark as Paid
+                                </Button>
+                              </>
                             )}
                             <Button 
                               variant="outline" 
@@ -1227,6 +1286,23 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Payment Form Dialog */}
+      {showPaymentForm && currentInvoice && (
+        <PaymentForm
+          invoiceId={currentInvoice.id}
+          total={currentInvoice.total}
+          isOpen={showPaymentForm}
+          onClose={() => {
+            setShowPaymentForm(false);
+            setCurrentInvoice(null);
+            // Refresh invoice data
+            queryClient.invalidateQueries({ 
+              queryKey: [`/api/repairs/${repairId}/details`]
+            });
+          }}
+        />
+      )}
     </>
   );
 }
