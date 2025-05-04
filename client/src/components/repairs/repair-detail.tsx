@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { RepairWithRelations } from "@/types";
@@ -54,29 +54,39 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   const [showQuoteForm, setShowQuoteForm] = useState(false);
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   const { toast } = useToast();
 
   const { data: repair, isLoading } = useQuery<RepairWithRelations>({
     queryKey: [`/api/repairs/${repairId}/details`],
   });
+  
+  // Initialize the current status from the repair data
+  useEffect(() => {
+    if (repair && repair.status) {
+      setCurrentStatus(repair.status);
+    }
+  }, [repair]);
 
   const handleStatusChange = async (newStatus: string) => {
     try {
+      // Make sure repair exists
+      if (!repair) return;
+      
       // Don't update if it's already the current status
-      if (repair.status === newStatus) return;
+      if (currentStatus === newStatus) return;
 
+      console.log(`Changing status from ${currentStatus} to ${newStatus}`);
+
+      // Update the local state immediately for the UI
+      setCurrentStatus(newStatus);
+      
       // Make the API request
-      const updatedRepair = await apiRequest("PUT", `/api/repairs/${repairId}`, {
+      await apiRequest("PUT", `/api/repairs/${repairId}`, {
         status: newStatus
       });
 
-      // Immediately update the repair data in the cache
-      queryClient.setQueryData([`/api/repairs/${repairId}/details`], {
-        ...repair,
-        status: newStatus
-      });
-
-      // Also update the repair list
+      // Invalidate the queries to ensure we get fresh data on next load
       queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
       
       toast({
@@ -85,6 +95,15 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
       });
     } catch (error) {
       console.error("Failed to update repair status:", error);
+      
+      // If the API call fails, revert the local state to the previous value
+      if (repair && repair.status) {
+        setCurrentStatus(repair.status);
+      }
+      
+      // And refresh the data
+      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      
       toast({
         title: "Error",
         description: "Failed to update repair status",
@@ -333,65 +352,65 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
                     <Button 
-                      variant={repair.status === "intake" ? "default" : "outline"}
+                      variant={currentStatus === "intake" ? "default" : "outline"}
                       onClick={() => handleStatusChange("intake")}
-                      className={repair.status === "intake" ? "" : "border-yellow-300 text-yellow-700 hover:bg-yellow-50"}
+                      className={currentStatus === "intake" ? "" : "border-yellow-300 text-yellow-700 hover:bg-yellow-50"}
                     >
                       <i className="fas fa-clipboard-list mr-1"></i> Intake
                     </Button>
                     <Button 
-                      variant={repair.status === "diagnosing" ? "default" : "outline"}
+                      variant={currentStatus === "diagnosing" ? "default" : "outline"}
                       onClick={() => handleStatusChange("diagnosing")}
-                      className={repair.status === "diagnosing" ? "" : "border-blue-300 text-blue-700 hover:bg-blue-50"}
+                      className={currentStatus === "diagnosing" ? "" : "border-blue-300 text-blue-700 hover:bg-blue-50"}
                     >
                       <i className="fas fa-search mr-1"></i> Diagnosing
                     </Button>
                     <Button 
-                      variant={repair.status === "awaiting_approval" ? "default" : "outline"}
+                      variant={currentStatus === "awaiting_approval" ? "default" : "outline"}
                       onClick={() => handleStatusChange("awaiting_approval")}
-                      className={repair.status === "awaiting_approval" ? "" : "border-purple-300 text-purple-700 hover:bg-purple-50"}
+                      className={currentStatus === "awaiting_approval" ? "" : "border-purple-300 text-purple-700 hover:bg-purple-50"}
                     >
                       <i className="fas fa-clock mr-1"></i> Awaiting Approval
                     </Button>
                     <Button 
-                      variant={repair.status === "parts_ordered" ? "default" : "outline"}
+                      variant={currentStatus === "parts_ordered" ? "default" : "outline"}
                       onClick={() => handleStatusChange("parts_ordered")}
-                      className={repair.status === "parts_ordered" ? "" : "border-blue-300 text-blue-700 hover:bg-blue-50"}
+                      className={currentStatus === "parts_ordered" ? "" : "border-blue-300 text-blue-700 hover:bg-blue-50"}
                     >
                       <i className="fas fa-box mr-1"></i> Parts Ordered
                     </Button>
                     <Button 
-                      variant={repair.status === "in_repair" ? "default" : "outline"}
+                      variant={currentStatus === "in_repair" ? "default" : "outline"}
                       onClick={() => handleStatusChange("in_repair")}
-                      className={repair.status === "in_repair" ? "" : "border-orange-300 text-orange-700 hover:bg-orange-50"}
+                      className={currentStatus === "in_repair" ? "" : "border-orange-300 text-orange-700 hover:bg-orange-50"}
                     >
                       <i className="fas fa-wrench mr-1"></i> In Repair
                     </Button>
                     <Button 
-                      variant={repair.status === "ready_for_pickup" ? "default" : "outline"}
+                      variant={currentStatus === "ready_for_pickup" ? "default" : "outline"}
                       onClick={() => handleStatusChange("ready_for_pickup")}
-                      className={repair.status === "ready_for_pickup" ? "" : "border-green-300 text-green-700 hover:bg-green-50"}
+                      className={currentStatus === "ready_for_pickup" ? "" : "border-green-300 text-green-700 hover:bg-green-50"}
                     >
                       <i className="fas fa-check-circle mr-1"></i> Ready for Pickup
                     </Button>
                     <Button 
-                      variant={repair.status === "completed" ? "default" : "outline"}
+                      variant={currentStatus === "completed" ? "default" : "outline"}
                       onClick={() => handleStatusChange("completed")}
-                      className={repair.status === "completed" ? "" : "border-gray-300 text-gray-700 hover:bg-gray-50"}
+                      className={currentStatus === "completed" ? "" : "border-gray-300 text-gray-700 hover:bg-gray-50"}
                     >
                       <i className="fas fa-check mr-1"></i> Completed
                     </Button>
                     <Button 
-                      variant={repair.status === "on_hold" ? "default" : "outline"}
+                      variant={currentStatus === "on_hold" ? "default" : "outline"}
                       onClick={() => handleStatusChange("on_hold")}
-                      className={repair.status === "on_hold" ? "" : "border-red-300 text-red-700 hover:bg-red-50"}
+                      className={currentStatus === "on_hold" ? "" : "border-red-300 text-red-700 hover:bg-red-50"}
                     >
                       <i className="fas fa-pause mr-1"></i> On Hold
                     </Button>
                     <Button 
-                      variant={repair.status === "cancelled" ? "default" : "outline"}
+                      variant={currentStatus === "cancelled" ? "default" : "outline"}
                       onClick={() => handleStatusChange("cancelled")}
-                      className={repair.status === "cancelled" ? "" : "border-red-300 text-red-700 hover:bg-red-50"}
+                      className={currentStatus === "cancelled" ? "" : "border-red-300 text-red-700 hover:bg-red-50"}
                     >
                       <i className="fas fa-times-circle mr-1"></i> Cancelled
                     </Button>
