@@ -1,7 +1,20 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { RepairWithRelations } from "@/types";
+import { Pencil, Plus, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { 
+  AlertDialog,
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 
 // Define RepairItem interface if not already defined elsewhere
 interface RepairItem {
@@ -59,9 +72,7 @@ import StatusBadge from "./status-badge";
 import QuoteForm from "./quote-form";
 import InvoiceForm from "./invoice-form";
 import IntakeForm from "./intake-form";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { Pencil, Plus, Trash2, Edit } from "lucide-react";
+import { Edit } from "lucide-react";
 import RepairItemForm from "./repair-item-form";
 
 interface RepairDetailProps {
@@ -708,12 +719,26 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                             </div>
                           )}
                           
-                          <div className="flex space-x-2 mt-4">
+                          <div className="flex flex-wrap gap-2 mt-4">
                             <Button variant="outline">
                               <i className="fas fa-print mr-1"></i> Print Quote
                             </Button>
                             <Button variant="outline">
                               <i className="fas fa-envelope mr-1"></i> Email to Customer
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="text-blue-500 hover:text-blue-700"
+                              onClick={() => handleEditQuote(quote.id)}
+                            >
+                              <Pencil className="h-4 w-4 mr-1" /> Edit
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() => handleDeleteQuote(quote.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" /> Delete
                             </Button>
                           </div>
                         </div>
@@ -823,7 +848,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                             </div>
                           )}
 
-                          <div className="flex space-x-2 mt-4">
+                          <div className="flex flex-wrap gap-2 mt-4">
                             <Button variant="outline">
                               <i className="fas fa-print mr-1"></i> Print Invoice
                             </Button>
@@ -835,6 +860,20 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                                 <i className="fas fa-check-circle mr-1"></i> Mark as Paid
                               </Button>
                             )}
+                            <Button 
+                              variant="outline" 
+                              className="text-blue-500 hover:text-blue-700"
+                              onClick={() => handleEditInvoice(invoice.id)}
+                            >
+                              <Pencil className="h-4 w-4 mr-1" /> Edit
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() => handleDeleteInvoice(invoice.id)}
+                            >
+                              <Trash2 className="h-4 w-4 mr-1" /> Delete
+                            </Button>
                           </div>
                         </div>
                       ))}
