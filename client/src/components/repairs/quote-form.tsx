@@ -65,7 +65,16 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
 
   // Form validation schema
   const formSchema = insertQuoteSchema.extend({
-    expirationDate: z.string().optional(),
+    expirationDate: z.union([
+      z.null(),
+      z.undefined(),
+      z.string(),
+      z.date()
+    ]).optional(),
+    dateCreated: z.union([
+      z.string(),
+      z.date()
+    ])
   });
 
   // Form initialization
