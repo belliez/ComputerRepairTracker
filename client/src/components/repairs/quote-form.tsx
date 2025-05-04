@@ -130,10 +130,12 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   // Create or update quote mutation
   const mutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
-      // Format data
+      // Format data for server-side expectations
       const quoteData = {
         ...values,
-        expirationDate: values.expirationDate ? new Date(values.expirationDate).toISOString() : undefined,
+        // Convert string dates to proper Date objects for the server
+        dateCreated: new Date(values.dateCreated).toISOString(),
+        expirationDate: values.expirationDate ? new Date(values.expirationDate).toISOString() : null,
       };
       
       if (quoteId) {
