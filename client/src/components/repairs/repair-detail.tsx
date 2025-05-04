@@ -85,10 +85,19 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   });
 
   // Fetch repair items separately for better real-time updates
-  const { data: repairItems, isLoading: isLoadingItems } = useQuery<RepairItem[]>({
+  const { 
+    data: repairItems, 
+    isLoading: isLoadingItems,
+    refetch: refetchRepairItems
+  } = useQuery<RepairItem[]>({
     queryKey: [`/api/repairs/${repairId}/items`],
     enabled: !!repairId,
   });
+  
+  // Debug log whenever repair items change
+  useEffect(() => {
+    console.log("Repair items updated:", repairItems);
+  }, [repairItems]);
   
   // Initialize the current status from the repair data
   useEffect(() => {
@@ -872,6 +881,16 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
           onClose={() => {
             setShowRepairItemForm(false);
             setCurrentEditingItem(null);
+            
+            // Explicitly refetch the repair items when the form closes
+            console.log("Manually refetching repair items after form close");
+            refetchRepairItems();
+            
+            // Also refetch the repair details
+            queryClient.refetchQueries({ 
+              queryKey: [`/api/repairs/${repairId}/details`],
+              exact: true
+            });
           }}
         />
       )}
