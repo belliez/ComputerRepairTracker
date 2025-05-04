@@ -18,6 +18,14 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize Stripe
+  if (!process.env.STRIPE_SECRET_KEY) {
+    console.warn("STRIPE_SECRET_KEY is not set. Payment processing will not work.");
+  }
+  const stripe = process.env.STRIPE_SECRET_KEY 
+    ? new Stripe(process.env.STRIPE_SECRET_KEY) 
+    : null;
+  
   // Initialize demo data
   try {
     await initializeDemo();
@@ -811,7 +819,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid ID format" });
       }
 
-      const { paymentMethod } = req.body;
+      const { paymentMethod, paymentIntentId } = req.body;
       if (!paymentMethod) {
         return res.status(400).json({ error: "Payment method is required" });
       }
@@ -821,10 +829,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Invoice not found" });
       }
 
+      // If payment was made via Stripe, verify the payment intent is successful
+      if (paymentMethod === "credit_card" && paymentIntentId && stripe) {
+        try {
+          const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+          if (paymentIntent.status !== "succeeded") {
+            return res.status(400).json({ error: "Payment has not been completed" });
+          }
+        } catch (stripeError) {
+          console.error("Error verifying Stripe payment:", stripeError);
+          return res.status(400).json({ error: "Could not verify payment" });
+        }
+      }
+
       const updatedInvoice = await storage.updateInvoice(id, {
         status: "paid",
         datePaid: new Date(),
         paymentMethod,
+        stripePaymentIntentId: paymentIntentId || null
       });
 
       // Also update the repair status to completed if it's ready for pickup
@@ -838,8 +860,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(updatedInvoice);
     } catch (error) {
+      console.error("Error processing payment:", error);
       res.status(500).json({ error: "Failed to process payment" });
     }
+  });
+  
+  // Stripe webhook handler for payment confirmations
+  apiRouter.post("/stripe-webhook", express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+    if (!stripe) {
+      return res.status(400).json({ error: "Stripe is not configured" });
+    }
+
+    const sig = req.headers['stripe-signature'];
+
+    if (!sig || !process.env.STRIPE_WEBHOOK_SECRET) {
+      return res.status(400).json({ error: "Stripe webhook signature or secret is missing" });
+    }
+
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (err: any) {
+      console.error(`Webhook Error: ${err.message}`);
+      return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the event
+    if (event.type === 'payment_intent.succeeded') {
+      const paymentIntent = event.data.object;
+      
+      // Extract the invoice ID from metadata
+      const invoiceId = paymentIntent.metadata?.invoiceId;
+      if (invoiceId) {
+        const id = parseInt(invoiceId);
+        if (!isNaN(id)) {
+          try {
+            const invoice = await storage.getInvoice(id);
+            if (invoice && invoice.status !== "paid") {
+              // Update the invoice to paid
+              await storage.updateInvoice(id, {
+                status: "paid",
+                datePaid: new Date(),
+                paymentMethod: "credit_card",
+                stripePaymentIntentId: paymentIntent.id
+              });
+              
+              // Update the repair status if needed
+              const repair = await storage.getRepair(invoice.repairId);
+              if (repair && repair.status === "ready_for_pickup") {
+                await storage.updateRepair(repair.id, {
+                  status: "completed",
+                  actualCompletionDate: new Date(),
+                });
+              }
+            }
+          } catch (error) {
+            console.error("Error processing webhook payment:", error);
+          }
+        }
+      }
+    }
+
+    // Return a response to acknowledge receipt of the event
+    res.json({ received: true });
   });
 
   // Email Quote to Customer
@@ -955,6 +1039,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending invoice email:", error);
       res.status(500).json({ error: "Failed to send invoice email" });
+    }
+  });
+  
+  // Create a payment intent for Stripe
+  apiRouter.post("/invoices/:id/create-payment-intent", async (req: Request, res: Response) => {
+    try {
+      if (!stripe) {
+        return res.status(400).json({ 
+          error: "Payment processing unavailable", 
+          message: "Stripe is not configured. Please set the STRIPE_SECRET_KEY environment variable." 
+        });
+      }
+
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid invoice ID format" });
+      }
+
+      const invoice = await storage.getInvoice(id);
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      // Get the repair
+      const repair = await storage.getRepair(invoice.repairId);
+      if (!repair) {
+        return res.status(404).json({ error: "Repair not found" });
+      }
+
+      // Get the customer
+      const customer = await storage.getCustomer(repair.customerId);
+      if (!customer) {
+        return res.status(404).json({ error: "Customer not found" });
+      }
+
+      // Create a payment intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(invoice.total * 100), // Convert to cents
+        currency: "usd",
+        metadata: {
+          invoiceId: invoice.id.toString(),
+          repairId: repair.id.toString(),
+          invoiceNumber: invoice.invoiceNumber,
+          customerName: `${customer.firstName} ${customer.lastName}`,
+          customerEmail: customer.email
+        },
+        receipt_email: customer.email,
+        description: `Invoice #${invoice.invoiceNumber} for Repair #${repair.ticketNumber}`
+      });
+
+      // Return the client secret to the client
+      res.json({ 
+        clientSecret: paymentIntent.client_secret 
+      });
+
+    } catch (error) {
+      console.error("Error creating payment intent:", error);
+      res.status(500).json({ error: "Failed to create payment intent" });
     }
   });
 

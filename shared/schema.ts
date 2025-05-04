@@ -184,6 +184,7 @@ export const invoices = pgTable("invoices", {
   status: text("status").notNull().default("unpaid"), // unpaid, partial, paid
   paymentMethod: text("payment_method"),
   notes: text("notes"),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
 });
 
 // Create a base insert schema for invoices
