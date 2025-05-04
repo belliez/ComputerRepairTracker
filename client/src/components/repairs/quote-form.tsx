@@ -13,6 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+// Helper function to format date to YYYY-MM-DD for input type="date"
+function formatDateForInput(date: Date | string | null | undefined): string {
+  if (!date) return '';
+  const d = new Date(date);
+  return d.toISOString().split('T')[0];
+}
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -63,13 +70,17 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   const taxAmount = subtotal * taxRate;
   const total = subtotal + taxAmount;
 
-  // Form validation schema
-  const formSchema = insertQuoteSchema.extend({
-    expirationDate: z.union([
-      z.string(),
-      z.null()
-    ]).nullish(),
-    dateCreated: z.string()
+  // Form validation schema - client side only
+  const formSchema = z.object({
+    repairId: z.number(),
+    quoteNumber: z.string(),
+    dateCreated: z.string(),
+    expirationDate: z.string().nullable().optional(),
+    subtotal: z.number(),
+    tax: z.number(),
+    total: z.number(),
+    status: z.string(),
+    notes: z.string().nullable().optional()
   });
 
   // Form initialization
@@ -163,7 +174,17 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    mutation.mutate(values);
+    console.log("Form submission values:", values);
+    
+    // Ensure dates are in ISO string format
+    const formattedValues = {
+      ...values,
+      dateCreated: values.dateCreated ? new Date(values.dateCreated).toISOString() : new Date().toISOString(),
+      expirationDate: values.expirationDate ? new Date(values.expirationDate).toISOString() : null,
+    };
+    
+    console.log("Formatted values for submission:", formattedValues);
+    mutation.mutate(formattedValues);
   };
 
   const isLoading = isLoadingItems || isLoadingQuote || mutation.isPending;

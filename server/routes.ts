@@ -647,13 +647,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/quotes", async (req: Request, res: Response) => {
     try {
-      const validatedData = insertQuoteSchema.parse(req.body);
-      const quote = await storage.createQuote(validatedData);
-      res.status(201).json(quote);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ error: "Invalid quote data", details: error.errors });
+      console.log("Received quote data:", JSON.stringify(req.body));
+      // First try to validate
+      try {
+        const validatedData = insertQuoteSchema.parse(req.body);
+        console.log("Validated quote data:", JSON.stringify(validatedData));
+        const quote = await storage.createQuote(validatedData);
+        res.status(201).json(quote);
+      } catch (validationError) {
+        console.error("Quote validation error:", validationError);
+        if (validationError instanceof z.ZodError) {
+          return res.status(400).json({ 
+            error: "Invalid quote data", 
+            details: validationError.errors,
+            receivedData: req.body 
+          });
+        }
+        throw validationError;
       }
+    } catch (error) {
+      console.error("Quote creation error:", error);
       res.status(500).json({ error: "Failed to create quote" });
     }
   });
