@@ -1,17 +1,20 @@
 import {
-  Customer,
-  Device,
-  InventoryItem,
-  Invoice,
-  Quote,
-  Repair,
-  RepairItem,
-  Technician,
   repairStatuses,
+  type Customer,
+  type Device,
+  type InventoryItem,
+  type Invoice,
+  type Quote,
+  type Repair,
+  type RepairItem,
+  type Technician,
 } from "@shared/schema";
 
 // Re-export repairStatuses for use in components
 export { repairStatuses };
+
+// Re-export the types
+export type { Customer, Device, InventoryItem, Invoice, Quote, Repair, RepairItem, Technician };
 
 // Status type definitions for UI
 export type RepairStatus = typeof repairStatuses[number];

@@ -32,7 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { InventoryItem } from "@/types";
+import { InventoryItem, RepairItem } from "@/types";
 
 // Form schema for repair items
 const repairItemSchema = z.object({

@@ -801,6 +801,19 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
           }}
         />
       )}
+
+      {/* Repair Item Form */}
+      {showRepairItemForm && (
+        <RepairItemForm
+          repairId={repairId}
+          isOpen={showRepairItemForm}
+          existingItem={currentEditingItem}
+          onClose={() => {
+            setShowRepairItemForm(false);
+            setCurrentEditingItem(null);
+          }}
+        />
+      )}
     </>
   );
 }
