@@ -130,20 +130,14 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   // Create or update quote mutation
   const mutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
-      // Format data for server-side expectations
-      const quoteData = {
-        ...values,
-        // Convert string dates to proper Date objects for the server
-        dateCreated: new Date(values.dateCreated).toISOString(),
-        expirationDate: values.expirationDate ? new Date(values.expirationDate).toISOString() : null,
-      };
-      
+      // With the schema updated to use z.coerce.date(), we can simplify this
+      // Just pass the values as-is - the server-side zod schema will handle the conversion
       if (quoteId) {
         // Update existing quote
-        return apiRequest("PUT", `/api/quotes/${quoteId}`, quoteData);
+        return apiRequest("PUT", `/api/quotes/${quoteId}`, values);
       } else {
         // Create new quote
-        return apiRequest("POST", "/api/quotes", quoteData);
+        return apiRequest("POST", "/api/quotes", values);
       }
     },
     onSuccess: () => {
@@ -237,7 +231,11 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                         <Input 
                           type="date" 
                           {...field} 
-                          value={typeof field.value === 'string' ? field.value : ''}
+                          onChange={(e) => {
+                            // Just set the string value directly, the schema will handle conversion
+                            field.onChange(e.target.value)
+                          }}
+                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
                         />
                       </FormControl>
                       <FormDescription>

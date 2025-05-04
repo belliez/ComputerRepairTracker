@@ -160,8 +160,15 @@ export const quotes = pgTable("quotes", {
   notes: text("notes"),
 });
 
-export const insertQuoteSchema = createInsertSchema(quotes).omit({
+// Create a base insert schema
+const baseQuoteSchema = createInsertSchema(quotes).omit({
   id: true,
+});
+
+// Create a custom schema with proper date transformations
+export const insertQuoteSchema = baseQuoteSchema.extend({
+  dateCreated: z.coerce.date().optional(),
+  expirationDate: z.coerce.date().nullable().optional(),
 });
 
 // Invoices
@@ -179,9 +186,15 @@ export const invoices = pgTable("invoices", {
   notes: text("notes"),
 });
 
-export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+// Create a base insert schema for invoices
+const baseInvoiceSchema = createInsertSchema(invoices).omit({
   id: true,
   datePaid: true,
+});
+
+// Create a custom schema with proper date transformations
+export const insertInvoiceSchema = baseInvoiceSchema.extend({
+  dateIssued: z.coerce.date().optional(),
 });
 
 // Define TypeScript types for the database models
