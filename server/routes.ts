@@ -393,24 +393,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const technicianId = req.query.technicianId ? parseInt(req.query.technicianId as string) : undefined;
       const status = req.query.status as string;
       
+      console.log("GET /repairs with query params:", { customerId, technicianId, status });
+      
+      // Filter by customer first if specified
       if (customerId) {
         const repairs = await storage.getRepairsByCustomer(customerId);
         return res.json(repairs);
       }
       
+      // Filter by technician if specified
       if (technicianId) {
         const repairs = await storage.getRepairsByTechnician(technicianId);
         return res.json(repairs);
       }
       
-      if (status && repairStatuses.includes(status as any)) {
+      // Filter by status if it's a valid status and is actually provided
+      if (status && status.length > 0 && repairStatuses.includes(status as any)) {
+        console.log(`Filtering repairs by status: ${status}`);
         const repairs = await storage.getRepairsByStatus(status as any);
         return res.json(repairs);
       }
       
+      // If no filters are active, return all repairs
+      console.log("No filters active, returning all repairs");
       const repairs = await storage.getRepairs();
       res.json(repairs);
     } catch (error) {
+      console.error("Error fetching repairs:", error);
       res.status(500).json({ error: "Failed to fetch repairs" });
     }
   });

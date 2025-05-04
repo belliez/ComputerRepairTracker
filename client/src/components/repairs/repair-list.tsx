@@ -51,13 +51,22 @@ export default function RepairList({
     queryKey: ["/api/devices"],
   });
 
+  // Build query params for better caching and proper server-side filtering
+  const buildQueryParams = () => {
+    const params = new URLSearchParams();
+    
+    if (filterStatus) params.append('status', filterStatus);
+    if (technicianId) params.append('technicianId', technicianId.toString());
+    if (customerId) params.append('customerId', customerId.toString());
+    
+    const paramString = params.toString();
+    return paramString ? `?${paramString}` : '';
+  };
+
+  const queryPath = `/api/repairs${buildQueryParams()}`;
+  
   const { data: repairs, isLoading } = useQuery<Repair[]>({
-    queryKey: [
-      "/api/repairs",
-      filterStatus ? { status: filterStatus } : null,
-      technicianId ? { technicianId } : null,
-      customerId ? { customerId } : null,
-    ],
+    queryKey: [queryPath],
   });
 
   if (isLoading) {
