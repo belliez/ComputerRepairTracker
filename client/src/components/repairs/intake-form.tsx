@@ -455,7 +455,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       <>
         <div>
           <h3 className="text-lg font-medium text-gray-900">Device Information</h3>
-          <p className="mt-1 text-sm text-gray-500">Select an existing device or add a new one.</p>
+          <p className="mt-1 text-sm text-gray-500">Select an existing device, add a new one, or skip if no device is involved.</p>
         </div>
         
         <div className="grid grid-cols-1 gap-6">
@@ -485,9 +485,32 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             </div>
           )}
           
-          <div className="flex justify-center">
-            <Button onClick={handleNewDevice} variant="outline">
+          <div className="flex flex-wrap justify-center gap-3">
+            <Button 
+              onClick={() => {
+                if (selectedCustomerId) {
+                  setShowNewDeviceForm(true);
+                } else {
+                  toast({
+                    title: "Customer required",
+                    description: "Please select a customer first",
+                    variant: "destructive"
+                  });
+                }
+              }} 
+              variant="outline"
+            >
               <i className="fas fa-plus mr-2"></i> Add New Device
+            </Button>
+            
+            <Button 
+              onClick={() => {
+                setSelectedDeviceId(null);
+                setCurrentStep("service");
+              }}
+              variant="secondary"
+            >
+              Skip (No Device)
             </Button>
           </div>
         </div>
@@ -752,18 +775,6 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                   const year = currentDate.getFullYear().toString().slice(-2);
                   const month = String(currentDate.getMonth() + 1).padStart(2, '0');
                   const ticketNumber = `RT-${year}${month}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
-                  
-                  // Validate device selection
-                  if (!selectedDeviceId) {
-                    toast({
-                      title: "Device Required",
-                      description: "Please select a device for this repair",
-                      variant: "destructive"
-                    });
-                    // Go back to device selection step
-                    setCurrentStep("device");
-                    return;
-                  }
                   
                   // Validate that issue is not empty
                   if (!formValues.issue || formValues.issue.trim() === "") {
