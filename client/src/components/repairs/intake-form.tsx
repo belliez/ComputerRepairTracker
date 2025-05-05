@@ -800,7 +800,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                       isUnderWarranty: Boolean(formValues.isUnderWarranty),
                       // We can safely update customer and device IDs too
                       customerId: Number(selectedCustomerId),
-                      deviceId: Number(selectedDeviceId),
+                      deviceId: selectedDeviceId ? Number(selectedDeviceId) : null,
                       // Include estimated completion date if provided
                       estimatedCompletionDate: formValues.estimatedCompletionDate && formValues.estimatedCompletionDate.trim() !== "" 
                         ? formValues.estimatedCompletionDate
@@ -810,7 +810,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                     // For new repairs, include all the required fields
                     apiData = {
                       customerId: Number(selectedCustomerId),
-                      deviceId: Number(selectedDeviceId),
+                      deviceId: selectedDeviceId ? Number(selectedDeviceId) : null,
                       issue: formValues.issue || "",
                       status: "intake", // Always "intake" for new repairs
                       priorityLevel: Number(formValues.priorityLevel || 3),
