@@ -90,7 +90,7 @@ export const repairs = pgTable("repairs", {
   id: serial("id").primaryKey(),
   ticketNumber: text("ticket_number").notNull().unique(),
   customerId: integer("customer_id").notNull().references(() => customers.id),
-  deviceId: integer("device_id").notNull().references(() => devices.id),
+  deviceId: integer("device_id").references(() => devices.id), // Made optional by removing .notNull()
   technicianId: integer("technician_id").references(() => technicians.id),
   status: text("status").$type<(typeof repairStatuses)[number]>().notNull().default("intake"),
   issue: text("issue").notNull(),
