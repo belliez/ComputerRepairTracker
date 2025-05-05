@@ -598,7 +598,9 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                     <CardTitle>Device Information</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {repair.device ? (
+                    {repair.deviceId === null ? (
+                      <div className="text-gray-500">No device associated with this repair</div>
+                    ) : repair.device ? (
                       <div className="space-y-2">
                         <div>
                           <span className="font-medium">Type:</span> {repair.device.type}

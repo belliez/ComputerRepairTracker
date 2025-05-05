@@ -165,9 +165,9 @@ export default function RepairList({
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {devices?.find(d => d.id === repair.deviceId) 
+                      {repair.deviceId && devices?.find(d => d.id === repair.deviceId) 
                         ? `${devices.find(d => d.id === repair.deviceId)?.brand} ${devices.find(d => d.id === repair.deviceId)?.model}`
-                        : `Device #${repair.deviceId}`
+                        : repair.deviceId ? `Device #${repair.deviceId}` : "No Device"
                       }
                     </div>
                     <div className="text-xs text-gray-500">

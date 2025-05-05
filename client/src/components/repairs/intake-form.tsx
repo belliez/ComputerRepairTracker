@@ -161,27 +161,34 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
         return apiRequest("POST", "/api/repairs", values);
       }
     },
-    onSuccess: () => {
-      // Invalidate all queries that start with '/api/repairs'
-      queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
+    onSuccess: async () => {
+      // Ensure all repair queries are invalidated
+      await queryClient.invalidateQueries({ 
+        queryKey: ["/api/repairs"],
+        refetchType: 'all'
+      });
       
-      // Also invalidate specific repair queries
+      // If there are filtered queries, invalidate those too
+      await queryClient.invalidateQueries({
+        queryKey: ["/api/repairs", { status: undefined }]
+      });
+      
+      // Invalidate specific repair queries if we're editing
       if (repairId) {
-        queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+        await queryClient.invalidateQueries({ 
+          queryKey: [`/api/repairs/${repairId}`],
+          refetchType: 'all'
+        });
+        await queryClient.invalidateQueries({ 
+          queryKey: [`/api/repairs/${repairId}/details`],
+          refetchType: 'all'
+        });
       }
       
-      // Invalidate any filtered repair queries
-      queryClient.invalidateQueries({ 
-        predicate: (query) => {
-          const queryKey = query.queryKey;
-          if (!Array.isArray(queryKey)) return false;
-          
-          const firstKey = queryKey[0];
-          if (typeof firstKey !== 'string') return false;
-          
-          return firstKey.startsWith('/api/repairs');
-        }
+      // Force refetch all repair-related queries
+      await queryClient.refetchQueries({ 
+        queryKey: ["/api/repairs"],
+        exact: false
       });
       
       toast({
@@ -286,10 +293,9 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       }
       
       // Validate required fields manually
-      if (!apiData.customerId || !apiData.deviceId || !apiData.issue.trim()) {
+      if (!apiData.customerId || !apiData.issue.trim()) {
         console.error("Missing required fields", { 
           customerId: apiData.customerId, 
-          deviceId: apiData.deviceId, 
           issue: apiData.issue 
         });
         
@@ -299,6 +305,11 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
           variant: "destructive"
         });
         return;
+      }
+      
+      // If no device is selected, set deviceId to null explicitly
+      if (!apiData.deviceId || apiData.deviceId === 0) {
+        apiData.deviceId = null;
       }
       
       console.log("Submitting repair data:", apiData);
