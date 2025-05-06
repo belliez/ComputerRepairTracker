@@ -492,7 +492,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   if (isLoading) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-3 sm:p-6">
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
           </div>
@@ -504,7 +504,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   if (!repair) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl p-3 sm:p-6">
           <DialogHeader>
             <DialogTitle>Error</DialogTitle>
             <DialogDescription>
@@ -528,7 +528,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-3 sm:p-6">
           <DialogHeader>
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
               <div>

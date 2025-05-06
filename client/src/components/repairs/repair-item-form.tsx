@@ -169,7 +169,7 @@ export default function RepairItemForm({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[500px] p-3 sm:p-6 overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>
             {isEditMode ? "Edit Item" : "Add Item to Repair"}
