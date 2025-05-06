@@ -405,33 +405,33 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       <>
         <div>
           <h3 className="text-lg font-medium text-gray-900">Customer Information</h3>
-          <p className="mt-1 text-sm text-gray-500">Find an existing customer or create a new one.</p>
+          <p className="mt-1 text-xs sm:text-sm text-gray-500">Find an existing customer or create a new one.</p>
         </div>
         
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <i className="fas fa-search text-gray-400"></i>
+              <i className="fas fa-search text-gray-400 text-xs sm:text-sm"></i>
             </div>
             <Input
               type="text"
               placeholder="Search by name, email, or phone"
-              className="pl-10"
+              className="pl-10 text-xs sm:text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">or</span>
-            <Button onClick={handleNewCustomer}>
-              <i className="fas fa-plus mr-2"></i> New Customer
+            <span className="text-xs sm:text-sm text-gray-500">or</span>
+            <Button onClick={handleNewCustomer} size="sm" className="text-xs sm:text-sm py-1 h-8 sm:h-9">
+              <i className="fas fa-plus mr-1 sm:mr-2"></i> New Customer
             </Button>
           </div>
           
-          <div className="max-h-60 overflow-y-auto border rounded-md">
+          <div className="max-h-56 sm:max-h-60 overflow-y-auto border rounded-md">
             {filteredCustomers?.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
+              <div className="p-2 sm:p-4 text-center text-gray-500 text-xs sm:text-sm">
                 No customers found. Try a different search term or create a new customer.
               </div>
             ) : (
@@ -439,17 +439,17 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 {filteredCustomers?.map(customer => (
                   <li 
                     key={customer.id} 
-                    className={`p-3 cursor-pointer hover:bg-gray-50 ${
+                    className={`p-2 sm:p-3 cursor-pointer hover:bg-gray-50 ${
                       selectedCustomerId === customer.id ? "bg-blue-50" : ""
                     }`}
                     onClick={() => handleCustomerSelected(customer.id)}
                   >
-                    <div className="flex justify-between">
+                    <div className="flex flex-col sm:flex-row sm:justify-between">
                       <div>
-                        <div className="font-medium">{`${customer.firstName} ${customer.lastName}`}</div>
-                        <div className="text-sm text-gray-500">{customer.email}</div>
+                        <div className="font-medium text-sm sm:text-base">{`${customer.firstName} ${customer.lastName}`}</div>
+                        <div className="text-xs sm:text-sm text-gray-500">{customer.email}</div>
                       </div>
-                      <div className="text-sm text-gray-500">{customer.phone}</div>
+                      <div className="text-xs sm:text-sm text-gray-500 mt-1 sm:mt-0">{customer.phone}</div>
                     </div>
                   </li>
                 ))}
@@ -466,27 +466,27 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       <>
         <div>
           <h3 className="text-lg font-medium text-gray-900">Device Information</h3>
-          <p className="mt-1 text-sm text-gray-500">Select an existing device, add a new one, or skip if no device is involved.</p>
+          <p className="mt-1 text-xs sm:text-sm text-gray-500">Select an existing device, add a new one, or skip if no device is involved.</p>
         </div>
         
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 gap-4 sm:gap-6">
           {devices?.length === 0 ? (
-            <div className="text-center py-4">
-              <p className="text-gray-500">No devices found for this customer.</p>
+            <div className="text-center py-2 sm:py-4">
+              <p className="text-gray-500 text-xs sm:text-sm">No devices found for this customer.</p>
             </div>
           ) : (
-            <div className="max-h-60 overflow-y-auto border rounded-md">
+            <div className="max-h-56 sm:max-h-60 overflow-y-auto border rounded-md">
               <ul className="divide-y divide-gray-200">
                 {devices?.map(device => (
                   <li 
                     key={device.id} 
-                    className={`p-3 cursor-pointer hover:bg-gray-50 ${
+                    className={`p-2 sm:p-3 cursor-pointer hover:bg-gray-50 ${
                       selectedDeviceId === device.id ? "bg-blue-50" : ""
                     }`}
                     onClick={() => handleDeviceSelected(device.id)}
                   >
-                    <div className="font-medium">{device.brand} {device.model}</div>
-                    <div className="text-sm text-gray-500">{device.type}</div>
+                    <div className="font-medium text-sm sm:text-base">{device.brand} {device.model}</div>
+                    <div className="text-xs sm:text-sm text-gray-500">{device.type}</div>
                     {device.serialNumber && (
                       <div className="text-xs text-gray-500">S/N: {device.serialNumber}</div>
                     )}
@@ -496,7 +496,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             </div>
           )}
           
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
             <Button 
               onClick={() => {
                 if (selectedCustomerId) {
@@ -510,8 +510,10 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 }
               }} 
               variant="outline"
+              size="sm"
+              className="text-xs sm:text-sm py-1 h-8 sm:h-9"
             >
-              <i className="fas fa-plus mr-2"></i> Add New Device
+              <i className="fas fa-plus mr-1 sm:mr-2"></i> Add New Device
             </Button>
             
             <Button 
@@ -520,6 +522,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 setCurrentStep("service");
               }}
               variant="secondary"
+              size="sm"
+              className="text-xs sm:text-sm py-1 h-8 sm:h-9"
             >
               Skip (No Device)
             </Button>
@@ -535,7 +539,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
         <form id="repair-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div>
             <h3 className="text-lg font-medium text-gray-900">Service Details</h3>
-            <p className="mt-1 text-sm text-gray-500">Provide information about the repair service needed.</p>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500">Provide information about the repair service needed.</p>
           </div>
           
           <FormField
@@ -543,12 +547,13 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             name="issue"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Issue Description</FormLabel>
+                <FormLabel className="text-sm">Issue Description</FormLabel>
                 <FormControl>
                   <Textarea 
                     placeholder="Describe the problem in detail..." 
                     {...field} 
                     value={field.value || ""}
+                    className="text-sm resize-none"
                   />
                 </FormControl>
                 <FormMessage />
@@ -715,12 +720,13 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             name="notes"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Additional Notes</FormLabel>
+                <FormLabel className="text-sm">Additional Notes</FormLabel>
                 <FormControl>
                   <Textarea 
                     placeholder="Add any additional information or special instructions..." 
                     {...field} 
                     value={field.value || ""}
+                    className="text-sm resize-none"
                   />
                 </FormControl>
                 <FormMessage />
@@ -756,13 +762,14 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             {currentStep === "service" && renderServiceStep()}
           </div>
           
-          <DialogFooter>
+          <DialogFooter className="flex flex-wrap justify-end gap-2">
             {currentStep !== "customer" && (
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={handlePrevStep}
-                className="mr-auto"
+                className="mr-auto text-xs sm:text-sm h-8 sm:h-9"
+                size="sm"
               >
                 Back
               </Button>
@@ -772,6 +779,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
               type="button" 
               variant="outline" 
               onClick={onClose}
+              className="text-xs sm:text-sm h-8 sm:h-9"
+              size="sm"
             >
               Cancel
             </Button>
@@ -779,6 +788,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             {currentStep === "service" ? (
               <Button 
                 type="button"
+                className="text-xs sm:text-sm h-8 sm:h-9"
+                size="sm"
                 onClick={() => {
                   // Get form values directly
                   const formValues = form.getValues();
@@ -865,6 +876,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 type="button" 
                 onClick={() => currentStep === "customer" && selectedCustomerId ? setCurrentStep("device") : setCurrentStep("service")} 
                 disabled={currentStep === "customer" && !selectedCustomerId}
+                className="text-xs sm:text-sm h-8 sm:h-9"
+                size="sm"
               >
                 Next
               </Button>
