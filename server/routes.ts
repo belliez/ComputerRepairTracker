@@ -1157,13 +1157,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   apiRouter.get("/settings/currencies/default", async (req: Request, res: Response) => {
     try {
-      const defaultCurrencies = await db.select().from(currencies).where({ isDefault: true });
-      const defaultCurrency = defaultCurrencies[0];
+      const allCurrencies = await db.select().from(currencies);
+      // Find the default currency
+      const defaultCurrency = allCurrencies.find(currency => currency.isDefault === true);
       
       if (!defaultCurrency) {
         // If no default, return USD as fallback
-        const usdCurrencies = await db.select().from(currencies).where({ code: "USD" });
-        const usdCurrency = usdCurrencies[0];
+        const usdCurrency = allCurrencies.find(currency => currency.code === "USD");
         return res.json(usdCurrency || { code: "USD", symbol: "$", name: "US Dollar" });
       }
       res.json(defaultCurrency);
@@ -1269,13 +1269,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   apiRouter.get("/settings/tax-rates/default", async (req: Request, res: Response) => {
     try {
-      const defaultTaxRates = await db.select().from(taxRates).where({ isDefault: true });
-      const defaultTaxRate = defaultTaxRates[0];
+      const allTaxRates = await db.select().from(taxRates);
+      // Find the default tax rate
+      const defaultTaxRate = allTaxRates.find(rate => rate.isDefault === true);
       
       if (!defaultTaxRate) {
         // Fall back to first tax rate if no default
-        const firstTaxRates = await db.select().from(taxRates).limit(1);
-        const firstTaxRate = firstTaxRates[0];
+        const firstTaxRate = allTaxRates[0];
         return res.json(firstTaxRate || { rate: 0, name: "No Tax" });
       }
       res.json(defaultTaxRate);

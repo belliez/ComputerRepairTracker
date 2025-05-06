@@ -1319,7 +1319,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
           isOpen={showQuoteForm}
           onClose={() => {
             setShowQuoteForm(false);
-            setEditingQuoteId(null);
+            setEditingQuoteId(undefined);
             // Refresh the repair data
             queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
           }}
@@ -1334,7 +1334,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
           isOpen={showInvoiceForm}
           onClose={() => {
             setShowInvoiceForm(false);
-            setEditingInvoiceId(null);
+            setEditingInvoiceId(undefined);
             // Refresh the repair data
             queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
           }}
