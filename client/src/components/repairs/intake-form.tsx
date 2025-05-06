@@ -980,8 +980,12 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent 
+          className="md:max-w-3xl p-0 sm:p-6 sm:max-h-[90vh] overflow-hidden"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="pt-6 px-6">
             <DialogTitle>
               {repairId ? "Edit Repair" : "Create New Repair"}
             </DialogTitle>
@@ -993,7 +997,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-2 sm:py-4 space-y-4 sm:space-y-6">
+          <div className="overflow-y-auto max-h-[60vh] px-6 py-2 sm:py-4 space-y-4 sm:space-y-6">
             {renderStepIndicator()}
             
             {currentStep === "customer" && renderCustomerStep()}
@@ -1001,7 +1005,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             {currentStep === "service" && renderServiceStep()}
           </div>
           
-          <DialogFooter className="flex flex-wrap justify-end gap-2 pt-2 mt-4">
+          <DialogFooter className="flex flex-wrap justify-end gap-2 pt-2 mt-4 p-6 border-t border-gray-200">
             {currentStep !== "customer" && (
               <Button 
                 type="button" 
