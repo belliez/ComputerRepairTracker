@@ -92,8 +92,8 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   const [showRepairItemForm, setShowRepairItemForm] = useState(false);
   const [currentEditingItem, setCurrentEditingItem] = useState<any>(null);
   const [currentStatus, setCurrentStatus] = useState<string | null>(null);
-  const [editingQuoteId, setEditingQuoteId] = useState<number | null>(null);
-  const [editingInvoiceId, setEditingInvoiceId] = useState<number | null>(null);
+  const [editingQuoteId, setEditingQuoteId] = useState<number | undefined>(undefined);
+  const [editingInvoiceId, setEditingInvoiceId] = useState<number | undefined>(undefined);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteItemType, setDeleteItemType] = useState<"quote" | "invoice" | null>(null);
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
@@ -208,7 +208,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   };
 
   const handleCreateQuote = () => {
-    setEditingQuoteId(null);
+    setEditingQuoteId(undefined);
     setShowQuoteForm(true);
   };
 
@@ -224,7 +224,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   };
 
   const handleCreateInvoice = () => {
-    setEditingInvoiceId(null);
+    setEditingInvoiceId(undefined);
     setShowInvoiceForm(true);
   };
   

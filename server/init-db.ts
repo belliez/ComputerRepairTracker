@@ -375,18 +375,19 @@ async function initializeSettingsData() {
   console.log('Created tax rates');
   
   // Update existing quotes and invoices with currency and tax rate
-  const defaultTaxRates = await db.select().from(taxRates).where({ isDefault: true });
-  if (defaultTaxRates.length > 0) {
+  const defaultTaxRates = await db.select().from(taxRates);
+  const defaultTaxRate = defaultTaxRates.find(rate => rate.isDefault === true);
+  if (defaultTaxRate) {
     await db.update(quotes)
       .set({ 
         currencyCode: 'USD',
-        taxRateId: defaultTaxRate[0].id 
+        taxRateId: defaultTaxRate.id 
       });
       
     await db.update(invoices)
       .set({ 
         currencyCode: 'USD',
-        taxRateId: defaultTaxRate[0].id 
+        taxRateId: defaultTaxRate.id 
       });
   }
   
