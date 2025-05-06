@@ -528,18 +528,18 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
               <div>
-                <DialogTitle className="text-2xl">
+                <DialogTitle className="text-xl sm:text-2xl">
                   Repair #{repair.ticketNumber}
                 </DialogTitle>
                 <DialogDescription>
                   Created on {format(new Date(repair.intakeDate), "MMMM d, yyyy")}
                 </DialogDescription>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -555,12 +555,14 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
           </DialogHeader>
 
           <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-4">
-              <TabsTrigger value="details">Repair Details</TabsTrigger>
-              <TabsTrigger value="parts">Parts & Services</TabsTrigger>
-              <TabsTrigger value="quotes">Quote</TabsTrigger>
-              <TabsTrigger value="invoice">Invoice</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto pb-2">
+              <TabsList className="mb-4 w-auto inline-flex">
+                <TabsTrigger value="details">Repair Details</TabsTrigger>
+                <TabsTrigger value="parts">Parts & Services</TabsTrigger>
+                <TabsTrigger value="quotes">Quote</TabsTrigger>
+                <TabsTrigger value="invoice">Invoice</TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* Details Tab */}
             <TabsContent value="details" className="space-y-6">
@@ -800,30 +802,20 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                 </CardHeader>
                 <CardContent>
                   {repairItems && repairItems.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead className="text-right">Price</TableHead>
-                          <TableHead className="text-right">Quantity</TableHead>
-                          <TableHead className="text-right">Total</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
+                    <div className="overflow-auto">
+                      {/* Mobile view (cards) */}
+                      <div className="md:hidden space-y-4">
                         {repairItems.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium">
-                              {item.description}
-                              {item.inventoryItem && (
-                                <div className="text-xs text-gray-500">
-                                  SKU: {item.inventoryItem.sku}
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell>
+                          <div key={item.id} className="border rounded-lg p-4 space-y-2">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="font-medium">{item.description}</div>
+                                {item.inventoryItem && (
+                                  <div className="text-xs text-gray-500">
+                                    SKU: {item.inventoryItem.sku}
+                                  </div>
+                                )}
+                              </div>
                               <Badge variant="outline" className={
                                 item.itemType === "part" 
                                   ? "bg-blue-100 text-blue-800 border-blue-300" 
@@ -831,42 +823,123 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                               }>
                                 {item.itemType === "part" ? "Part" : "Service"}
                               </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
-                            <TableCell className="text-right">{item.quantity}</TableCell>
-                            <TableCell className="text-right">${(item.unitPrice * item.quantity).toFixed(2)}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={
-                                item.isCompleted
-                                  ? "bg-green-100 text-green-800 border-green-300"
-                                  : "bg-yellow-100 text-yellow-800 border-yellow-300"
-                              }>
-                                {item.isCompleted ? "Completed" : "Pending"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button 
-                                  onClick={() => handleEditRepairItem(item)} 
-                                  variant="ghost" 
-                                  size="icon"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  onClick={() => handleDeleteRepairItem(item.id)} 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="text-red-500 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div>
+                                <span className="text-gray-500">Price:</span> ${item.unitPrice.toFixed(2)}
                               </div>
-                            </TableCell>
-                          </TableRow>
+                              <div>
+                                <span className="text-gray-500">Quantity:</span> {item.quantity}
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Total:</span> ${(item.unitPrice * item.quantity).toFixed(2)}
+                              </div>
+                              <div>
+                                <Badge variant="outline" className={
+                                  item.isCompleted
+                                    ? "bg-green-100 text-green-800 border-green-300"
+                                    : "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                }>
+                                  {item.isCompleted ? "Completed" : "Pending"}
+                                </Badge>
+                              </div>
+                            </div>
+                            
+                            <div className="flex justify-end gap-2 pt-2">
+                              <Button 
+                                onClick={() => handleEditRepairItem(item)} 
+                                variant="ghost" 
+                                size="sm"
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                              <Button 
+                                onClick={() => handleDeleteRepairItem(item.id)} 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Delete
+                              </Button>
+                            </div>
+                          </div>
                         ))}
-                      </TableBody>
-                    </Table>
+                      </div>
+                      
+                      {/* Desktop view (table) */}
+                      <div className="hidden md:block">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Description</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead className="text-right">Price</TableHead>
+                              <TableHead className="text-right">Quantity</TableHead>
+                              <TableHead className="text-right">Total</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {repairItems.map((item) => (
+                              <TableRow key={item.id}>
+                                <TableCell className="font-medium">
+                                  {item.description}
+                                  {item.inventoryItem && (
+                                    <div className="text-xs text-gray-500">
+                                      SKU: {item.inventoryItem.sku}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className={
+                                    item.itemType === "part" 
+                                      ? "bg-blue-100 text-blue-800 border-blue-300" 
+                                      : "bg-purple-100 text-purple-800 border-purple-300"
+                                  }>
+                                    {item.itemType === "part" ? "Part" : "Service"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
+                                <TableCell className="text-right">{item.quantity}</TableCell>
+                                <TableCell className="text-right">${(item.unitPrice * item.quantity).toFixed(2)}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className={
+                                    item.isCompleted
+                                      ? "bg-green-100 text-green-800 border-green-300"
+                                      : "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                  }>
+                                    {item.isCompleted ? "Completed" : "Pending"}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <Button 
+                                      onClick={() => handleEditRepairItem(item)} 
+                                      variant="ghost" 
+                                      size="icon"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                      onClick={() => handleDeleteRepairItem(item.id)} 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="text-red-500 hover:text-red-700"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
                   ) : (
                     <div className="text-center py-8">
                       <div className="text-gray-400 mb-2">
