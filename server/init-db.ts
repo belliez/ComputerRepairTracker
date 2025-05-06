@@ -16,12 +16,47 @@ import {
 export async function initializeDemo() {
   console.log('Initializing demo data...');
   
+  // Initialize currencies and tax rates regardless of other data
+  await initializeSettingsData();
+  
   // Check if we already have data
   const existingCustomers = await db.select().from(customers);
   if (existingCustomers.length > 0) {
     console.log('Demo data already exists. Skipping initialization.');
     return;
   }
+
+// Initialize settings data (currencies and tax rates)
+async function initializeSettingsData() {
+  // Check if currencies already exist
+  const existingCurrencies = await db.select().from(currencies);
+  if (existingCurrencies.length === 0) {
+    console.log('Initializing currencies...');
+    await db.insert(currencies).values([
+      { code: 'USD', name: 'US Dollar', symbol: '$', isDefault: true },
+      { code: 'EUR', name: 'Euro', symbol: '€', isDefault: false },
+      { code: 'GBP', name: 'British Pound', symbol: '£', isDefault: false },
+      { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', isDefault: false },
+      { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', isDefault: false },
+      { code: 'JPY', name: 'Japanese Yen', symbol: '¥', isDefault: false },
+    ]);
+  }
+  
+  // Check if tax rates already exist
+  const existingTaxRates = await db.select().from(taxRates);
+  if (existingTaxRates.length === 0) {
+    console.log('Initializing tax rates...');
+    await db.insert(taxRates).values([
+      { countryCode: 'US', regionCode: null, name: 'No Tax', rate: 0, isDefault: false },
+      { countryCode: 'US', regionCode: 'CA', name: 'California Sales Tax', rate: 7.25, isDefault: true },
+      { countryCode: 'US', regionCode: 'NY', name: 'New York Sales Tax', rate: 8.875, isDefault: false },
+      { countryCode: 'US', regionCode: 'TX', name: 'Texas Sales Tax', rate: 6.25, isDefault: false },
+      { countryCode: 'CA', regionCode: null, name: 'Canada GST', rate: 5, isDefault: false },
+      { countryCode: 'GB', regionCode: null, name: 'UK VAT', rate: 20, isDefault: false },
+      { countryCode: 'AU', regionCode: null, name: 'Australia GST', rate: 10, isDefault: false },
+    ]);
+  }
+}
 
   // Create customers
   const [customer1] = await db.insert(customers).values({
