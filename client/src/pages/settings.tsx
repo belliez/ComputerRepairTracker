@@ -1,291 +1,809 @@
-import { useState } from "react";
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle,
-  CardDescription,
-  CardFooter
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import { Loader, PlusCircle, Trash2, X } from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
-export default function Settings() {
-  const [shopName, setShopName] = useState("RepairTrack");
-  const [email, setEmail] = useState("info@repairtrack.com");
-  const [phone, setPhone] = useState("(555) 123-4567");
-  const [address, setAddress] = useState("123 Repair St");
-  const [city, setCity] = useState("Tech City");
-  const [state, setState] = useState("CA");
-  const [zip, setZip] = useState("12345");
-  const [taxRate, setTaxRate] = useState("8.25");
-  
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [smsNotifications, setSmsNotifications] = useState(false);
-  const [customerPortal, setCustomerPortal] = useState(true);
-  const [autoAssign, setAutoAssign] = useState(false);
+// Schemas for form validation
+const currencySchema = z.object({
+  code: z.string().length(3, { message: "Currency code must be exactly 3 characters (e.g., USD)" }),
+  name: z.string().min(2, { message: "Currency name is required" }),
+  symbol: z.string().min(1, { message: "Currency symbol is required" }),
+  isDefault: z.boolean().optional(),
+});
+
+const taxRateSchema = z.object({
+  countryCode: z.string().length(2, { message: "Country code must be exactly 2 characters (e.g., US)" }),
+  regionCode: z.string().optional(),
+  name: z.string().min(2, { message: "Tax rate name is required" }),
+  rate: z.number().min(0).max(1, { message: "Rate must be between 0 and 1 (e.g., 0.07 for 7%)" }),
+  isDefault: z.boolean().optional(),
+});
+
+const SettingsPage = () => {
+  const [activeTab, setActiveTab] = useState('currencies');
+  const [showCurrencyDialog, setShowCurrencyDialog] = useState(false);
+  const [showTaxRateDialog, setShowTaxRateDialog] = useState(false);
+  const [editingCurrency, setEditingCurrency] = useState<any>(null);
+  const [editingTaxRate, setEditingTaxRate] = useState<any>(null);
+  const [deletingCurrencyCode, setDeletingCurrencyCode] = useState<string | null>(null);
+  const [deletingTaxRateId, setDeletingTaxRateId] = useState<number | null>(null);
   
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
-  const handleSaveShopInfo = () => {
-    // Here you would typically save to an API
-    toast({
-      title: "Settings saved",
-      description: "Your shop information has been updated successfully",
-    });
+  // Queries
+  const {
+    data: currencies,
+    isLoading: isLoadingCurrencies,
+  } = useQuery({
+    queryKey: ['/api/settings/currencies'],
+  });
+  
+  const {
+    data: taxRates,
+    isLoading: isLoadingTaxRates,
+  } = useQuery({
+    queryKey: ['/api/settings/tax-rates'],
+  });
+  
+  // Currency form
+  const currencyForm = useForm<z.infer<typeof currencySchema>>({
+    resolver: zodResolver(currencySchema),
+    defaultValues: {
+      code: '',
+      name: '',
+      symbol: '',
+      isDefault: false,
+    }
+  });
+  
+  // Tax rate form
+  const taxRateForm = useForm<z.infer<typeof taxRateSchema>>({
+    resolver: zodResolver(taxRateSchema),
+    defaultValues: {
+      countryCode: '',
+      regionCode: '',
+      name: '',
+      rate: 0,
+      isDefault: false,
+    }
+  });
+  
+  // Mutations
+  const createCurrencyMutation = useMutation({
+    mutationFn: (data: z.infer<typeof currencySchema>) => 
+      apiRequest('POST', '/api/settings/currencies', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
+      setShowCurrencyDialog(false);
+      currencyForm.reset();
+      toast({
+        title: "Currency added",
+        description: "The currency has been successfully added",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error adding currency",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const updateCurrencyMutation = useMutation({
+    mutationFn: (data: z.infer<typeof currencySchema>) => 
+      apiRequest('PUT', `/api/settings/currencies/${data.code}`, {
+        name: data.name,
+        symbol: data.symbol,
+        isDefault: data.isDefault,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
+      setShowCurrencyDialog(false);
+      setEditingCurrency(null);
+      currencyForm.reset();
+      toast({
+        title: "Currency updated",
+        description: "The currency has been successfully updated",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating currency",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const deleteCurrencyMutation = useMutation({
+    mutationFn: (code: string) => 
+      apiRequest('DELETE', `/api/settings/currencies/${code}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
+      setDeletingCurrencyCode(null);
+      toast({
+        title: "Currency deleted",
+        description: "The currency has been successfully deleted",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting currency",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const createTaxRateMutation = useMutation({
+    mutationFn: (data: z.infer<typeof taxRateSchema>) => 
+      apiRequest('POST', '/api/settings/tax-rates', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/tax-rates'] });
+      setShowTaxRateDialog(false);
+      taxRateForm.reset();
+      toast({
+        title: "Tax rate added",
+        description: "The tax rate has been successfully added",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error adding tax rate",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const updateTaxRateMutation = useMutation({
+    mutationFn: (data: any) => 
+      apiRequest('PUT', `/api/settings/tax-rates/${data.id}`, {
+        countryCode: data.countryCode,
+        regionCode: data.regionCode,
+        name: data.name,
+        rate: data.rate,
+        isDefault: data.isDefault,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/tax-rates'] });
+      setShowTaxRateDialog(false);
+      setEditingTaxRate(null);
+      taxRateForm.reset();
+      toast({
+        title: "Tax rate updated",
+        description: "The tax rate has been successfully updated",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating tax rate",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const deleteTaxRateMutation = useMutation({
+    mutationFn: (id: number) => 
+      apiRequest('DELETE', `/api/settings/tax-rates/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/tax-rates'] });
+      setDeletingTaxRateId(null);
+      toast({
+        title: "Tax rate deleted",
+        description: "The tax rate has been successfully deleted",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting tax rate",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Event handlers
+  const handleAddCurrency = (data: z.infer<typeof currencySchema>) => {
+    if (editingCurrency) {
+      updateCurrencyMutation.mutate(data);
+    } else {
+      createCurrencyMutation.mutate(data);
+    }
   };
   
-  const handleSaveNotifications = () => {
-    // Here you would typically save to an API
-    toast({
-      title: "Notification settings saved",
-      description: "Your notification preferences have been updated",
+  const handleAddTaxRate = (data: z.infer<typeof taxRateSchema>) => {
+    if (editingTaxRate) {
+      updateTaxRateMutation.mutate({
+        ...data,
+        id: editingTaxRate.id,
+      });
+    } else {
+      createTaxRateMutation.mutate(data);
+    }
+  };
+  
+  const handleEditCurrency = (currency: any) => {
+    setEditingCurrency(currency);
+    currencyForm.reset({
+      code: currency.code,
+      name: currency.name,
+      symbol: currency.symbol,
+      isDefault: currency.isDefault,
     });
+    setShowCurrencyDialog(true);
+  };
+  
+  const handleEditTaxRate = (taxRate: any) => {
+    setEditingTaxRate(taxRate);
+    taxRateForm.reset({
+      countryCode: taxRate.countryCode,
+      regionCode: taxRate.regionCode || '',
+      name: taxRate.name,
+      rate: taxRate.rate,
+      isDefault: taxRate.isDefault,
+    });
+    setShowTaxRateDialog(true);
+  };
+  
+  const handleDeleteCurrency = (code: string) => {
+    setDeletingCurrencyCode(code);
+  };
+  
+  const handleDeleteTaxRate = (id: number) => {
+    setDeletingTaxRateId(id);
+  };
+  
+  const handleCloseCurrencyDialog = () => {
+    setShowCurrencyDialog(false);
+    setEditingCurrency(null);
+    currencyForm.reset();
+  };
+  
+  const handleCloseTaxRateDialog = () => {
+    setShowTaxRateDialog(false);
+    setEditingTaxRate(null);
+    taxRateForm.reset();
   };
   
   return (
-    <>
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Settings</h1>
-        <p className="text-sm text-gray-500">Configure your repair shop system</p>
+    <div className="container mx-auto pt-8 px-4">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold">Settings</h1>
+        <p className="text-gray-500 mt-1">Configure application settings</p>
       </div>
       
-      <Tabs defaultValue="shop" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="shop">Shop Information</TabsTrigger>
-          <TabsTrigger value="users">Users & Roles</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="advanced">Advanced</TabsTrigger>
+      <Tabs defaultValue="currencies" onValueChange={setActiveTab} value={activeTab}>
+        <TabsList className="mb-6">
+          <TabsTrigger value="currencies">Currencies</TabsTrigger>
+          <TabsTrigger value="tax-rates">Tax Rates</TabsTrigger>
         </TabsList>
         
-        {/* Shop Information Tab */}
-        <TabsContent value="shop">
+        {/* Currencies Tab */}
+        <TabsContent value="currencies">
           <Card>
-            <CardHeader>
-              <CardTitle>Shop Information</CardTitle>
-              <CardDescription>
-                This information will appear on your quotes, invoices, and customer communications.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="shopName">Shop Name</Label>
-                  <Input 
-                    id="shopName" 
-                    value={shopName} 
-                    onChange={(e) => setShopName(e.target.value)} 
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="taxRate">Tax Rate (%)</Label>
-                  <Input 
-                    id="taxRate" 
-                    value={taxRate} 
-                    onChange={(e) => setTaxRate(e.target.value)} 
-                  />
-                </div>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Currencies</CardTitle>
+                <CardDescription>
+                  Manage currencies for quotes and invoices
+                </CardDescription>
               </div>
-              
-              <Separator />
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input 
-                  id="email" 
-                  type="email" 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)} 
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input 
-                  id="phone" 
-                  value={phone} 
-                  onChange={(e) => setPhone(e.target.value)} 
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="address">Street Address</Label>
-                <Input 
-                  id="address" 
-                  value={address} 
-                  onChange={(e) => setAddress(e.target.value)} 
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="city">City</Label>
-                  <Input 
-                    id="city" 
-                    value={city} 
-                    onChange={(e) => setCity(e.target.value)} 
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="state">State</Label>
-                  <Input 
-                    id="state" 
-                    value={state} 
-                    onChange={(e) => setState(e.target.value)} 
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="zip">ZIP Code</Label>
-                  <Input 
-                    id="zip" 
-                    value={zip} 
-                    onChange={(e) => setZip(e.target.value)} 
-                  />
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveShopInfo}>Save Changes</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        {/* Users & Roles Tab */}
-        <TabsContent value="users">
-          <Card>
-            <CardHeader>
-              <CardTitle>Users & Roles</CardTitle>
-              <CardDescription>
-                Manage staff accounts and permissions
-              </CardDescription>
+              <Dialog open={showCurrencyDialog} onOpenChange={setShowCurrencyDialog}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => {
+                    setEditingCurrency(null);
+                    currencyForm.reset({
+                      code: '',
+                      name: '',
+                      symbol: '',
+                      isDefault: false,
+                    });
+                  }}>
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add Currency
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingCurrency ? 'Edit Currency' : 'Add Currency'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingCurrency
+                        ? 'Update the currency details below'
+                        : 'Enter currency details to add a new currency'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...currencyForm}>
+                    <form onSubmit={currencyForm.handleSubmit(handleAddCurrency)} className="space-y-4">
+                      <FormField
+                        control={currencyForm.control}
+                        name="code"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Currency Code (3 letters)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="USD"
+                                maxLength={3}
+                                disabled={!!editingCurrency}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              ISO currency code (e.g., USD, EUR, GBP)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={currencyForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Currency Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="US Dollar" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={currencyForm.control}
+                        name="symbol"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Symbol</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="$" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={currencyForm.control}
+                        name="isDefault"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                              <FormLabel>Set as Default</FormLabel>
+                              <FormDescription>
+                                Make this the default currency system-wide
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <DialogFooter>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={handleCloseCurrencyDialog}
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          type="submit"
+                          disabled={
+                            createCurrencyMutation.isPending || 
+                            updateCurrencyMutation.isPending
+                          }
+                        >
+                          {(createCurrencyMutation.isPending || updateCurrencyMutation.isPending) && (
+                            <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          {editingCurrency ? 'Update' : 'Add'} Currency
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <div className="text-gray-400 mb-2">
-                  <i className="fas fa-users-cog text-4xl"></i>
+              {isLoadingCurrencies ? (
+                <div className="flex justify-center py-8">
+                  <Loader className="h-8 w-8 animate-spin text-primary" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-700">User management coming soon</h3>
-                <p className="text-gray-500 mt-1">
-                  This feature is currently under development
-                </p>
-              </div>
+              ) : currencies && currencies.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Symbol</TableHead>
+                      <TableHead>Default</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {currencies.map((currency: any) => (
+                      <TableRow key={currency.code}>
+                        <TableCell className="font-medium">{currency.code}</TableCell>
+                        <TableCell>{currency.name}</TableCell>
+                        <TableCell>{currency.symbol}</TableCell>
+                        <TableCell>
+                          {currency.isDefault && (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              Default
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditCurrency(currency)}
+                            >
+                              Edit
+                            </Button>
+                            <AlertDialog 
+                              open={deletingCurrencyCode === currency.code}
+                              onOpenChange={(open) => {
+                                if (!open) setDeletingCurrencyCode(null);
+                              }}
+                            >
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => handleDeleteCurrency(currency.code)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Currency</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this currency? This action cannot be undone.
+                                    <br /><br />
+                                    <strong>Note:</strong> You cannot delete a currency that is in use by quotes or invoices.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteCurrencyMutation.mutate(currency.code)}
+                                    className="bg-red-500 hover:bg-red-600"
+                                  >
+                                    {deleteCurrencyMutation.isPending && (
+                                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                                    )}
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No currencies found. Add one to get started.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
         
-        {/* Notifications Tab */}
-        <TabsContent value="notifications">
+        {/* Tax Rates Tab */}
+        <TabsContent value="tax-rates">
           <Card>
-            <CardHeader>
-              <CardTitle>Notification Settings</CardTitle>
-              <CardDescription>
-                Configure how you and your customers receive notifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-md font-medium">Email Notifications</h3>
-                    <p className="text-sm text-gray-500">Send status updates via email</p>
-                  </div>
-                  <Switch 
-                    checked={emailNotifications}
-                    onCheckedChange={setEmailNotifications}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-md font-medium">SMS Notifications</h3>
-                    <p className="text-sm text-gray-500">Send text messages for important updates</p>
-                  </div>
-                  <Switch 
-                    checked={smsNotifications}
-                    onCheckedChange={setSmsNotifications}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-md font-medium">Customer Portal</h3>
-                    <p className="text-sm text-gray-500">Allow customers to view repair status online</p>
-                  </div>
-                  <Switch 
-                    checked={customerPortal}
-                    onCheckedChange={setCustomerPortal}
-                  />
-                </div>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Tax Rates</CardTitle>
+                <CardDescription>
+                  Manage tax rates for different regions
+                </CardDescription>
               </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={handleSaveNotifications}>Save Changes</Button>
-            </CardFooter>
-          </Card>
-        </TabsContent>
-        
-        {/* Advanced Tab */}
-        <TabsContent value="advanced">
-          <Card>
-            <CardHeader>
-              <CardTitle>Advanced Settings</CardTitle>
-              <CardDescription>
-                Configuration options for system behavior
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-md font-medium">Auto-Assign Repairs</h3>
-                    <p className="text-sm text-gray-500">Automatically assign repairs to available technicians</p>
-                  </div>
-                  <Switch 
-                    checked={autoAssign}
-                    onCheckedChange={setAutoAssign}
-                  />
-                </div>
-                
-                <Separator />
-                
-                <div>
-                  <h3 className="text-md font-medium mb-2">Data Management</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Button variant="outline">
-                      <i className="fas fa-download mr-2"></i> Export Data
-                    </Button>
-                    <Button variant="outline">
-                      <i className="fas fa-upload mr-2"></i> Import Data
-                    </Button>
-                  </div>
-                </div>
-                
-                <Separator />
-                
-                <div>
-                  <h3 className="text-md font-medium text-red-600 mb-2">Danger Zone</h3>
-                  <Button variant="destructive">
-                    <i className="fas fa-trash-alt mr-2"></i> Reset System Data
+              <Dialog open={showTaxRateDialog} onOpenChange={setShowTaxRateDialog}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => {
+                    setEditingTaxRate(null);
+                    taxRateForm.reset({
+                      countryCode: '',
+                      regionCode: '',
+                      name: '',
+                      rate: 0,
+                      isDefault: false,
+                    });
+                  }}>
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add Tax Rate
                   </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingTaxRate ? 'Edit Tax Rate' : 'Add Tax Rate'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingTaxRate
+                        ? 'Update the tax rate details below'
+                        : 'Enter tax rate details to add a new tax rate'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...taxRateForm}>
+                    <form onSubmit={taxRateForm.handleSubmit(handleAddTaxRate)} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={taxRateForm.control}
+                          name="countryCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Country Code</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="US" maxLength={2} />
+                              </FormControl>
+                              <FormDescription>
+                                ISO country code (e.g., US, GB)
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={taxRateForm.control}
+                          name="regionCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Region Code (Optional)</FormLabel>
+                              <FormControl>
+                                <Input {...field} placeholder="CA" />
+                              </FormControl>
+                              <FormDescription>
+                                State/province code
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <FormField
+                        control={taxRateForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Tax Rate Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Sales Tax" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={taxRateForm.control}
+                        name="rate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Rate (Decimal)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="1"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                                placeholder="0.07"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Enter as decimal (e.g., 0.07 for 7%)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={taxRateForm.control}
+                        name="isDefault"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                              <FormLabel>Set as Default</FormLabel>
+                              <FormDescription>
+                                Make this the default tax rate system-wide
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <DialogFooter>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={handleCloseTaxRateDialog}
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          type="submit"
+                          disabled={
+                            createTaxRateMutation.isPending || 
+                            updateTaxRateMutation.isPending
+                          }
+                        >
+                          {(createTaxRateMutation.isPending || updateTaxRateMutation.isPending) && (
+                            <Loader className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          {editingTaxRate ? 'Update' : 'Add'} Tax Rate
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {isLoadingTaxRates ? (
+                <div className="flex justify-center py-8">
+                  <Loader className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              </div>
+              ) : taxRates && taxRates.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Country</TableHead>
+                      <TableHead>Region</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Rate</TableHead>
+                      <TableHead>Default</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {taxRates.map((taxRate: any) => (
+                      <TableRow key={taxRate.id}>
+                        <TableCell>{taxRate.countryCode}</TableCell>
+                        <TableCell>{taxRate.regionCode || '-'}</TableCell>
+                        <TableCell>{taxRate.name}</TableCell>
+                        <TableCell>{(taxRate.rate * 100).toFixed(2)}%</TableCell>
+                        <TableCell>
+                          {taxRate.isDefault && (
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              Default
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditTaxRate(taxRate)}
+                            >
+                              Edit
+                            </Button>
+                            <AlertDialog 
+                              open={deletingTaxRateId === taxRate.id}
+                              onOpenChange={(open) => {
+                                if (!open) setDeletingTaxRateId(null);
+                              }}
+                            >
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => handleDeleteTaxRate(taxRate.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Tax Rate</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete this tax rate? This action cannot be undone.
+                                    <br /><br />
+                                    <strong>Note:</strong> You cannot delete a tax rate that is in use by quotes or invoices.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteTaxRateMutation.mutate(taxRate.id)}
+                                    className="bg-red-500 hover:bg-red-600"
+                                  >
+                                    {deleteTaxRateMutation.isPending && (
+                                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                                    )}
+                                    Delete
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No tax rates found. Add one to get started.
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-    </>
+    </div>
   );
-}
+};
+
+export default SettingsPage;

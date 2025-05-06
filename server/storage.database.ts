@@ -316,44 +316,84 @@ export class DatabaseStorage implements IStorage {
 
   // Extended functions
   async getRepairWithRelations(id: number): Promise<any> {
-    const repair = await this.getRepair(id);
-    if (!repair) {
-      return null;
-    }
+    try {
+      const repair = await this.getRepair(id);
+      if (!repair) {
+        return null;
+      }
 
-    const customer = await this.getCustomer(repair.customerId);
-    const device = await this.getDevice(repair.deviceId);
-    const technician = repair.technicianId ? await this.getTechnician(repair.technicianId) : undefined;
-    const items = await this.getRepairItems(repair.id);
-    
-    // For each repair item with an inventory item, fetch the inventory item
-    const itemsWithInventory = await Promise.all(
-      items.map(async (item) => {
-        if (item.inventoryItemId) {
-          const inventoryItem = await this.getInventoryItem(item.inventoryItemId);
-          return { ...item, inventoryItem };
+      // Get customer and device information
+      let customer = null;
+      let device = null;
+      let technician = null;
+      
+      try {
+        if (repair.customerId) {
+          customer = await this.getCustomer(repair.customerId);
         }
-        return item;
-      })
-    );
+        
+        if (repair.deviceId) {
+          device = await this.getDevice(repair.deviceId);
+        }
+        
+        if (repair.technicianId) {
+          technician = await this.getTechnician(repair.technicianId);
+        }
+      } catch (error) {
+        console.error("Error fetching related entities:", error);
+      }
+      
+      // Get repair items
+      const items = await this.getRepairItems(repair.id);
+      
+      // For each repair item with an inventory item, fetch the inventory item
+      const itemsWithInventory = await Promise.all(
+        items.map(async (item) => {
+          if (item.inventoryItemId) {
+            try {
+              const inventoryItem = await this.getInventoryItem(item.inventoryItemId);
+              return { ...item, inventoryItem };
+            } catch (error) {
+              return item; // Return the item without inventory details if there's an error
+            }
+          }
+          return item;
+        })
+      );
 
-    // Get quotes and invoices for this repair
-    const quoteList = await this.getQuotesByRepair(repair.id);
-    const invoiceList = await this.getInvoicesByRepair(repair.id);
+      let quoteList = [];
+      let invoiceList = [];
+      
+      // Try to get quotes and invoices
+      try {
+        quoteList = await this.getQuotesByRepair(repair.id);
+      } catch (error) {
+        console.error("Error fetching quotes:", error);
+      }
+      
+      try {
+        invoiceList = await this.getInvoicesByRepair(repair.id);
+      } catch (error) {
+        console.error("Error fetching invoices:", error);
+      }
 
-    // Return the full repair with all its relations
-    return {
-      ...repair,
-      customer,
-      device,
-      technician,
-      items: itemsWithInventory,
-      // Return all quotes, not just approved ones
-      quote: quoteList.length > 0 ? quoteList[0] : null,
-      quotes: quoteList,
-      // Return all invoices, not just the first one
-      invoice: invoiceList.length > 0 ? invoiceList[0] : null,
-      invoices: invoiceList,
-    };
+      // Return the full repair with all its relations
+      return {
+        ...repair,
+        customer,
+        device,
+        technician,
+        items: itemsWithInventory,
+        // Return all quotes, not just approved ones
+        quote: quoteList.length > 0 ? quoteList[0] : null,
+        quotes: quoteList,
+        // Return all invoices, not just the first one
+        invoice: invoiceList.length > 0 ? invoiceList[0] : null,
+        invoices: invoiceList,
+      };
+    } catch (error) {
+      console.error("Error in getRepairWithRelations:", error);
+      throw error;
+    }
   }
 }
