@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Customer, Device, Technician, insertRepairSchema, repairStatuses } from "@shared/schema";
+import { X } from "lucide-react";
 import { 
   Dialog,
   DialogContent,
@@ -756,10 +757,207 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
     };
   }, [isOpen, currentStep]);
   
+  // For mobile devices, create a different UI that's completely full screen
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Check if we're on mobile when component mounts and on window resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Initial check
+    checkMobile();
+    
+    // Add resize listener
+    window.addEventListener('resize', checkMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+    };
+  }, []);
+
+  if (isMobile) {
+    return (
+      <>
+        {isOpen && (
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-background overflow-y-auto">
+            <div className="w-full min-h-screen flex flex-col">
+              {/* Header */}
+              <div className="sticky top-0 bg-background z-10 px-4 py-3 border-b flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    {repairId ? "Edit Repair" : "Create New Repair"}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    {repairId 
+                      ? "Edit the repair information below" 
+                      : "Enter the information below to create a new repair ticket"
+                    }
+                  </p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={onClose}>
+                  <span className="text-xl">×</span>
+                </Button>
+              </div>
+              
+              {/* Content */}
+              <div className="flex-1 px-4 py-3 overflow-auto">
+                {renderStepIndicator()}
+                
+                {currentStep === "customer" && renderCustomerStep()}
+                {currentStep === "device" && renderDeviceStep()}
+                {currentStep === "service" && renderServiceStep()}
+              </div>
+              
+              {/* Footer */}
+              <div className="sticky bottom-0 bg-background z-10 px-4 py-3 border-t flex flex-wrap justify-end gap-2">
+                {currentStep !== "customer" && (
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={handlePrevStep}
+                    className="mr-auto"
+                    size="sm"
+                  >
+                    Back
+                  </Button>
+                )}
+                
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={onClose}
+                  size="sm"
+                >
+                  Cancel
+                </Button>
+                
+                {currentStep === "service" ? (
+                  <Button 
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      // Get form values directly
+                      const formValues = form.getValues();
+                      console.log("Form values:", formValues);
+                      
+                      // Generate a ticket number if this is a new repair
+                      const currentDate = new Date();
+                      const year = currentDate.getFullYear().toString().slice(-2);
+                      const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                      const ticketNumber = `RT-${year}${month}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+                      
+                      // Validate that issue is not empty
+                      if (!formValues.issue || formValues.issue.trim() === "") {
+                        toast({
+                          title: "Issue Description Required",
+                          description: "Please provide a description of the issue",
+                          variant: "destructive"
+                        });
+                        return;
+                      }
+
+                      // Create submission data differently based on whether we're creating or updating
+                      let apiData;
+                      
+                      if (repairId) {
+                        // When updating, only send the fields that are editable
+                        apiData = {
+                          status: formValues.status,
+                          priorityLevel: Number(formValues.priorityLevel || 3),
+                          technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
+                          issue: formValues.issue || "",
+                          notes: formValues.notes || "",
+                          isUnderWarranty: Boolean(formValues.isUnderWarranty),
+                          // We can safely update customer and device IDs too
+                          customerId: Number(selectedCustomerId),
+                          deviceId: selectedDeviceId ? Number(selectedDeviceId) : null,
+                          // Include estimated completion date if provided
+                          estimatedCompletionDate: formValues.estimatedCompletionDate && formValues.estimatedCompletionDate.trim() !== "" 
+                            ? formValues.estimatedCompletionDate
+                            : null
+                        };
+                      } else {
+                        // For new repairs, include all the required fields
+                        apiData = {
+                          customerId: Number(selectedCustomerId),
+                          deviceId: selectedDeviceId ? Number(selectedDeviceId) : null,
+                          issue: formValues.issue || "",
+                          status: "intake", // Always "intake" for new repairs
+                          priorityLevel: Number(formValues.priorityLevel || 3),
+                          technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
+                          notes: formValues.notes || "",
+                          isUnderWarranty: Boolean(formValues.isUnderWarranty),
+                          ticketNumber // New repairs get a ticket number
+                        };
+                      }
+                      
+                      console.log("Submitting repair data:", apiData);
+                      mutation.mutate(apiData, {
+                        onError: (error: any) => {
+                          console.error("Error creating repair:", error);
+                          // Display a more detailed error message
+                          toast({
+                            title: "Failed to create repair",
+                            description: error?.message || "An unknown error occurred",
+                            variant: "destructive"
+                          });
+                        }
+                      });
+                    }}
+                    disabled={mutation.isPending}
+                  >
+                    {mutation.isPending ? (
+                      <span className="flex items-center">
+                        <i className="fas fa-spinner fa-spin mr-2"></i> Saving...
+                      </span>
+                    ) : repairId ? (
+                      "Update Repair"
+                    ) : (
+                      "Create Repair"
+                    )}
+                  </Button>
+                ) : (
+                  <Button 
+                    type="button" 
+                    onClick={() => currentStep === "customer" && selectedCustomerId ? setCurrentStep("device") : setCurrentStep("service")} 
+                    disabled={currentStep === "customer" && !selectedCustomerId}
+                    size="sm"
+                  >
+                    Next
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {showNewCustomerForm && (
+          <CustomerForm 
+            isOpen={showNewCustomerForm}
+            onClose={() => setShowNewCustomerForm(false)}
+            onCustomerCreated={handleCustomerCreated}
+          />
+        )}
+
+        {showNewDeviceForm && selectedCustomerId && (
+          <DeviceForm
+            customerId={selectedCustomerId}
+            isOpen={showNewDeviceForm}
+            onClose={() => setShowNewDeviceForm(false)}
+            onDeviceCreated={handleDeviceCreated}
+          />
+        )}
+      </>
+    );
+  }
+  
+  // For desktop, keep using the Dialog
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="w-[95vw] sm:w-[95vw] md:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-3 sm:p-6" style={{ WebkitOverflowScrolling: 'touch', position: 'relative', touchAction: 'pan-y' }}>
+        <DialogContent className="w-full max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-6" style={{ WebkitOverflowScrolling: 'touch', position: 'relative', touchAction: 'pan-y' }}>
           <DialogHeader className="sticky top-0 bg-background z-10 pb-2">
             <DialogTitle className="text-lg sm:text-xl">
               {repairId ? "Edit Repair" : "Create New Repair"}
