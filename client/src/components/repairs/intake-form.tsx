@@ -980,9 +980,9 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="w-full max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-6" style={{ WebkitOverflowScrolling: 'touch', position: 'relative', touchAction: 'pan-y' }}>
-          <DialogHeader className="sticky top-0 bg-background z-10 pb-2">
-            <DialogTitle className="text-lg sm:text-xl">
+        <DialogContent className="max-w-3xl p-6">
+          <DialogHeader>
+            <DialogTitle>
               {repairId ? "Edit Repair" : "Create New Repair"}
             </DialogTitle>
             <DialogDescription>
@@ -993,7 +993,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-2 sm:py-4 space-y-4 sm:space-y-6 overflow-x-hidden overflow-y-auto">
+          <div className="py-2 sm:py-4 space-y-4 sm:space-y-6">
             {renderStepIndicator()}
             
             {currentStep === "customer" && renderCustomerStep()}
@@ -1001,7 +1001,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             {currentStep === "service" && renderServiceStep()}
           </div>
           
-          <DialogFooter className="flex flex-wrap justify-end gap-2 sticky bottom-0 bg-white z-10 pt-2 mt-4">
+          <DialogFooter className="flex flex-wrap justify-end gap-2 pt-2 mt-4">
             {currentStep !== "customer" && (
               <Button 
                 type="button" 
