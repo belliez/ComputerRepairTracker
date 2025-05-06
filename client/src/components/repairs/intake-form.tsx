@@ -335,19 +335,19 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
 
   const renderStepIndicator = () => {
     return (
-      <div className="mb-8">
-        <div className="flex items-center">
+      <div className="mb-4 sm:mb-8 w-full">
+        <div className="flex items-center w-full min-w-[500px]">
           <div className="flex-1">
             <div className="flex items-center justify-start">
-              <div className={`rounded-full h-8 w-8 flex items-center justify-center ${
+              <div className={`rounded-full h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center ${
                 currentStep === "customer" ? "bg-blue-500" : "bg-blue-500"
               }`}>
-                <i className="fas fa-user text-white"></i>
+                <i className="fas fa-user text-white text-xs sm:text-sm"></i>
               </div>
-              <div className="ml-4">
-                <p className={`text-sm font-medium ${
+              <div className="ml-2 sm:ml-4">
+                <p className={`text-xs sm:text-sm font-medium ${
                   currentStep === "customer" ? "text-gray-900" : "text-gray-900"
-                }`}>Customer Info</p>
+                }`}>Customer</p>
               </div>
             </div>
           </div>
@@ -358,19 +358,19 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
           </div>
           <div className="flex-1">
             <div className="flex items-center justify-center">
-              <div className={`rounded-full h-8 w-8 flex items-center justify-center ${
+              <div className={`rounded-full h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center ${
                 currentStep === "device" ? "bg-blue-500" : 
                 currentStep === "service" ? "bg-blue-500" : "bg-gray-200"
               }`}>
                 <i className={`fas fa-laptop ${
                   currentStep === "device" || currentStep === "service" ? "text-white" : "text-gray-500"
-                }`}></i>
+                } text-xs sm:text-sm`}></i>
               </div>
-              <div className="ml-4">
-                <p className={`text-sm font-medium ${
+              <div className="ml-2 sm:ml-4">
+                <p className={`text-xs sm:text-sm font-medium ${
                   currentStep === "device" ? "text-gray-900" : 
                   currentStep === "service" ? "text-gray-900" : "text-gray-500"
-                }`}>Device Info</p>
+                }`}>Device</p>
               </div>
             </div>
           </div>
@@ -381,17 +381,17 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
           </div>
           <div className="flex-1">
             <div className="flex items-center justify-end">
-              <div className={`rounded-full h-8 w-8 flex items-center justify-center ${
+              <div className={`rounded-full h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center ${
                 currentStep === "service" ? "bg-blue-500" : "bg-gray-200"
               }`}>
                 <i className={`fas fa-wrench ${
                   currentStep === "service" ? "text-white" : "text-gray-500"
-                }`}></i>
+                } text-xs sm:text-sm`}></i>
               </div>
-              <div className="ml-4">
-                <p className={`text-sm font-medium ${
+              <div className="ml-2 sm:ml-4">
+                <p className={`text-xs sm:text-sm font-medium ${
                   currentStep === "service" ? "text-gray-900" : "text-gray-500"
-                }`}>Service Details</p>
+                }`}>Service</p>
               </div>
             </div>
           </div>
@@ -556,19 +556,19 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             )}
           />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <FormField
               control={form.control}
               name="technicianId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Assign Technician</FormLabel>
+                  <FormLabel className="text-sm">Assign Technician</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(value === "0" ? null : parseInt(value))}
                     value={field.value?.toString() || "0"}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm">
                         <SelectValue placeholder="Select a technician" />
                       </SelectTrigger>
                     </FormControl>
@@ -576,7 +576,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                       <SelectItem value="0">Unassigned</SelectItem>
                       {technicians?.map((tech) => (
                         <SelectItem key={tech.id} value={tech.id.toString()}>
-                          {tech.firstName} {tech.lastName} - {tech.role}
+                          {tech.firstName} {tech.lastName}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -591,14 +591,14 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
               name="status"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Status</FormLabel>
+                  <FormLabel className="text-sm">Status</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(value)}
                     defaultValue="intake"
                     value={field.value || "intake"}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="text-sm">
                         <SelectValue />
                       </SelectTrigger>
                     </FormControl>
@@ -621,42 +621,42 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             name="priorityLevel"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Priority Level</FormLabel>
+                <FormLabel className="text-sm">Priority Level</FormLabel>
                 <FormControl>
                   <RadioGroup
                     onValueChange={(value) => field.onChange(parseInt(value))}
                     defaultValue={field.value ? field.value.toString() : "2"}
-                    className="flex space-x-2"
+                    className="flex flex-wrap gap-2 sm:space-x-2"
                   >
                     <FormItem className="flex items-center space-x-1">
                       <FormControl>
                         <RadioGroupItem value="1" />
                       </FormControl>
-                      <FormLabel className="text-red-500 font-medium">Critical</FormLabel>
+                      <FormLabel className="text-red-500 text-xs sm:text-sm font-medium">Critical</FormLabel>
                     </FormItem>
                     <FormItem className="flex items-center space-x-1">
                       <FormControl>
                         <RadioGroupItem value="2" />
                       </FormControl>
-                      <FormLabel className="text-orange-500 font-medium">High</FormLabel>
+                      <FormLabel className="text-orange-500 text-xs sm:text-sm font-medium">High</FormLabel>
                     </FormItem>
                     <FormItem className="flex items-center space-x-1">
                       <FormControl>
                         <RadioGroupItem value="3" />
                       </FormControl>
-                      <FormLabel className="text-gray-500 font-medium">Normal</FormLabel>
+                      <FormLabel className="text-gray-500 text-xs sm:text-sm font-medium">Normal</FormLabel>
                     </FormItem>
                     <FormItem className="flex items-center space-x-1">
                       <FormControl>
                         <RadioGroupItem value="4" />
                       </FormControl>
-                      <FormLabel className="text-blue-500 font-medium">Low</FormLabel>
+                      <FormLabel className="text-blue-500 text-xs sm:text-sm font-medium">Low</FormLabel>
                     </FormItem>
                     <FormItem className="flex items-center space-x-1">
                       <FormControl>
                         <RadioGroupItem value="5" />
                       </FormControl>
-                      <FormLabel className="text-green-500 font-medium">Lowest</FormLabel>
+                      <FormLabel className="text-green-500 text-xs sm:text-sm font-medium">Lowest</FormLabel>
                     </FormItem>
                   </RadioGroup>
                 </FormControl>
@@ -665,21 +665,22 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             )}
           />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <FormField
               control={form.control}
               name="estimatedCompletionDate"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Estimated Completion Date</FormLabel>
+                  <FormLabel className="text-sm">Estimated Completion Date</FormLabel>
                   <FormControl>
                     <Input 
                       type="date" 
                       {...field} 
                       value={field.value || ''}
+                      className="text-sm"
                     />
                   </FormControl>
-                  <FormDescription>
+                  <FormDescription className="text-xs sm:text-sm">
                     When do you expect the repair to be completed?
                   </FormDescription>
                   <FormMessage />
@@ -691,7 +692,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
               control={form.control}
               name="isUnderWarranty"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-2 sm:p-4">
                   <FormControl>
                     <Checkbox
                       checked={field.value || false}
@@ -699,8 +700,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>Under Warranty</FormLabel>
-                    <FormDescription>
+                    <FormLabel className="text-sm">Under Warranty</FormLabel>
+                    <FormDescription className="text-xs sm:text-sm">
                       Check if this repair is covered by warranty
                     </FormDescription>
                   </div>
@@ -734,10 +735,10 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-3 sm:p-6">
-          <DialogHeader>
-            <DialogTitle>{repairId ? "Edit Repair" : "New Repair Intake"}</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-2 sm:p-6">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-lg sm:text-xl">{repairId ? "Edit Repair" : "New Repair Intake"}</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               {repairId 
                 ? "Edit the repair information below" 
                 : "Enter the information below to create a new repair ticket"
@@ -745,9 +746,11 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             </DialogDescription>
           </DialogHeader>
           
-          {renderStepIndicator()}
+          <div className="overflow-x-auto">
+            {renderStepIndicator()}
+          </div>
           
-          <div className="py-4 space-y-6">
+          <div className="py-2 sm:py-4 space-y-4 sm:space-y-6 overflow-x-hidden">
             {currentStep === "customer" && renderCustomerStep()}
             {currentStep === "device" && renderDeviceStep()}
             {currentStep === "service" && renderServiceStep()}
