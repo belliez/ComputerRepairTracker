@@ -762,6 +762,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   
   // Check if we're on mobile when component mounts and on window resize
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -776,12 +778,49 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       window.removeEventListener('resize', checkMobile);
     };
   }, []);
+  
+  // Load repair data when editing
+  const { data: repairData } = useQuery({
+    queryKey: [`/api/repairs/${repairId}`],
+    enabled: !!repairId && isOpen,
+    queryFn: () => apiRequest("GET", `/api/repairs/${repairId}`).then(res => res.json()),
+  });
 
-  if (isMobile) {
+  // Set up form data when loading repair for editing
+  useEffect(() => {
+    if (isOpen && repairId && repairData) {
+      console.log("Edit form opened with repairData:", repairData);
+      
+      // Set selected customer and device IDs
+      if (repairData.customerId) {
+        setSelectedCustomerId(repairData.customerId.toString());
+      }
+      
+      if (repairData.deviceId) {
+        setSelectedDeviceId(repairData.deviceId.toString());
+      }
+      
+      // Set form values for editing
+      form.reset({
+        ...repairData,
+        technicianId: repairData.technicianId ? repairData.technicianId.toString() : null,
+        priorityLevel: repairData.priorityLevel ? repairData.priorityLevel.toString() : "3",
+        estimatedCompletionDate: repairData.estimatedCompletionDate || "",
+      });
+      
+      // Jump directly to the service step when editing
+      setCurrentStep("service");
+    }
+  }, [isOpen, repairId, repairData, form]);
+
+  // Force mobile mode for this fix
+  const forceMobile = true;
+
+  if (forceMobile || isMobile) {
     return (
       <>
         {isOpen && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center bg-background overflow-y-auto">
+          <div className="fixed inset-0 z-[1000] flex items-start justify-center bg-background overflow-y-auto">
             <div className="w-full min-h-screen flex flex-col">
               {/* Header */}
               <div className="sticky top-0 bg-background z-10 px-4 py-3 border-b flex items-center justify-between">
