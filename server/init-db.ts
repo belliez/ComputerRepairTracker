@@ -7,7 +7,9 @@ import {
   repairs,
   repairItems,
   quotes,
-  invoices
+  invoices,
+  currencies,
+  taxRates
 } from "@shared/schema";
 
 // Initialize demo data
@@ -253,6 +255,105 @@ export async function initializeDemo() {
   }).returning();
 
   console.log('Created invoices');
+  
+  // Create currencies
+  await db.insert(currencies).values([
+    {
+      code: 'USD',
+      name: 'US Dollar',
+      symbol: '$',
+      isDefault: true
+    },
+    {
+      code: 'EUR',
+      name: 'Euro',
+      symbol: '€',
+      isDefault: false
+    },
+    {
+      code: 'GBP',
+      name: 'British Pound',
+      symbol: '£',
+      isDefault: false
+    },
+    {
+      code: 'CAD',
+      name: 'Canadian Dollar',
+      symbol: 'C$',
+      isDefault: false
+    },
+    {
+      code: 'AUD',
+      name: 'Australian Dollar',
+      symbol: 'A$',
+      isDefault: false
+    },
+    {
+      code: 'JPY',
+      name: 'Japanese Yen',
+      symbol: '¥',
+      isDefault: false
+    }
+  ]);
+  
+  console.log('Created currencies');
+  
+  // Create tax rates
+  await db.insert(taxRates).values([
+    {
+      countryCode: 'US',
+      regionCode: 'CA',
+      name: 'California Sales Tax',
+      rate: 0.0825, // 8.25%
+      isDefault: true
+    },
+    {
+      countryCode: 'US',
+      regionCode: 'NY',
+      name: 'New York Sales Tax',
+      rate: 0.08875, // 8.875%
+      isDefault: false
+    },
+    {
+      countryCode: 'GB',
+      regionCode: null,
+      name: 'UK VAT',
+      rate: 0.20, // 20%
+      isDefault: false
+    },
+    {
+      countryCode: 'CA',
+      regionCode: null,
+      name: 'Canada GST/HST',
+      rate: 0.13, // 13%
+      isDefault: false
+    },
+    {
+      countryCode: 'AU',
+      regionCode: null,
+      name: 'Australia GST',
+      rate: 0.10, // 10%
+      isDefault: false
+    }
+  ]);
+  
+  console.log('Created tax rates');
+  
+  // Update existing quotes and invoices with currency and tax rate
+  const defaultTaxRate = await db.select().from(taxRates).where(taxRates.isDefault);
+  if (defaultTaxRate.length > 0) {
+    await db.update(quotes)
+      .set({ 
+        currencyCode: 'USD',
+        taxRateId: defaultTaxRate[0].id 
+      });
+      
+    await db.update(invoices)
+      .set({ 
+        currencyCode: 'USD',
+        taxRateId: defaultTaxRate[0].id 
+      });
+  }
   
   console.log('Demo data initialization complete');
 }

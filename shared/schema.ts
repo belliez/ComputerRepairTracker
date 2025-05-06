@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, json, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -158,6 +158,8 @@ export const quotes = pgTable("quotes", {
   total: doublePrecision("total").notNull(),
   status: text("status").notNull().default("pending"), // pending, approved, rejected
   notes: text("notes"),
+  currencyCode: text("currency_code").default("USD").references(() => currencies.code),
+  taxRateId: integer("tax_rate_id").references(() => taxRates.id),
 });
 
 // Create a base insert schema
@@ -185,6 +187,8 @@ export const invoices = pgTable("invoices", {
   paymentMethod: text("payment_method"),
   notes: text("notes"),
   stripePaymentIntentId: text("stripe_payment_intent_id"),
+  currencyCode: text("currency_code").default("USD").references(() => currencies.code),
+  taxRateId: integer("tax_rate_id").references(() => taxRates.id),
 });
 
 // Create a base insert schema for invoices
@@ -223,6 +227,30 @@ export type InsertQuote = z.infer<typeof insertQuoteSchema>;
 export type Invoice = typeof invoices.$inferSelect;
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 
+// System Settings
+export const currencies = pgTable("currencies", {
+  code: text("code").notNull().primaryKey(), // Like USD, EUR, GBP
+  name: text("name").notNull(), // US Dollar, Euro, British Pound
+  symbol: text("symbol").notNull(), // $, €, £
+  isDefault: boolean("is_default").default(false),
+});
+
+export const insertCurrencySchema = createInsertSchema(currencies);
+
+// Tax rates for different regions
+export const taxRates = pgTable("tax_rates", {
+  id: serial("id").primaryKey(),
+  countryCode: text("country_code").notNull(), // US, GB, etc
+  regionCode: text("region_code"), // State/province code like CA, TX, etc
+  name: text("name").notNull(), // Sales Tax, VAT
+  rate: doublePrecision("rate").notNull(), // 0.07 for 7%
+  isDefault: boolean("is_default").default(false),
+});
+
+export const insertTaxRateSchema = createInsertSchema(taxRates).omit({
+  id: true,
+});
+
 // Extended types for the frontend
 export type RepairWithRelations = Repair & {
   customer: Customer;
@@ -232,3 +260,10 @@ export type RepairWithRelations = Repair & {
   quote?: Quote;
   invoice?: Invoice;
 };
+
+// Define new types
+export type Currency = typeof currencies.$inferSelect;
+export type InsertCurrency = z.infer<typeof insertCurrencySchema>;
+
+export type TaxRate = typeof taxRates.$inferSelect;
+export type InsertTaxRate = z.infer<typeof insertTaxRateSchema>;
