@@ -404,6 +404,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   };
 
   const handleEditRepair = () => {
+    console.log("Editing repair:", repair);
     setShowEditForm(true);
   };
   
