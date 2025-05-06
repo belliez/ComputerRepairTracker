@@ -977,65 +977,56 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   }
   
   // For desktop, keep using the Dialog
+  // Use actual HTML dialog element for better native mobile support
   return (
     <>
-      {/* Custom modal implementation that doesn't use Radix Dialog for better mobile compatibility */}
       {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-0 sm:p-6 touch-none"
-          onClick={(e) => {
-            // Only close if clicking the backdrop
-            if (e.target === e.currentTarget) {
-              onClose();
-            }
-          }}
-        >
+        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center">
           <div 
-            className="bg-white rounded-lg w-full h-[100vh] sm:h-auto sm:max-h-[90vh] sm:max-w-3xl shadow-xl flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+            className="bg-white w-full h-full md:w-auto md:h-auto md:max-w-3xl md:max-h-[90vh] md:rounded-lg overflow-hidden shadow-lg flex flex-col"
+            style={{ WebkitOverflowScrolling: 'touch' }} // iOS momentum scrolling
           >
-            {/* Header */}
-            <div className="p-4 sm:p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold">
-                    {repairId ? "Edit Repair" : "Create New Repair"}
-                  </h2>
-                  <p className="text-sm text-gray-500">
-                    {repairId 
-                      ? "Edit the repair information below" 
-                      : "Enter the information below to create a new repair ticket"
-                    }
-                  </p>
-                </div>
-                <button 
-                  type="button" 
-                  className="rounded-full h-8 w-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100"
-                  onClick={onClose}
-                >
-                  <X className="h-4 w-4" />
-                </button>
+            {/* Header - Fixed position */}
+            <div className="bg-white p-4 border-b border-gray-200 flex justify-between items-center">
+              <div>
+                <h1 className="text-xl font-bold">
+                  {repairId ? "Edit Repair" : "Create New Repair"}
+                </h1>
+                <p className="text-sm text-gray-500">
+                  {repairId 
+                    ? "Edit the repair information below" 
+                    : "Enter the information below to create a new repair ticket"
+                  }
+                </p>
+              </div>
+              <button 
+                className="p-2 rounded-full hover:bg-gray-200" 
+                onClick={onClose}
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {/* Main content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {renderStepIndicator()}
+              
+              {/* Form Steps */}
+              <div className="mt-4">
+                {currentStep === "customer" && renderCustomerStep()}
+                {currentStep === "device" && renderDeviceStep()}
+                {currentStep === "service" && renderServiceStep()}
               </div>
             </div>
             
-            {/* Content area - scrollable */}
-            <div className="flex-1 overflow-y-auto touch-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
-              {renderStepIndicator()}
-              
-              {currentStep === "customer" && renderCustomerStep()}
-              {currentStep === "device" && renderDeviceStep()}
-              {currentStep === "service" && renderServiceStep()}
-            </div>
-            
-            {/* Footer */}
-            <div className="p-4 sm:p-6 border-t border-gray-200 flex flex-wrap justify-end gap-2">
+            {/* Footer - Fixed position */}
+            <div className="bg-white p-4 border-t border-gray-200 flex justify-end items-center gap-2">
               {currentStep !== "customer" && (
                 <Button 
                   type="button" 
                   variant="outline" 
                   onClick={handlePrevStep}
-                  className="mr-auto text-xs sm:text-sm h-8 sm:h-9"
-                  size="sm"
+                  className="mr-auto"
                 >
                   Back
                 </Button>
@@ -1045,8 +1036,6 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 type="button" 
                 variant="outline" 
                 onClick={onClose}
-                className="text-xs sm:text-sm h-8 sm:h-9"
-                size="sm"
               >
                 Cancel
               </Button>
@@ -1054,8 +1043,6 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
               {currentStep === "service" ? (
                 <Button 
                   type="button"
-                  className="text-xs sm:text-sm h-8 sm:h-9"
-                  size="sm"
                   onClick={() => {
                     // Get form values directly
                     const formValues = form.getValues();
@@ -1142,8 +1129,6 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                   type="button" 
                   onClick={() => currentStep === "customer" && selectedCustomerId ? setCurrentStep("device") : setCurrentStep("service")} 
                   disabled={currentStep === "customer" && !selectedCustomerId}
-                  className="text-xs sm:text-sm h-8 sm:h-9"
-                  size="sm"
                 >
                   Next
                 </Button>
