@@ -1414,6 +1414,34 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
           }}
         />
       )}
+
+      {/* Cost Estimator Dialog */}
+      {showCostEstimator && (
+        <Dialog open={showCostEstimator} onOpenChange={setShowCostEstimator}>
+          <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Repair Cost Estimator</DialogTitle>
+              <DialogDescription>
+                Estimate the total repair cost with a transparent breakdown
+              </DialogDescription>
+            </DialogHeader>
+            <CostEstimator 
+              repairId={repairId} 
+              onEstimateComplete={(estimateData) => {
+                // Here we can handle saving the estimate if needed
+                toast({
+                  title: "Estimate complete",
+                  description: `Total estimated cost: ${estimateData.currency} ${estimateData.total.toFixed(2)}`,
+                });
+                setShowCostEstimator(false);
+              }}
+            />
+            <DialogFooter className="mt-4">
+              <Button onClick={() => setShowCostEstimator(false)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 }

@@ -66,28 +66,48 @@ export default function CostEstimator({ repairId, onEstimateComplete }: CostEsti
     ...commonServices,
     ...commonParts
   ]);
-  const [customItem, setCustomItem] = useState({ name: "", price: "", quantity: "1", category: "parts" as const });
+  type ItemCategory = 'parts' | 'labor' | 'fee';
+  const [customItem, setCustomItem] = useState<{ name: string; price: string; quantity: string; category: ItemCategory }>({ 
+    name: "", 
+    price: "", 
+    quantity: "1", 
+    category: "parts" 
+  });
   const [taxRate, setTaxRate] = useState(0.1); // Default 10% tax
   const [currency, setCurrency] = useState("USD");
   const { toast } = useToast();
 
+  // Define types for tax rates and currencies
+  interface TaxRate {
+    id: number;
+    name: string;
+    rate: number;
+  }
+
+  interface Currency {
+    id: number;
+    code: string;
+    name: string;
+    symbol: string;
+  }
+
   // Fetch tax rates from settings
-  const { data: taxRates } = useQuery({
+  const { data: taxRates } = useQuery<TaxRate[]>({
     queryKey: ["/api/settings/tax-rates"],
   });
 
   // Fetch currencies from settings
-  const { data: currencies } = useQuery({
+  const { data: currencies } = useQuery<Currency[]>({
     queryKey: ["/api/settings/currencies"],
   });
 
   // Fetch default tax rate
-  const { data: defaultTaxRate } = useQuery({
+  const { data: defaultTaxRate } = useQuery<TaxRate>({
     queryKey: ["/api/settings/tax-rates/default"],
   });
 
   // Fetch default currency
-  const { data: defaultCurrency } = useQuery({
+  const { data: defaultCurrency } = useQuery<Currency>({
     queryKey: ["/api/settings/currencies/default"],
   });
 
