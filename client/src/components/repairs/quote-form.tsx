@@ -54,25 +54,55 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   });
 
   // Get existing quote if editing
-  const { data: existingQuote, isLoading: isLoadingQuote } = useQuery({
+  const { data: existingQuote, isLoading: isLoadingQuote } = useQuery<Quote>({
     queryKey: [`/api/quotes/${quoteId}`],
     enabled: !!quoteId,
   });
 
+  // Define interfaces for our data structures
+  interface Currency {
+    code: string;
+    name: string;
+    symbol: string;
+    isDefault: boolean;
+  }
+  
+  interface TaxRate {
+    id: number;
+    name: string;
+    rate: number;
+    isDefault: boolean;
+  }
+  
+  interface Quote {
+    id: number;
+    repairId: number;
+    quoteNumber: string;
+    dateCreated: string;
+    expirationDate: string | null;
+    subtotal: number;
+    tax: number;
+    total: number;
+    status: string;
+    notes: string | null;
+    currencyCode: string;
+    taxRateId: number;
+  }
+  
   // Get currencies and tax rates
-  const { data: currencies, isLoading: isLoadingCurrencies } = useQuery({
+  const { data: currencies, isLoading: isLoadingCurrencies } = useQuery<Currency[]>({
     queryKey: ['/api/settings/currencies'],
   });
   
-  const { data: defaultCurrency, isLoading: isLoadingDefaultCurrency } = useQuery({
+  const { data: defaultCurrency, isLoading: isLoadingDefaultCurrency } = useQuery<Currency>({
     queryKey: ['/api/settings/currencies/default'],
   });
   
-  const { data: taxRates, isLoading: isLoadingTaxRates } = useQuery({
+  const { data: taxRates, isLoading: isLoadingTaxRates } = useQuery<TaxRate[]>({
     queryKey: ['/api/settings/tax-rates'],
   });
   
-  const { data: defaultTaxRate, isLoading: isLoadingDefaultTaxRate } = useQuery({
+  const { data: defaultTaxRate, isLoading: isLoadingDefaultTaxRate } = useQuery<TaxRate>({
     queryKey: ['/api/settings/tax-rates/default'],
   });
   
@@ -154,30 +184,27 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   // Update form with existing quote data if editing
   useEffect(() => {
     if (existingQuote) {
-      // Extract data safely
-      const quoteData = existingQuote as any;
-      
       // Format dates for input fields
-      const dateCreated = new Date(quoteData.dateCreated).toISOString().split('T')[0];
-      const expirationDate = quoteData.expirationDate 
-        ? new Date(quoteData.expirationDate).toISOString().split('T')[0]
+      const dateCreated = new Date(existingQuote.dateCreated).toISOString().split('T')[0];
+      const expirationDate = existingQuote.expirationDate 
+        ? new Date(existingQuote.expirationDate).toISOString().split('T')[0]
         : null;
       
       form.reset({
-        repairId: quoteData.repairId,
-        quoteNumber: quoteData.quoteNumber,
+        repairId: existingQuote.repairId,
+        quoteNumber: existingQuote.quoteNumber,
         dateCreated,
         expirationDate,
-        subtotal: quoteData.subtotal,
-        tax: quoteData.tax,
-        total: quoteData.total,
-        status: quoteData.status,
-        notes: quoteData.notes || "",
-        currencyCode: quoteData.currencyCode || (defaultCurrency?.code || "USD"),
-        taxRateId: quoteData.taxRateId || (defaultTaxRate?.id || 1),
+        subtotal: existingQuote.subtotal,
+        tax: existingQuote.tax,
+        total: existingQuote.total,
+        status: existingQuote.status,
+        notes: existingQuote.notes || "",
+        currencyCode: existingQuote.currencyCode || (defaultCurrency?.code || "USD"),
+        taxRateId: existingQuote.taxRateId || (defaultTaxRate?.id || 1),
       });
     }
-  }, [existingQuote, form]);
+  }, [existingQuote, form, defaultCurrency, defaultTaxRate]);
 
   // Automatically update totals when items change
   useEffect(() => {
@@ -372,7 +399,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                               <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
                             </div>
                           ) : currencies && currencies.length > 0 ? (
-                            currencies.map((currency: any) => (
+                            currencies.map((currency) => (
                               <SelectItem key={currency.code} value={currency.code}>
                                 {currency.symbol} {currency.name} ({currency.code})
                               </SelectItem>
@@ -415,7 +442,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                               <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
                             </div>
                           ) : taxRates && taxRates.length > 0 ? (
-                            taxRates.map((taxRate: any) => (
+                            taxRates.map((taxRate) => (
                               <SelectItem key={taxRate.id} value={String(taxRate.id)}>
                                 {taxRate.name} ({(taxRate.rate * 100).toFixed(2)}%)
                               </SelectItem>
