@@ -113,27 +113,45 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
     if (repair) {
       console.log("Editing repair:", repair);
       
-      setSelectedCustomerId(repair.customerId);
-      setSelectedDeviceId(repair.deviceId);
-      
-      // When editing, set all values from the existing repair
-      form.reset({
-        customerId: repair.customerId,
-        deviceId: repair.deviceId || 0,
-        status: repair.status as any, // Cast to any to avoid TypeScript errors
-        technicianId: repair.technicianId,
-        issue: repair.issue || "",
-        notes: repair.notes || "",
-        priorityLevel: repair.priorityLevel,
-        isUnderWarranty: repair.isUnderWarranty,
-        estimatedCompletionDate: repair.estimatedCompletionDate 
-          ? new Date(repair.estimatedCompletionDate).toISOString().split('T')[0]
-          : "",
-        ticketNumber: repair.ticketNumber,
-      });
+      try {
+        // Set customer ID
+        if (typeof repair.customerId === 'number') {
+          setSelectedCustomerId(repair.customerId);
+        }
+        
+        // Set device ID if present
+        if (typeof repair.deviceId === 'number') {
+          setSelectedDeviceId(repair.deviceId);
+        }
+        
+        // When editing, set all values from the existing repair
+        form.reset({
+          customerId: typeof repair.customerId === 'number' ? repair.customerId : 0,
+          deviceId: typeof repair.deviceId === 'number' ? repair.deviceId : 0,
+          status: repair.status || "intake",
+          technicianId: repair.technicianId,
+          issue: repair.issue || "",
+          notes: repair.notes || "",
+          priorityLevel: typeof repair.priorityLevel === 'number' ? repair.priorityLevel : 3,
+          isUnderWarranty: Boolean(repair.isUnderWarranty),
+          estimatedCompletionDate: repair.estimatedCompletionDate 
+            ? new Date(repair.estimatedCompletionDate).toISOString().split('T')[0]
+            : "",
+          ticketNumber: repair.ticketNumber,
+        });
+        
+        console.log("Form reset with data:", form.getValues());
 
-      // When editing an existing repair, skip straight to the service details step
-      setCurrentStep("service");
+        // When editing an existing repair, skip straight to the service details step
+        setCurrentStep("service");
+      } catch (err) {
+        console.error("Error setting form values:", err);
+        toast({
+          title: "Error Loading Data",
+          description: "There was an error loading the repair data. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   }, [repair, form]);
 
@@ -786,8 +804,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
     return (
       <>
         {isOpen && (
-          <div className="fixed inset-0 z-[1000] flex items-start justify-center bg-background overflow-y-auto">
-            <div className="w-full min-h-screen flex flex-col">
+          <div className="fixed inset-0 z-[1000] flex flex-col bg-background">
+            <div className="w-full h-full flex flex-col">
               {/* Header */}
               <div className="sticky top-0 bg-background z-10 px-4 py-3 border-b flex items-center justify-between">
                 <div>
@@ -807,7 +825,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
               </div>
               
               {/* Content */}
-              <div className="flex-1 px-4 py-3 overflow-auto">
+              <div className="flex-1 px-4 py-3 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {renderStepIndicator()}
                 
                 {currentStep === "customer" && renderCustomerStep()}
