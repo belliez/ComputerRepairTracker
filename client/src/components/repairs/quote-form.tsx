@@ -1,10 +1,12 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertQuoteSchema, RepairItem } from "@shared/schema";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -144,6 +146,8 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
       total,
       status: "pending",
       notes: "",
+      currencyCode: selectedCurrencyCode || (defaultCurrency?.code || "USD"),
+      taxRateId: selectedTaxRateId || (defaultTaxRate?.id || 1),
     },
   });
 
@@ -169,6 +173,8 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
         total: quoteData.total,
         status: quoteData.status,
         notes: quoteData.notes || "",
+        currencyCode: quoteData.currencyCode || (defaultCurrency?.code || "USD"),
+        taxRateId: quoteData.taxRateId || (defaultTaxRate?.id || 1),
       });
     }
   }, [existingQuote, form]);
@@ -341,6 +347,91 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name="currencyCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedCurrencyCode(value);
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select currency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {isLoadingCurrencies ? (
+                            <div className="flex justify-center p-2">
+                              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                            </div>
+                          ) : currencies && currencies.length > 0 ? (
+                            currencies.map((currency: any) => (
+                              <SelectItem key={currency.code} value={currency.code}>
+                                {currency.symbol} {currency.name} ({currency.code})
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="USD">$ US Dollar (USD)</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Select the currency for this quote
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="taxRateId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tax Rate</FormLabel>
+                      <Select
+                        value={String(field.value)}
+                        onValueChange={(value) => {
+                          const numValue = parseInt(value);
+                          field.onChange(numValue);
+                          setSelectedTaxRateId(numValue);
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select tax rate" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {isLoadingTaxRates ? (
+                            <div className="flex justify-center p-2">
+                              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                            </div>
+                          ) : taxRates && taxRates.length > 0 ? (
+                            taxRates.map((taxRate: any) => (
+                              <SelectItem key={taxRate.id} value={String(taxRate.id)}>
+                                {taxRate.name} ({(taxRate.rate * 100).toFixed(2)}%)
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="1">No Tax (0%)</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Select the appropriate tax rate
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               {/* Use the new EditableLineItems component */}
@@ -399,7 +490,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                         <FormLabel>Subtotal</FormLabel>
                         <FormControl>
                           <div className="flex items-center">
-                            <span className="mr-1">$</span>
+                            <span className="mr-1">{selectedCurrency?.symbol || '$'}</span>
                             <Input
                               {...field}
                               value={field.value ? field.value.toFixed(2) : '0.00'}
@@ -420,7 +511,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                         <FormLabel>Tax ({(taxRate * 100).toFixed(2)}%)</FormLabel>
                         <FormControl>
                           <div className="flex items-center">
-                            <span className="mr-1">$</span>
+                            <span className="mr-1">{selectedCurrency?.symbol || '$'}</span>
                             <Input
                               {...field}
                               value={field.value ? field.value.toFixed(2) : '0.00'}
@@ -441,7 +532,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                         <FormLabel>Total</FormLabel>
                         <FormControl>
                           <div className="flex items-center">
-                            <span className="mr-1">$</span>
+                            <span className="mr-1">{selectedCurrency?.symbol || '$'}</span>
                             <Input
                               {...field}
                               value={field.value ? field.value.toFixed(2) : '0.00'}
