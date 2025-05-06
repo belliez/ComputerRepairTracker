@@ -119,15 +119,16 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
       form.reset({
         customerId: repair.customerId,
         deviceId: repair.deviceId || 0,
-        status: repair.status,
+        status: repair.status as any, // Cast to any to avoid TypeScript errors
         technicianId: repair.technicianId,
-        issue: repair.issue,
+        issue: repair.issue || "",
         notes: repair.notes || "",
         priorityLevel: repair.priorityLevel,
         isUnderWarranty: repair.isUnderWarranty,
         estimatedCompletionDate: repair.estimatedCompletionDate 
           ? new Date(repair.estimatedCompletionDate).toISOString().split('T')[0]
-          : undefined,
+          : "",
+        ticketNumber: repair.ticketNumber,
       });
 
       // When editing an existing repair, skip straight to the service details step
@@ -709,10 +710,56 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
     );
   };
 
+  // Effect to handle keyboard appearing on mobile
+  useEffect(() => {
+    // Only run this effect if the dialog is open
+    if (!isOpen) return;
+    
+    // Function to handle viewport changes (like when keyboard appears)
+    const handleResize = () => {
+      // Get the dialog content element
+      const dialogContent = document.querySelector('[role="dialog"]');
+      if (dialogContent) {
+        // Adjust the scroll position if an input is focused
+        const activeElement = document.activeElement;
+        if (activeElement instanceof HTMLInputElement || 
+            activeElement instanceof HTMLTextAreaElement) {
+          // Scroll the active element into view with some padding
+          setTimeout(() => {
+            activeElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 100);
+        }
+      }
+    };
+    
+    // Function to handle input focus
+    const handleFocus = (e: FocusEvent) => {
+      const target = e.target;
+      if (target instanceof HTMLInputElement || 
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement) {
+        // Scroll the focused element into view
+        setTimeout(() => {
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }
+    };
+
+    // Add event listeners
+    window.addEventListener('resize', handleResize);
+    document.addEventListener('focus', handleFocus, true);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('focus', handleFocus, true);
+    };
+  }, [isOpen, currentStep]);
+  
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl h-[80vh] overflow-y-auto w-[calc(100vw-2rem)] overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)] overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch', position: 'relative', paddingBottom: '80px', touchAction: 'pan-y' }}>
           <DialogHeader className="sticky top-0 bg-white z-10 pb-2">
             <DialogTitle>
               {repairId ? "Edit Repair" : "Create New Repair"}
