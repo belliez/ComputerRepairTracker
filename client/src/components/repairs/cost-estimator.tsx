@@ -242,44 +242,16 @@ export default function CostEstimator({ repairId, onEstimateComplete }: CostEsti
         <CardDescription>Select items to include in the estimate</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Tax Rate & Currency Selection */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div className="space-y-2">
-            <Label htmlFor="tax-rate">Tax Rate</Label>
-            <Select 
-              value={taxRate.toString()} 
-              onValueChange={(value) => setTaxRate(parseFloat(value))}
-            >
-              <SelectTrigger id="tax-rate">
-                <SelectValue placeholder="Select Tax Rate" />
-              </SelectTrigger>
-              <SelectContent>
-                {taxRates?.map(rate => (
-                  <SelectItem key={rate.id} value={(rate.rate / 100).toString()}>
-                    {rate.name} ({rate.rate}%)
-                  </SelectItem>
-                ))}
-                <SelectItem value="0">No Tax (0%)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="currency">Currency</Label>
-            <Select 
-              value={currency} 
-              onValueChange={(value) => setCurrency(value)}
-            >
-              <SelectTrigger id="currency">
-                <SelectValue placeholder="Select Currency" />
-              </SelectTrigger>
-              <SelectContent>
-                {currencies?.map(curr => (
-                  <SelectItem key={curr.id} value={curr.code}>
-                    {curr.name} ({curr.symbol})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* Using system default tax rate and currency */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 bg-gray-50 p-3 rounded-md text-sm">
+          <span className="font-medium mb-2 sm:mb-0">Using system settings:</span>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+            <span>
+              <strong>Currency:</strong> {defaultCurrency?.name || 'Loading...'} ({defaultCurrency?.symbol || '$'})
+            </span>
+            <span>
+              <strong>Tax Rate:</strong> {defaultTaxRate ? `${defaultTaxRate.name} (${defaultTaxRate.rate}%)` : 'Loading...'}
+            </span>
           </div>
         </div>
 

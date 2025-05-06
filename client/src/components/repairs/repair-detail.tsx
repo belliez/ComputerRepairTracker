@@ -1418,26 +1418,28 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
       {/* Cost Estimator Dialog */}
       {showCostEstimator && (
         <Dialog open={showCostEstimator} onOpenChange={setShowCostEstimator}>
-          <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="sm:w-[calc(100vw-2rem)] md:max-w-4xl w-screen max-h-[90vh] overflow-y-auto p-0 sm:p-6">
+            <DialogHeader className="p-4 sm:p-0">
               <DialogTitle>Repair Cost Estimator</DialogTitle>
               <DialogDescription>
                 Estimate the total repair cost with a transparent breakdown
               </DialogDescription>
             </DialogHeader>
-            <CostEstimator 
-              repairId={repairId} 
-              onEstimateComplete={(estimateData) => {
-                // Here we can handle saving the estimate if needed
-                toast({
-                  title: "Estimate complete",
-                  description: `Total estimated cost: ${estimateData.currency} ${estimateData.total.toFixed(2)}`,
-                });
-                setShowCostEstimator(false);
-              }}
-            />
-            <DialogFooter className="mt-4">
-              <Button onClick={() => setShowCostEstimator(false)}>Close</Button>
+            <div className="px-4 sm:px-0">
+              <CostEstimator 
+                repairId={repairId} 
+                onEstimateComplete={(estimateData) => {
+                  // Here we can handle saving the estimate if needed
+                  toast({
+                    title: "Estimate complete",
+                    description: `Total estimated cost: ${estimateData.currency} ${estimateData.total.toFixed(2)}`,
+                  });
+                  setShowCostEstimator(false);
+                }}
+              />
+            </div>
+            <DialogFooter className="p-4 sm:p-0 mt-4">
+              <Button onClick={() => setShowCostEstimator(false)} className="w-full sm:w-auto">Close</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
