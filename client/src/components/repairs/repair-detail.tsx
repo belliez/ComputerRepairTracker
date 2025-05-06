@@ -528,7 +528,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-3 sm:p-6">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-5xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-2 sm:p-6">
           <DialogHeader>
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
               <div>
@@ -555,18 +555,18 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
           </DialogHeader>
 
           <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
-            <div className="overflow-x-auto pb-2">
-              <TabsList className="mb-4 w-auto inline-flex">
-                <TabsTrigger value="details">Repair Details</TabsTrigger>
-                <TabsTrigger value="parts">Parts & Services</TabsTrigger>
-                <TabsTrigger value="quotes">Quote</TabsTrigger>
-                <TabsTrigger value="invoice">Invoice</TabsTrigger>
+            <div className="overflow-x-auto pb-2 -mx-2">
+              <TabsList className="mb-4 w-auto inline-flex px-2">
+                <TabsTrigger value="details" className="text-xs sm:text-sm">Details</TabsTrigger>
+                <TabsTrigger value="parts" className="text-xs sm:text-sm">Parts & Services</TabsTrigger>
+                <TabsTrigger value="quotes" className="text-xs sm:text-sm">Quote</TabsTrigger>
+                <TabsTrigger value="invoice" className="text-xs sm:text-sm">Invoice</TabsTrigger>
               </TabsList>
             </div>
 
             {/* Details Tab */}
-            <TabsContent value="details" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <TabsContent value="details" className="space-y-6 px-0 sm:px-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Card>
                   <CardHeader>
                     <CardTitle>Customer Information</CardTitle>
@@ -792,7 +792,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
             </TabsContent>
 
             {/* Parts & Services Tab */}
-            <TabsContent value="parts">
+            <TabsContent value="parts" className="px-0 sm:px-2">
               <Card>
                 <CardHeader>
                   <CardTitle>Parts & Services</CardTitle>
@@ -968,7 +968,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
             </TabsContent>
 
             {/* Quotes Tab */}
-            <TabsContent value="quotes">
+            <TabsContent value="quotes" className="px-0 sm:px-2">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
@@ -1107,7 +1107,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
             </TabsContent>
 
             {/* Invoice Tab */}
-            <TabsContent value="invoice">
+            <TabsContent value="invoice" className="px-0 sm:px-2">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
