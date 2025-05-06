@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { Repair, Technician } from "@shared/schema";
 import { 
   Card, 
@@ -27,13 +27,22 @@ export default function Dashboard() {
   const [showPartsForm, setShowPartsForm] = useState(false);
   const [selectedRepairId, setSelectedRepairId] = useState<number | null>(null);
   
-  const queryClient = useQuery<Repair[]>({
+  const queryClient = useQueryClient();
+  
+  // Get repair data with regular refresh
+  const { data: repairs, isLoading: isLoadingRepairs } = useQuery<Repair[]>({
     queryKey: ["/api/repairs"],
     refetchInterval: 10000, // Refresh every 10 seconds
     staleTime: 5000, // Consider data stale after 5 seconds
   });
   
-  const { data: repairs, isLoading: isLoadingRepairs } = queryClient;
+  // When a form closes, make sure to refresh the data
+  useEffect(() => {
+    if (!showIntakeForm && !showCustomerForm && !showInvoiceForm) {
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
+    }
+  }, [showIntakeForm, showCustomerForm, showInvoiceForm, queryClient]);
 
   // Handler functions
   const handleViewRepair = (repairId: number) => {
@@ -85,7 +94,7 @@ export default function Dashboard() {
     const activeRepairs = allRepairs.filter(r => 
       !['completed', 'cancelled'].includes(r.status)
     ).length;
-    const urgentRepairs = allRepairs.filter(r => r.priorityLevel <= 2).length;
+    const urgentRepairs = allRepairs.filter(r => r.priorityLevel != null && r.priorityLevel <= 2).length;
     const completedRepairs = allRepairs.filter(r => r.status === 'completed').length;
 
     return (
@@ -160,14 +169,20 @@ export default function Dashboard() {
         <IntakeForm 
           repairId={selectedRepairId} 
           isOpen={showIntakeForm} 
-          onClose={() => setShowIntakeForm(false)}
+          onClose={() => {
+            setShowIntakeForm(false);
+            queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
+          }}
         />
       )}
 
       {showCustomerForm && (
         <CustomerForm 
           isOpen={showCustomerForm} 
-          onClose={() => setShowCustomerForm(false)}
+          onClose={() => {
+            setShowCustomerForm(false);
+            queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+          }}
         />
       )}
 
@@ -175,14 +190,21 @@ export default function Dashboard() {
         <InvoiceForm 
           repairId={selectedRepairId}
           isOpen={showInvoiceForm} 
-          onClose={() => setShowInvoiceForm(false)}
+          onClose={() => {
+            setShowInvoiceForm(false);
+            queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
+          }}
         />
       )}
 
       {showPartsForm && (
         <PartsForm 
           isOpen={showPartsForm} 
-          onClose={() => setShowPartsForm(false)}
+          onClose={() => {
+            setShowPartsForm(false);
+            queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+          }}
         />
       )}
     </>
