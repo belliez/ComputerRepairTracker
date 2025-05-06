@@ -681,7 +681,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                     
                     <div>
                       <h4 className="font-medium">Priority</h4>
-                      <p>
+                      <div className="mt-1">
                         <Badge className={
                           safeGet(repair, 'priorityLevel', 3) === 1 ? "bg-red-100 text-red-800 border-red-300" :
                           safeGet(repair, 'priorityLevel', 3) === 2 ? "bg-orange-100 text-orange-800 border-orange-300" :
@@ -695,7 +695,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                            safeGet(repair, 'priorityLevel', 3) === 4 ? "Low" :
                            "Lowest"}
                         </Badge>
-                      </p>
+                      </div>
                     </div>
                   </div>
 
