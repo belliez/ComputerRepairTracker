@@ -59,19 +59,18 @@ export default function Sidebar({ isVisible, onClose }: SidebarProps) {
         <ul>
           {navItems.map((item) => (
             <li key={item.path} className="mb-1">
-              <Link href={item.path}>
-                <a 
-                  className={cn(
-                    "flex items-center px-4 py-2 rounded transition-colors",
-                    location === item.path
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-300 hover:bg-gray-700 hover:text-white"
-                  )}
-                  onClick={() => onClose()}
-                >
-                  <i className={`fas fa-${item.icon} w-5`}></i>
-                  <span>{item.label}</span>
-                </a>
+              <Link 
+                href={item.path}
+                className={cn(
+                  "flex items-center px-4 py-2 rounded transition-colors",
+                  location === item.path
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                )}
+                onClick={() => onClose()}
+              >
+                <i className={`fas fa-${item.icon} w-5`}></i>
+                <span>{item.label}</span>
               </Link>
             </li>
           ))}
