@@ -96,13 +96,14 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
     defaultValues: {
       customerId: 0,
       deviceId: 0,
-      status: "intake",
+      status: "intake" as const,
       issue: "",
       notes: "",
       priorityLevel: 3,
       isUnderWarranty: false,
-      technicianId: undefined,
+      technicianId: null,
       estimatedCompletionDate: "", // Empty string default
+      ticketNumber: undefined,
     },
   });
 
@@ -317,7 +318,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   const renderStepIndicator = () => {
     return (
       <div className="mb-4 sm:mb-6 w-full overflow-x-auto pb-2">
-        <div className="flex items-center w-full" style={{ minWidth: "300px" }}>
+        <div className="flex items-center w-full" style={{ minWidth: "270px" }}>
           <div className="flex-1">
             <div 
               className="flex items-center justify-start cursor-pointer" 
@@ -711,8 +712,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-[calc(100vw-2rem)] overflow-x-hidden">
-          <DialogHeader>
+        <DialogContent className="max-w-3xl h-[80vh] overflow-y-auto w-[calc(100vw-2rem)] overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <DialogHeader className="sticky top-0 bg-white z-10 pb-2">
             <DialogTitle>
               {repairId ? "Edit Repair" : "Create New Repair"}
             </DialogTitle>
@@ -724,7 +725,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             </DialogDescription>
           </DialogHeader>
           
-          <div className="py-2 sm:py-4 space-y-4 sm:space-y-6 overflow-x-hidden">
+          <div className="py-2 sm:py-4 space-y-4 sm:space-y-6 overflow-x-hidden overflow-y-auto">
             {renderStepIndicator()}
             
             {currentStep === "customer" && renderCustomerStep()}
@@ -732,7 +733,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             {currentStep === "service" && renderServiceStep()}
           </div>
           
-          <DialogFooter className="flex flex-wrap justify-end gap-2">
+          <DialogFooter className="flex flex-wrap justify-end gap-2 sticky bottom-0 bg-white z-10 pt-2 mt-4">
             {currentStep !== "customer" && (
               <Button 
                 type="button" 
