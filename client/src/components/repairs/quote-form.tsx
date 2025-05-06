@@ -57,9 +57,62 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
     enabled: !!quoteId,
   });
 
+  // Get currencies and tax rates
+  const { data: currencies, isLoading: isLoadingCurrencies } = useQuery({
+    queryKey: ['/api/settings/currencies'],
+  });
+  
+  const { data: defaultCurrency, isLoading: isLoadingDefaultCurrency } = useQuery({
+    queryKey: ['/api/settings/currencies/default'],
+  });
+  
+  const { data: taxRates, isLoading: isLoadingTaxRates } = useQuery({
+    queryKey: ['/api/settings/tax-rates'],
+  });
+  
+  const { data: defaultTaxRate, isLoading: isLoadingDefaultTaxRate } = useQuery({
+    queryKey: ['/api/settings/tax-rates/default'],
+  });
+  
+  // State for selected currency and tax rate
+  const [selectedCurrencyCode, setSelectedCurrencyCode] = useState<string>("");
+  const [selectedTaxRateId, setSelectedTaxRateId] = useState<number | null>(null);
+  
+  // Set defaults when data loads
+  useEffect(() => {
+    if (defaultCurrency && !selectedCurrencyCode) {
+      setSelectedCurrencyCode(defaultCurrency.code);
+    }
+    if (defaultTaxRate && !selectedTaxRateId) {
+      setSelectedTaxRateId(defaultTaxRate.id);
+    }
+  }, [defaultCurrency, defaultTaxRate, selectedCurrencyCode, selectedTaxRateId]);
+  
+  // When editing, load the existing quote's settings
+  useEffect(() => {
+    if (existingQuote) {
+      if (existingQuote.currencyCode) {
+        setSelectedCurrencyCode(existingQuote.currencyCode);
+      }
+      if (existingQuote.taxRateId) {
+        setSelectedTaxRateId(existingQuote.taxRateId);
+      }
+    }
+  }, [existingQuote]);
+  
+  // Get the selected tax rate
+  const selectedTaxRate = selectedTaxRateId 
+    ? taxRates?.find(rate => rate.id === selectedTaxRateId)
+    : defaultTaxRate;
+    
+  // Get the selected currency
+  const selectedCurrency = selectedCurrencyCode
+    ? currencies?.find(currency => currency.code === selectedCurrencyCode)
+    : defaultCurrency;
+  
   // Calculate values from repair items
   const subtotal = repairItems?.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0) || 0;
-  const taxRate = 0.0825; // 8.25% tax - would come from settings in a real system
+  const taxRate = selectedTaxRate?.rate || 0;
   const taxAmount = subtotal * taxRate;
   const total = subtotal + taxAmount;
 
@@ -73,7 +126,9 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
     tax: z.number(),
     total: z.number(),
     status: z.string(),
-    notes: z.string().nullable().optional()
+    notes: z.string().nullable().optional(),
+    currencyCode: z.string(),
+    taxRateId: z.number()
   });
 
   // Form initialization

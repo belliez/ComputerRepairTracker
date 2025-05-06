@@ -15,7 +15,13 @@ import {
   insertRepairSchema,
   insertTechnicianSchema,
   repairStatuses,
+  currencies,
+  taxRates,
+  quotes,
+  invoices,
 } from "@shared/schema";
+import { db } from "./db";
+import { eq, sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize Stripe
@@ -1074,10 +1080,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Customer not found" });
       }
 
+      // Get currency information
+      let currencyCode = "usd"; // Default fallback
+      if (invoice.currencyCode) {
+        // Use invoice currency if set
+        currencyCode = invoice.currencyCode.toLowerCase();
+      } else {
+        // Get default currency
+        const [defaultCurrency] = await db.select().from(currencies).where(eq(currencies.isDefault, true));
+        if (defaultCurrency) {
+          currencyCode = defaultCurrency.code.toLowerCase();
+        }
+      }
+      
       // Create a payment intent
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(invoice.total * 100), // Convert to cents
-        currency: "usd",
+        currency: currencyCode,
         metadata: {
           invoiceId: invoice.id.toString(),
           repairId: repair.id.toString(),
@@ -1097,6 +1116,224 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating payment intent:", error);
       res.status(500).json({ error: "Failed to create payment intent" });
+    }
+  });
+
+  // Settings API - Currencies
+  apiRouter.get("/settings/currencies", async (req: Request, res: Response) => {
+    try {
+      const allCurrencies = await db.select().from(currencies);
+      res.json(allCurrencies);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  apiRouter.get("/settings/currencies/default", async (req: Request, res: Response) => {
+    try {
+      const [defaultCurrency] = await db.select().from(currencies).where(eq(currencies.isDefault, true));
+      if (!defaultCurrency) {
+        // If no default, return USD as fallback
+        const [usdCurrency] = await db.select().from(currencies).where(eq(currencies.code, "USD"));
+        return res.json(usdCurrency || { code: "USD", symbol: "$", name: "US Dollar" });
+      }
+      res.json(defaultCurrency);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  apiRouter.post("/settings/currencies", async (req: Request, res: Response) => {
+    try {
+      const { code, name, symbol, isDefault } = req.body;
+      
+      // If setting as default, unset any existing default
+      if (isDefault) {
+        await db.update(currencies)
+          .set({ isDefault: false })
+          .where(eq(currencies.isDefault, true));
+      }
+      
+      const [currency] = await db.insert(currencies)
+        .values({ code, name, symbol, isDefault })
+        .returning();
+        
+      res.status(201).json(currency);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  apiRouter.put("/settings/currencies/:code", async (req: Request, res: Response) => {
+    try {
+      const { code } = req.params;
+      const { name, symbol, isDefault } = req.body;
+      
+      // If setting as default, unset any existing default
+      if (isDefault) {
+        await db.update(currencies)
+          .set({ isDefault: false })
+          .where(eq(currencies.isDefault, true));
+      }
+      
+      const [updatedCurrency] = await db.update(currencies)
+        .set({ name, symbol, isDefault })
+        .where(eq(currencies.code, code))
+        .returning();
+        
+      if (!updatedCurrency) {
+        return res.status(404).json({ error: "Currency not found" });
+      }
+      
+      res.json(updatedCurrency);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  apiRouter.delete("/settings/currencies/:code", async (req: Request, res: Response) => {
+    try {
+      const { code } = req.params;
+      
+      // Check if currency is in use
+      const quotesUsingCurrency = await db.select({ count: sql`count(*)` })
+        .from(quotes)
+        .where(eq(quotes.currencyCode, code));
+        
+      const invoicesUsingCurrency = await db.select({ count: sql`count(*)` })
+        .from(invoices)
+        .where(eq(invoices.currencyCode, code));
+        
+      if (quotesUsingCurrency[0].count > 0 || invoicesUsingCurrency[0].count > 0) {
+        return res.status(400).json({ 
+          error: "Cannot delete currency that is in use by quotes or invoices" 
+        });
+      }
+      
+      // Check if it's the default currency
+      const [currencyToDelete] = await db.select()
+        .from(currencies)
+        .where(eq(currencies.code, code));
+        
+      if (currencyToDelete?.isDefault) {
+        return res.status(400).json({ 
+          error: "Cannot delete the default currency. Set another currency as default first." 
+        });
+      }
+      
+      await db.delete(currencies).where(eq(currencies.code, code));
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  // Settings API - Tax Rates
+  apiRouter.get("/settings/tax-rates", async (req: Request, res: Response) => {
+    try {
+      const allTaxRates = await db.select().from(taxRates);
+      res.json(allTaxRates);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  apiRouter.get("/settings/tax-rates/default", async (req: Request, res: Response) => {
+    try {
+      const [defaultTaxRate] = await db.select().from(taxRates).where(eq(taxRates.isDefault, true));
+      if (!defaultTaxRate) {
+        // Fall back to first tax rate if no default
+        const [firstTaxRate] = await db.select().from(taxRates).limit(1);
+        return res.json(firstTaxRate || { rate: 0, name: "No Tax" });
+      }
+      res.json(defaultTaxRate);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  apiRouter.post("/settings/tax-rates", async (req: Request, res: Response) => {
+    try {
+      const { countryCode, regionCode, name, rate, isDefault } = req.body;
+      
+      // If setting as default, unset any existing default
+      if (isDefault) {
+        await db.update(taxRates)
+          .set({ isDefault: false })
+          .where(eq(taxRates.isDefault, true));
+      }
+      
+      const [taxRate] = await db.insert(taxRates)
+        .values({ countryCode, regionCode, name, rate, isDefault })
+        .returning();
+        
+      res.status(201).json(taxRate);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  apiRouter.put("/settings/tax-rates/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { countryCode, regionCode, name, rate, isDefault } = req.body;
+      
+      // If setting as default, unset any existing default
+      if (isDefault) {
+        await db.update(taxRates)
+          .set({ isDefault: false })
+          .where(eq(taxRates.isDefault, true));
+      }
+      
+      const [updatedTaxRate] = await db.update(taxRates)
+        .set({ countryCode, regionCode, name, rate, isDefault })
+        .where(eq(taxRates.id, id))
+        .returning();
+        
+      if (!updatedTaxRate) {
+        return res.status(404).json({ error: "Tax rate not found" });
+      }
+      
+      res.json(updatedTaxRate);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+  
+  apiRouter.delete("/settings/tax-rates/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Check if tax rate is in use
+      const quotesUsingTaxRate = await db.select({ count: sql`count(*)` })
+        .from(quotes)
+        .where(eq(quotes.taxRateId, id));
+        
+      const invoicesUsingTaxRate = await db.select({ count: sql`count(*)` })
+        .from(invoices)
+        .where(eq(invoices.taxRateId, id));
+        
+      if (quotesUsingTaxRate[0].count > 0 || invoicesUsingTaxRate[0].count > 0) {
+        return res.status(400).json({ 
+          error: "Cannot delete tax rate that is in use by quotes or invoices" 
+        });
+      }
+      
+      // Check if it's the default tax rate
+      const [taxRateToDelete] = await db.select()
+        .from(taxRates)
+        .where(eq(taxRates.id, id));
+        
+      if (taxRateToDelete?.isDefault) {
+        return res.status(400).json({ 
+          error: "Cannot delete the default tax rate. Set another tax rate as default first." 
+        });
+      }
+      
+      await db.delete(taxRates).where(eq(taxRates.id, id));
+      res.status(204).send();
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
     }
   });
 
