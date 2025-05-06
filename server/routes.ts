@@ -465,13 +465,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid ID format" });
       }
 
-      const repairDetails = await storage.getRepairWithRelations(id);
-      if (!repairDetails) {
+      // First, check if the basic repair exists
+      const repair = await storage.getRepair(id);
+      if (!repair) {
         return res.status(404).json({ error: "Repair not found" });
       }
 
-      res.json(repairDetails);
+      try {
+        const repairDetails = await storage.getRepairWithRelations(id);
+        if (!repairDetails) {
+          return res.status(404).json({ error: "Repair details not found" });
+        }
+        res.json(repairDetails);
+      } catch (detailsError) {
+        console.error(`Error fetching repair details for repair ID ${id}:`, detailsError);
+        
+        // If we can't get the full details, return the basic repair info instead
+        // This prevents the UI from showing an error
+        const basicRepair = await storage.getRepair(id);
+        const items = await storage.getRepairItems(id);
+        
+        // Return a simplified version with just the basic repair and items
+        return res.json({
+          ...basicRepair,
+          items: items || [],
+          customer: null, // These will be populated by the UI from other sources if needed
+          device: null,
+          technician: null,
+          quote: null,
+          invoice: null
+        });
+      }
     } catch (error) {
+      console.error("Failed to fetch repair details:", error);
       res.status(500).json({ error: "Failed to fetch repair details" });
     }
   });

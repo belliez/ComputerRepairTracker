@@ -126,6 +126,22 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
       setCurrentStatus(repair.status);
     }
   }, [repair]);
+  
+  // Safety function to check if nested properties exist
+  const safeGet = (obj: any, path: string, defaultValue: any = null) => {
+    try {
+      const pathParts = path.split('.');
+      let current = obj;
+      for (const part of pathParts) {
+        if (current === null || current === undefined) return defaultValue;
+        current = current[part];
+      }
+      return current === undefined ? defaultValue : current;
+    } catch (error) {
+      console.error(`Error accessing path ${path}:`, error);
+      return defaultValue;
+    }
+  };
 
   const handleStatusChange = async (newStatus: string) => {
     try {
@@ -572,20 +588,23 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                     <CardTitle>Customer Information</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {repair.customer ? (
+                    {safeGet(repair, 'customer', null) ? (
                       <div className="space-y-2">
                         <div>
-                          <span className="font-medium">Name:</span> {repair.customer.firstName} {repair.customer.lastName}
+                          <span className="font-medium">Name:</span> {safeGet(repair, 'customer.firstName', '')} {safeGet(repair, 'customer.lastName', '')}
                         </div>
                         <div>
-                          <span className="font-medium">Email:</span> {repair.customer.email}
+                          <span className="font-medium">Email:</span> {safeGet(repair, 'customer.email', 'N/A')}
                         </div>
                         <div>
-                          <span className="font-medium">Phone:</span> {repair.customer.phone}
+                          <span className="font-medium">Phone:</span> {safeGet(repair, 'customer.phone', 'N/A')}
                         </div>
-                        {repair.customer.address && (
+                        {safeGet(repair, 'customer.address', false) && (
                           <div>
-                            <span className="font-medium">Address:</span> {repair.customer.address}, {repair.customer.city}, {repair.customer.state} {repair.customer.postalCode}
+                            <span className="font-medium">Address:</span> {safeGet(repair, 'customer.address', '')}, 
+                            {safeGet(repair, 'customer.city', '')}, 
+                            {safeGet(repair, 'customer.state', '')} 
+                            {safeGet(repair, 'customer.postalCode', '')}
                           </div>
                         )}
                       </div>
