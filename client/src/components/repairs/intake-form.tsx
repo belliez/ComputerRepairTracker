@@ -759,7 +759,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="w-screen sm:w-[calc(100vw-2rem)] md:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-3 sm:p-6" style={{ WebkitOverflowScrolling: 'touch', position: 'relative', touchAction: 'pan-y' }}>
+        <DialogContent className="w-[95vw] sm:w-[95vw] md:max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-3 sm:p-6" style={{ WebkitOverflowScrolling: 'touch', position: 'relative', touchAction: 'pan-y' }}>
           <DialogHeader className="sticky top-0 bg-background z-10 pb-2">
             <DialogTitle className="text-lg sm:text-xl">
               {repairId ? "Edit Repair" : "Create New Repair"}
