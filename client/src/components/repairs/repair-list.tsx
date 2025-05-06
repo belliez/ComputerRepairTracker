@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Repair, Customer, Device } from "@shared/schema";
 import StatusBadge from "./status-badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format } from "date-fns";
+import { format, isToday, isYesterday, subDays } from "date-fns";
 
 interface RepairListProps {
   onViewRepair?: (repairId: number) => void;
@@ -40,6 +40,7 @@ export default function RepairList({
   const [timeFilter, setTimeFilter] = useState("7");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
+  const queryClient = useQueryClient();
 
   // Get customer data for displaying names
   const { data: customers } = useQuery<Customer[]>({
@@ -84,7 +85,47 @@ export default function RepairList({
     );
   }
 
-  const filteredRepairs = repairs || [];
+  // Filter repairs by time selected
+  const getFilteredRepairs = () => {
+    if (!repairs) return [];
+    
+    // Create a copy of repairs to sort and filter
+    let filtered = [...repairs];
+    
+    // Filter by date
+    switch (timeFilter) {
+      case 'today':
+        filtered = filtered.filter(repair => 
+          isToday(new Date(repair.intakeDate))
+        );
+        break;
+      case 'yesterday':
+        filtered = filtered.filter(repair => 
+          isYesterday(new Date(repair.intakeDate))
+        );
+        break;
+      case '7':
+        filtered = filtered.filter(repair => 
+          new Date(repair.intakeDate) >= subDays(new Date(), 7)
+        );
+        break;
+      case '30':
+        filtered = filtered.filter(repair => 
+          new Date(repair.intakeDate) >= subDays(new Date(), 30)
+        );
+        break;
+      // 'all' - no filtering needed
+    }
+    
+    // Sort by intake date, newest first
+    filtered.sort((a, b) => 
+      new Date(b.intakeDate).getTime() - new Date(a.intakeDate).getTime()
+    );
+    
+    return filtered;
+  };
+
+  const filteredRepairs = getFilteredRepairs();
   
   // Calculate pagination
   const totalPages = Math.ceil(filteredRepairs.length / pageSize);
@@ -99,6 +140,10 @@ export default function RepairList({
 
   const handleTimeFilterChange = (value: string) => {
     setTimeFilter(value);
+    setCurrentPage(1); // Reset to first page when filter changes
+    
+    // Make sure data is fresh
+    queryClient.invalidateQueries({ queryKey: [queryPath] });
   };
 
   return (
@@ -115,6 +160,8 @@ export default function RepairList({
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="yesterday">Yesterday</SelectItem>
                 <SelectItem value="7">Last 7 days</SelectItem>
                 <SelectItem value="30">Last 30 days</SelectItem>
                 <SelectItem value="all">All time</SelectItem>

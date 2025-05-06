@@ -26,10 +26,14 @@ export default function Dashboard() {
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [showPartsForm, setShowPartsForm] = useState(false);
   const [selectedRepairId, setSelectedRepairId] = useState<number | null>(null);
-
-  const { data: repairs, isLoading: isLoadingRepairs } = useQuery<Repair[]>({
+  
+  const queryClient = useQuery<Repair[]>({
     queryKey: ["/api/repairs"],
+    refetchInterval: 10000, // Refresh every 10 seconds
+    staleTime: 5000, // Consider data stale after 5 seconds
   });
+  
+  const { data: repairs, isLoading: isLoadingRepairs } = queryClient;
 
   // Handler functions
   const handleViewRepair = (repairId: number) => {
