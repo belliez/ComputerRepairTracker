@@ -549,10 +549,10 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
               <div>
                 <DialogTitle className="text-xl sm:text-2xl">
-                  Repair #{repair.ticketNumber}
+                  Repair #{safeGet(repair, 'ticketNumber', '')}
                 </DialogTitle>
                 <DialogDescription>
-                  Created on {format(new Date(repair.intakeDate), "MMMM d, yyyy")}
+                  Created on {format(new Date(safeGet(repair, 'intakeDate', new Date())), "MMMM d, yyyy")}
                 </DialogDescription>
               </div>
               <div className="flex flex-wrap items-center gap-3">
@@ -565,7 +565,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                   <Pencil className="h-4 w-4 mr-1" />
                   Edit
                 </Button>
-                <StatusBadge status={repair.status} className="text-sm py-1 px-3" />
+                <StatusBadge status={safeGet(repair, 'status', 'intake')} className="text-sm py-1 px-3" />
               </div>
             </div>
           </DialogHeader>
@@ -619,29 +619,29 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                     <CardTitle>Device Information</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {repair.deviceId === null ? (
+                    {safeGet(repair, 'deviceId') === null ? (
                       <div className="text-gray-500">No device associated with this repair</div>
-                    ) : repair.device ? (
+                    ) : safeGet(repair, 'device', null) ? (
                       <div className="space-y-2">
                         <div>
-                          <span className="font-medium">Type:</span> {repair.device.type}
+                          <span className="font-medium">Type:</span> {safeGet(repair, 'device.type', 'N/A')}
                         </div>
                         <div>
-                          <span className="font-medium">Brand/Model:</span> {repair.device.brand} {repair.device.model}
+                          <span className="font-medium">Brand/Model:</span> {safeGet(repair, 'device.brand', '')} {safeGet(repair, 'device.model', '')}
                         </div>
-                        {repair.device.serialNumber && (
+                        {safeGet(repair, 'device.serialNumber', '') && (
                           <div>
-                            <span className="font-medium">Serial Number:</span> {repair.device.serialNumber}
+                            <span className="font-medium">Serial Number:</span> {safeGet(repair, 'device.serialNumber', '')}
                           </div>
                         )}
-                        {repair.device.condition && (
+                        {safeGet(repair, 'device.condition', '') && (
                           <div>
-                            <span className="font-medium">Condition:</span> {repair.device.condition}
+                            <span className="font-medium">Condition:</span> {safeGet(repair, 'device.condition', '')}
                           </div>
                         )}
-                        {repair.device.accessories && (
+                        {safeGet(repair, 'device.accessories', '') && (
                           <div>
-                            <span className="font-medium">Accessories:</span> {repair.device.accessories}
+                            <span className="font-medium">Accessories:</span> {safeGet(repair, 'device.accessories', '')}
                           </div>
                         )}
                       </div>
@@ -660,23 +660,23 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <h4 className="font-medium">Issue</h4>
-                      <p className="text-gray-700">{repair.issue}</p>
+                      <p className="text-gray-700">{safeGet(repair, 'issue', 'No issue description')}</p>
                     </div>
                     
                     <div>
                       <h4 className="font-medium">Priority</h4>
                       <p>
                         <Badge className={
-                          repair.priorityLevel === 1 ? "bg-red-100 text-red-800 border-red-300" :
-                          repair.priorityLevel === 2 ? "bg-orange-100 text-orange-800 border-orange-300" :
-                          repair.priorityLevel === 3 ? "bg-gray-100 text-gray-800 border-gray-300" :
-                          repair.priorityLevel === 4 ? "bg-blue-100 text-blue-800 border-blue-300" :
+                          safeGet(repair, 'priorityLevel', 3) === 1 ? "bg-red-100 text-red-800 border-red-300" :
+                          safeGet(repair, 'priorityLevel', 3) === 2 ? "bg-orange-100 text-orange-800 border-orange-300" :
+                          safeGet(repair, 'priorityLevel', 3) === 3 ? "bg-gray-100 text-gray-800 border-gray-300" :
+                          safeGet(repair, 'priorityLevel', 3) === 4 ? "bg-blue-100 text-blue-800 border-blue-300" :
                           "bg-green-100 text-green-800 border-green-300"
                         }>
-                          {repair.priorityLevel === 1 ? "Critical" :
-                           repair.priorityLevel === 2 ? "High" :
-                           repair.priorityLevel === 3 ? "Normal" :
-                           repair.priorityLevel === 4 ? "Low" :
+                          {safeGet(repair, 'priorityLevel', 3) === 1 ? "Critical" :
+                           safeGet(repair, 'priorityLevel', 3) === 2 ? "High" :
+                           safeGet(repair, 'priorityLevel', 3) === 3 ? "Normal" :
+                           safeGet(repair, 'priorityLevel', 3) === 4 ? "Low" :
                            "Lowest"}
                         </Badge>
                       </p>
@@ -686,14 +686,16 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <h4 className="font-medium">Intake Date</h4>
-                      <p className="text-gray-700">{format(new Date(repair.intakeDate), "MMMM d, yyyy")}</p>
+                      <p className="text-gray-700">
+                        {format(new Date(safeGet(repair, 'intakeDate', new Date())), "MMMM d, yyyy")}
+                      </p>
                     </div>
                     
                     <div>
                       <h4 className="font-medium">Estimated Completion</h4>
                       <p className="text-gray-700">
-                        {repair.estimatedCompletionDate 
-                          ? format(new Date(repair.estimatedCompletionDate), "MMMM d, yyyy")
+                        {safeGet(repair, 'estimatedCompletionDate', null)
+                          ? format(new Date(safeGet(repair, 'estimatedCompletionDate', new Date())), "MMMM d, yyyy")
                           : "Not specified"}
                       </p>
                     </div>
@@ -703,8 +705,8 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                     <div>
                       <h4 className="font-medium">Assigned Technician</h4>
                       <p className="text-gray-700">
-                        {repair.technician 
-                          ? `${repair.technician.firstName} ${repair.technician.lastName} (${repair.technician.role})`
+                        {safeGet(repair, 'technician', null)
+                          ? `${safeGet(repair, 'technician.firstName', '')} ${safeGet(repair, 'technician.lastName', '')} (${safeGet(repair, 'technician.role', '')})`
                           : "Unassigned"}
                       </p>
                     </div>
@@ -712,22 +714,22 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                     <div>
                       <h4 className="font-medium">Warranty</h4>
                       <p className="text-gray-700">
-                        {repair.isUnderWarranty ? "Yes - Under Warranty" : "No - Not Under Warranty"}
+                        {safeGet(repair, 'isUnderWarranty', false) ? "Yes - Under Warranty" : "No - Not Under Warranty"}
                       </p>
                     </div>
                   </div>
 
-                  {repair.diagnosticNotes && (
+                  {safeGet(repair, 'diagnosticNotes', '') && (
                     <div>
                       <h4 className="font-medium">Diagnostic Notes</h4>
-                      <p className="text-gray-700">{repair.diagnosticNotes}</p>
+                      <p className="text-gray-700">{safeGet(repair, 'diagnosticNotes', '')}</p>
                     </div>
                   )}
 
-                  {repair.notes && (
+                  {safeGet(repair, 'notes', '') && (
                     <div>
                       <h4 className="font-medium">Additional Notes</h4>
-                      <p className="text-gray-700">{repair.notes}</p>
+                      <p className="text-gray-700">{safeGet(repair, 'notes', '')}</p>
                     </div>
                   )}
                 </CardContent>
