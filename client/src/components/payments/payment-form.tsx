@@ -63,7 +63,7 @@ export default function PaymentForm({ invoiceId, total, isOpen, onClose }: Payme
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-[500px] p-3 sm:p-6 overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Pay Invoice</DialogTitle>
         </DialogHeader>

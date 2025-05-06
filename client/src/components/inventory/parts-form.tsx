@@ -144,7 +144,7 @@ export default function PartsForm({ itemId, isOpen, onClose }: PartsFormProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-3 sm:p-6">
         <DialogHeader>
           <DialogTitle>{itemId ? "Edit Inventory Item" : "Add New Inventory Item"}</DialogTitle>
           <DialogDescription>

@@ -145,7 +145,7 @@ export default function DeviceForm({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-md p-3 sm:p-6 overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>{deviceId ? "Edit Device" : "New Device"}</DialogTitle>
           <DialogDescription>
