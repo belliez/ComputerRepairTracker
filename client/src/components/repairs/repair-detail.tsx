@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { RepairWithRelations } from "@/types";
-import { Pencil, Plus, Trash2, Printer, Mail, CreditCard, Check } from "lucide-react";
+import { Pencil, Plus, Trash2, Printer, Mail, CreditCard, Check, Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { printDocument, createQuoteDocument, createInvoiceDocument } from "@/lib/print-utils";
+import CostEstimator from "./cost-estimator";
 import { 
   AlertDialog,
   AlertDialogAction, 
@@ -97,6 +98,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   const [deleteItemType, setDeleteItemType] = useState<"quote" | "invoice" | null>(null);
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [showCostEstimator, setShowCostEstimator] = useState(false);
   const [currentInvoice, setCurrentInvoice] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -405,6 +407,10 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
     setShowEditForm(true);
   };
   
+  const handleShowCostEstimator = () => {
+    setShowCostEstimator(true);
+  };
+  
   const handleAddRepairItem = () => {
     setCurrentEditingItem(null);
     setShowRepairItemForm(true);
@@ -564,6 +570,15 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                 >
                   <Pencil className="h-4 w-4 mr-1" />
                   Edit
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleShowCostEstimator}
+                  className="flex items-center"
+                >
+                  <Calculator className="h-4 w-4 mr-1" />
+                  Cost Estimator
                 </Button>
                 <StatusBadge status={safeGet(repair, 'status', 'intake')} className="text-sm py-1 px-3" />
               </div>
