@@ -361,8 +361,8 @@ export class DatabaseStorage implements IStorage {
         })
       );
 
-      let quoteList = [];
-      let invoiceList = [];
+      let quoteList: any[] = [];
+      let invoiceList: any[] = [];
       
       // Try to get quotes and invoices
       try {

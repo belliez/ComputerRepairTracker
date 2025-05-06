@@ -37,7 +37,7 @@ export default function RepairList({
   technicianId,
   customerId,
 }: RepairListProps) {
-  const [timeFilter, setTimeFilter] = useState("7");
+  const [timeFilter, setTimeFilter] = useState("today");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
   const queryClient = useQueryClient();

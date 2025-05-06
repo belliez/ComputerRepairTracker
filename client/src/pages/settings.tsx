@@ -69,18 +69,35 @@ const SettingsPage = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Define types for our queries
+  interface Currency {
+    code: string;
+    name: string;
+    symbol: string;
+    isDefault: boolean;
+  }
+  
+  interface TaxRate {
+    id: number;
+    countryCode: string;
+    regionCode: string | null;
+    name: string;
+    rate: number;
+    isDefault: boolean;
+  }
+
   // Queries
   const {
-    data: currencies,
+    data: currencies = [],
     isLoading: isLoadingCurrencies,
-  } = useQuery({
+  } = useQuery<Currency[]>({
     queryKey: ['/api/settings/currencies'],
   });
   
   const {
-    data: taxRates,
+    data: taxRates = [],
     isLoading: isLoadingTaxRates,
-  } = useQuery({
+  } = useQuery<TaxRate[]>({
     queryKey: ['/api/settings/tax-rates'],
   });
   
