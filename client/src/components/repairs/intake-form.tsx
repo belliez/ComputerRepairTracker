@@ -980,7 +980,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="max-w-3xl p-6">
+        <DialogContent className="max-w-3xl p-6 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {repairId ? "Edit Repair" : "Create New Repair"}
