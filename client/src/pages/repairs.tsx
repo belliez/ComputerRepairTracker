@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Repair } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { RepairTab, repairStatuses, statusConfigs } from "@/types";
+import { RepairTab, repairStatuses, statusConfigs, URGENT_PRIORITY_LEVELS, priorityLevels } from "@/types";
 import { Link, useLocation } from "wouter";
 import RepairList from "@/components/repairs/repair-list";
 import RepairDetail from "@/components/repairs/repair-detail";

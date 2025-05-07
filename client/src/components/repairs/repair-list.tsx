@@ -236,7 +236,15 @@ export default function RepairList({
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <StatusBadge status={repair.status} />
+                    <div className="flex flex-col gap-1">
+                      <StatusBadge status={repair.status} />
+                      {repair.priorityLevel && repair.priorityLevel <= 2 && (
+                        <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+                          <span className="mr-1 text-red-500">●</span>
+                          Urgent
+                        </span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
                     {repair.estimatedCompletionDate

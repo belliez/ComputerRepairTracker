@@ -13,6 +13,18 @@ import {
 // Re-export repairStatuses for use in components
 export { repairStatuses };
 
+// Define priority levels
+export const priorityLevels = [
+  { value: 1, label: "Urgent", color: "red" },
+  { value: 2, label: "High", color: "orange" },
+  { value: 3, label: "Medium", color: "yellow" },
+  { value: 4, label: "Low", color: "blue" },
+  { value: 5, label: "Lowest", color: "green" },
+];
+
+// Define constants for urgent priorities
+export const URGENT_PRIORITY_LEVELS = [1, 2];
+
 // Re-export the types
 export type { Customer, Device, InventoryItem, Invoice, Quote, Repair, RepairItem, Technician };
 
