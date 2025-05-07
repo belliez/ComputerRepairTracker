@@ -180,15 +180,19 @@ export default function DeviceForm({
                   <FormItem>
                     <FormLabel>Device Type</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      value={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        console.log("Selected device type:", value);
+                      }}
+                      value={field.value || "Laptop"}
+                      defaultValue="Laptop"
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue placeholder="Select a device type" />
                         </SelectTrigger>
                       </FormControl>
-                      <SelectContent>
+                      <SelectContent position="popper">
                         {deviceTypes.map((type) => (
                           <SelectItem key={type} value={type}>
                             {type}
