@@ -835,6 +835,25 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 {currentStep === "service" && renderServiceStep()}
               </div>
               
+              {/* Customer Form - Added here for mobile view */}
+              {showNewCustomerForm && (
+                <CustomerForm 
+                  isOpen={showNewCustomerForm}
+                  onClose={() => setShowNewCustomerForm(false)}
+                  onCustomerCreated={handleCustomerCreated}
+                />
+              )}
+              
+              {/* Device Form - Added here for mobile view */}
+              {showNewDeviceForm && selectedCustomerId && (
+                <DeviceForm
+                  customerId={selectedCustomerId}
+                  isOpen={showNewDeviceForm}
+                  onClose={() => setShowNewDeviceForm(false)}
+                  onDeviceCreated={handleDeviceCreated}
+                />
+              )}
+              
               {/* Footer */}
               <div className="sticky bottom-0 bg-background z-10 px-4 py-3 border-t flex flex-wrap justify-end gap-2">
                 {currentStep !== "customer" && (
