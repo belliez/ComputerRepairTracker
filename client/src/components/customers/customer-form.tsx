@@ -88,6 +88,7 @@ export default function CustomerForm({
       }
     },
     onSuccess: (data) => {
+      // Force refetch customers data to ensure latest data
       queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
       
       toast({

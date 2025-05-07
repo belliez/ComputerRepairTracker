@@ -211,7 +211,13 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   const handleCustomerCreated = (customerId: number) => {
     setShowNewCustomerForm(false);
     setSelectedCustomerId(customerId);
+    // Force refetch of customer data to ensure dropdown lists are up to date
     queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+    
+    // Update form with the new customer
+    form.setValue("customerId", customerId);
+    
+    // Proceed to device selection step
     setCurrentStep("device");
   };
 
@@ -240,7 +246,11 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   const handleDeviceCreated = (deviceId: number) => {
     setShowNewDeviceForm(false);
     setSelectedDeviceId(deviceId);
+    // Force refresh device data
     queryClient.invalidateQueries({ queryKey: ["/api/devices"] });
+    // Update form with the new device
+    form.setValue("deviceId", deviceId);
+    // Proceed to service step
     setCurrentStep("service");
   };
 
