@@ -564,9 +564,9 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <Button 
-                  variant="outline" 
+                  variant="default" 
                   size="sm"
-                  onClick={handleEditRepair}
+                  onClick={() => setShowEditForm(true)}
                   className="flex items-center"
                 >
                   <Pencil className="h-4 w-4 mr-1" />
