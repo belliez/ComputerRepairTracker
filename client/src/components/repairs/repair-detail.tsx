@@ -73,7 +73,7 @@ import { Separator } from "@/components/ui/separator";
 import StatusBadge from "./status-badge";
 import QuoteForm from "./quote-form";
 import InvoiceForm from "./invoice-form";
-import IntakeForm from "./intake-form";
+import IntakeForm from "./mobile-intake-form";
 import { Edit } from "lucide-react";
 import RepairItemForm from "./repair-item-form";
 import PaymentForm from "../payments/payment-form";

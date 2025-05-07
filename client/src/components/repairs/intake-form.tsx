@@ -6,14 +6,6 @@ import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Customer, Device, Technician, insertRepairSchema, repairStatuses } from "@shared/schema";
 import { X } from "lucide-react";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -977,50 +969,104 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   }
   
   // For desktop, keep using the Dialog
-  // Use actual HTML dialog element for better native mobile support
+  if (!isOpen) return null;
+  
+  // Create a completely new implementation with minimal complexity
+  const handleFormSubmit = () => {
+    // Get form values directly
+    const formValues = form.getValues();
+    console.log("Form values:", formValues);
+    
+    // Generate a ticket number if this is a new repair
+    const currentDate = new Date();
+    const year = currentDate.getFullYear().toString().slice(-2);
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const ticketNumber = `RT-${year}${month}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
+    
+    // Validate that issue is not empty
+    if (!formValues.issue || formValues.issue.trim() === "") {
+      toast({
+        title: "Issue Description Required",
+        description: "Please provide a description of the issue",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Create submission data differently based on whether we're creating or updating
+    let apiData;
+    
+    if (repairId) {
+      // When updating, only send the fields that are editable
+      apiData = {
+        status: formValues.status,
+        priorityLevel: Number(formValues.priorityLevel || 3),
+        technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
+        issue: formValues.issue || "",
+        notes: formValues.notes || "",
+        isUnderWarranty: Boolean(formValues.isUnderWarranty),
+        // We can safely update customer and device IDs too
+        customerId: Number(selectedCustomerId),
+        deviceId: selectedDeviceId ? Number(selectedDeviceId) : null,
+        // Include estimated completion date if provided
+        estimatedCompletionDate: formValues.estimatedCompletionDate && formValues.estimatedCompletionDate.trim() !== "" 
+          ? formValues.estimatedCompletionDate
+          : null
+      };
+    } else {
+      // For new repairs, include all the required fields
+      apiData = {
+        customerId: Number(selectedCustomerId),
+        deviceId: selectedDeviceId ? Number(selectedDeviceId) : null,
+        issue: formValues.issue || "",
+        status: "intake", // Always "intake" for new repairs
+        priorityLevel: Number(formValues.priorityLevel || 3),
+        technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
+        notes: formValues.notes || "",
+        isUnderWarranty: Boolean(formValues.isUnderWarranty),
+        ticketNumber // New repairs get a ticket number
+      };
+    }
+    
+    console.log("Submitting repair data:", apiData);
+    mutation.mutate(apiData);
+  };
+  
   return (
     <>
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center">
-          <div 
-            className="bg-white w-full h-full md:w-auto md:h-auto md:max-w-3xl md:max-h-[90vh] md:rounded-lg overflow-hidden shadow-lg flex flex-col"
-            style={{ WebkitOverflowScrolling: 'touch' }} // iOS momentum scrolling
-          >
-            {/* Header - Fixed position */}
-            <div className="bg-white p-4 border-b border-gray-200 flex justify-between items-center">
-              <div>
-                <h1 className="text-xl font-bold">
-                  {repairId ? "Edit Repair" : "Create New Repair"}
-                </h1>
-                <p className="text-sm text-gray-500">
-                  {repairId 
-                    ? "Edit the repair information below" 
-                    : "Enter the information below to create a new repair ticket"
-                  }
-                </p>
-              </div>
+      <div className="fixed inset-0 z-50 bg-black/50 overflow-y-auto" onClick={(e) => e.currentTarget === e.target && onClose()}>
+        <div className="flex min-h-full items-center justify-center p-0">
+          <div className="w-full max-w-3xl bg-white rounded-lg shadow-xl overflow-hidden transform transition-all">
+            {/* HEADER */}
+            <div className="bg-white px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-lg font-medium">
+                {repairId ? "Edit Repair" : "Create New Repair"}
+              </h2>
               <button 
-                className="p-2 rounded-full hover:bg-gray-200" 
+                type="button"
+                className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
                 onClick={onClose}
               >
-                <X className="h-5 w-5" />
+                <span className="sr-only">Close</span>
+                <X className="h-6 w-6" aria-hidden="true" />
               </button>
             </div>
             
-            {/* Main content - Scrollable */}
-            <div className="flex-1 overflow-y-auto p-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+            {/* CONTENT - Scrollable */}
+            <div className="bg-white px-4 py-4 max-h-[70vh] overflow-y-auto">
+              {/* Step indicator */}
               {renderStepIndicator()}
               
-              {/* Form Steps */}
-              <div className="mt-4">
+              {/* Form content */}
+              <div className="mt-4 space-y-4">
                 {currentStep === "customer" && renderCustomerStep()}
                 {currentStep === "device" && renderDeviceStep()}
                 {currentStep === "service" && renderServiceStep()}
               </div>
             </div>
             
-            {/* Footer - Fixed position */}
-            <div className="bg-white p-4 border-t border-gray-200 flex justify-end items-center gap-2">
+            {/* FOOTER */}
+            <div className="bg-gray-50 px-4 py-3 sm:px-6 flex flex-wrap justify-end gap-2 border-t border-gray-200">
               {currentStep !== "customer" && (
                 <Button 
                   type="button" 
@@ -1043,75 +1089,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
               {currentStep === "service" ? (
                 <Button 
                   type="button"
-                  onClick={() => {
-                    // Get form values directly
-                    const formValues = form.getValues();
-                    console.log("Form values:", formValues);
-                    
-                    // Generate a ticket number if this is a new repair
-                    const currentDate = new Date();
-                    const year = currentDate.getFullYear().toString().slice(-2);
-                    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-                    const ticketNumber = `RT-${year}${month}${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`;
-                    
-                    // Validate that issue is not empty
-                    if (!formValues.issue || formValues.issue.trim() === "") {
-                      toast({
-                        title: "Issue Description Required",
-                        description: "Please provide a description of the issue",
-                        variant: "destructive"
-                      });
-                      return;
-                    }
-
-                    // Create submission data differently based on whether we're creating or updating
-                    let apiData;
-                    
-                    if (repairId) {
-                      // When updating, only send the fields that are editable
-                      apiData = {
-                        status: formValues.status,
-                        priorityLevel: Number(formValues.priorityLevel || 3),
-                        technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
-                        issue: formValues.issue || "",
-                        notes: formValues.notes || "",
-                        isUnderWarranty: Boolean(formValues.isUnderWarranty),
-                        // We can safely update customer and device IDs too
-                        customerId: Number(selectedCustomerId),
-                        deviceId: selectedDeviceId ? Number(selectedDeviceId) : null,
-                        // Include estimated completion date if provided
-                        estimatedCompletionDate: formValues.estimatedCompletionDate && formValues.estimatedCompletionDate.trim() !== "" 
-                          ? formValues.estimatedCompletionDate
-                          : null
-                      };
-                    } else {
-                      // For new repairs, include all the required fields
-                      apiData = {
-                        customerId: Number(selectedCustomerId),
-                        deviceId: selectedDeviceId ? Number(selectedDeviceId) : null,
-                        issue: formValues.issue || "",
-                        status: "intake", // Always "intake" for new repairs
-                        priorityLevel: Number(formValues.priorityLevel || 3),
-                        technicianId: formValues.technicianId ? Number(formValues.technicianId) : null,
-                        notes: formValues.notes || "",
-                        isUnderWarranty: Boolean(formValues.isUnderWarranty),
-                        ticketNumber // New repairs get a ticket number
-                      };
-                    }
-                    
-                    console.log("Submitting repair data:", apiData);
-                    mutation.mutate(apiData, {
-                      onError: (error: any) => {
-                        console.error("Error creating repair:", error);
-                        // Display a more detailed error message
-                        toast({
-                          title: "Failed to create repair",
-                          description: error?.message || "An unknown error occurred",
-                          variant: "destructive"
-                        });
-                      }
-                    });
-                  }}
+                  onClick={handleFormSubmit}
                   disabled={mutation.isPending}
                 >
                   {mutation.isPending ? (
@@ -1136,7 +1114,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             </div>
           </div>
         </div>
-      )}
+      </div>
       
       {showNewCustomerForm && (
         <CustomerForm 
