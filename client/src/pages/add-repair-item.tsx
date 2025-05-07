@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrency } from "@/hooks/use-currency";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -31,6 +32,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 export default function AddRepairItem() {
   const [location, navigate] = useLocation();
   const { toast } = useToast();
+  const { formatCurrency } = useCurrency();
   
   // Parse the repair ID from the URL
   const repairId = parseInt(location.split('/')[2]);
@@ -81,11 +83,13 @@ export default function AddRepairItem() {
 
   // Handle inventory item selection
   const handleInventoryItemSelect = (itemId: number) => {
-    const selectedItem = inventoryItems.find((item: any) => item.id === parseInt(itemId.toString()));
-    if (selectedItem) {
-      form.setValue("description", selectedItem.name);
-      form.setValue("unitPrice", selectedItem.price);
-      form.setValue("status", selectedItem.quantity > 0 ? "in_stock" : "ordered");
+    if (Array.isArray(inventoryItems)) {
+      const selectedItem = inventoryItems.find((item: any) => item.id === parseInt(itemId.toString()));
+      if (selectedItem) {
+        form.setValue("description", selectedItem.name);
+        form.setValue("unitPrice", selectedItem.price);
+        form.setValue("status", selectedItem.quantity > 0 ? "in_stock" : "ordered");
+      }
     }
   };
 
@@ -102,8 +106,8 @@ export default function AddRepairItem() {
         description: "The item has been added to the repair successfully",
       });
       
-      // Navigate back to repair view page
-      navigate(`/repairs/view/${repairId}`);
+      // Navigate back to repair view page with the parts tab active
+      navigate(`/repairs/view/${repairId}?tab=parts`);
     },
     onError: (error) => {
       console.error("Error adding repair item:", error);
@@ -193,9 +197,9 @@ export default function AddRepairItem() {
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="null">None</SelectItem>
-                        {inventoryItems.map((item: any) => (
+                        {Array.isArray(inventoryItems) && inventoryItems.map((item: any) => (
                           <SelectItem key={item.id} value={item.id.toString()}>
-                            {item.name} (${item.price.toFixed(2)}) - {item.quantity > 0 ? `${item.quantity} in stock` : 'Out of stock'}
+                            {item.name} ({formatCurrency(item.price)}) - {item.quantity > 0 ? `${item.quantity} in stock` : 'Out of stock'}
                           </SelectItem>
                         ))}
                       </SelectContent>
