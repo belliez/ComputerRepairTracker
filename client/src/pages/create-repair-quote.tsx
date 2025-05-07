@@ -72,12 +72,18 @@ const quoteSchema = z.object({
 
 export default function CreateRepairQuote() {
   const [location, navigate] = useLocation();
-  const [, params] = useRoute<{ repairId: string }>("/repairs/:repairId/quotes/create");
+  const [matchCreate, paramsCreate] = useRoute<{ repairId: string }>("/repairs/:repairId/quotes/create");
+  const [matchEdit, paramsEdit] = useRoute<{ repairId: string, quoteId: string }>("/repairs/:repairId/quotes/:quoteId/edit");
+  
+  // Determine if we're editing or creating
+  const isEditing = !!matchEdit;
+  const params = isEditing ? paramsEdit : paramsCreate;
   const queryClient = useQueryClient();
   const { formatCurrency } = useCurrency();
   
-  // Parse the repair ID from the URL
+  // Parse the repair ID and quote ID from the URL
   const repairId = parseInt(params?.repairId || '0');
+  const quoteId = isEditing ? parseInt(params?.quoteId || '0') : undefined;
   
   // State to store total calculations
   const [subtotal, setSubtotal] = useState(0);
@@ -102,6 +108,15 @@ export default function CreateRepairQuote() {
   } = useQuery({
     queryKey: [`/api/repairs/${repairId}/items`],
     enabled: !!repairId,
+  });
+  
+  // Get existing quote if in edit mode
+  const {
+    data: existingQuote,
+    isLoading: isLoadingQuote
+  } = useQuery({
+    queryKey: [`/api/quotes/${quoteId}`],
+    enabled: !!quoteId,
   });
   
   // Get available currencies
@@ -251,6 +266,45 @@ export default function CreateRepairQuote() {
       form.setValue('taxRateId', defaultTaxRate.id);
     }
   }, [defaultCurrency, defaultTaxRate, form.setValue, form]);
+  
+  // Load existing quote data when editing
+  useEffect(() => {
+    if (existingQuote && isEditing) {
+      // Set the initial values from the existing quote
+      if (existingQuote.currencyCode) {
+        setSelectedCurrencyCode(existingQuote.currencyCode);
+      }
+      
+      if (existingQuote.taxRateId) {
+        setSelectedTaxRateId(existingQuote.taxRateId);
+      }
+      
+      // Prepare form values 
+      const formValues = {
+        repairId: repairId,
+        quoteNumber: existingQuote.quoteNumber || '',
+        notes: existingQuote.notes || '',
+        validUntil: existingQuote.expirationDate ? new Date(existingQuote.expirationDate) : undefined,
+        currencyCode: existingQuote.currencyCode || 'USD',
+        taxRateId: existingQuote.taxRateId,
+        // TODO: we don't have line items directly in the quote,
+        // so we'll use the repair items as a starting point
+        items: repairItems?.map((item: any) => ({
+          description: item.description,
+          quantity: parseFloat(item.quantity),
+          unitPrice: parseFloat(item.unitPrice),
+        })) || []
+      };
+      
+      // Reset the form with the quote data
+      form.reset(formValues);
+      
+      // Set calculated values
+      setSubtotal(existingQuote.subtotal || 0);
+      setTaxAmount(existingQuote.tax || 0);
+      setTotal(existingQuote.total || 0);
+    }
+  }, [existingQuote, isEditing, repairId, repairItems, form]);
   
   // Create quote mutation
   const createQuoteMutation = useMutation({
