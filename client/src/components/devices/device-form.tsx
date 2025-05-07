@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,6 +51,7 @@ export default function DeviceForm({
   onDeviceCreated 
 }: DeviceFormProps) {
   const { toast } = useToast();
+  const [selectedDeviceType, setSelectedDeviceType] = useState<string>("Laptop");
 
   // Get existing device if editing
   const { data: existingDevice, isLoading } = useQuery({
@@ -97,6 +98,10 @@ export default function DeviceForm({
   useEffect(() => {
     if (existingDevice) {
       form.reset(existingDevice);
+      // Also update the selectedDeviceType state if editing an existing device
+      if (existingDevice && typeof existingDevice === 'object' && 'type' in existingDevice) {
+        setSelectedDeviceType(existingDevice.type as string);
+      }
     } else {
       form.setValue("customerId", customerId);
     }
@@ -178,31 +183,43 @@ export default function DeviceForm({
                 
                 {/* Quick Select Icons for Device Types */}
                 <div className="grid grid-cols-4 gap-2 mb-3">
-                  {deviceTypes.map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => {
-                        console.log("Quick select:", type);
-                        form.setValue("type", type);
-                      }}
-                      className={`p-2 rounded-md flex flex-col items-center text-xs border ${
-                        form.getValues("type") === type
-                          ? "bg-blue-100 border-blue-500 text-blue-700"
-                          : "bg-gray-50 border-gray-200 hover:bg-gray-100"
-                      }`}
-                    >
-                      {type === "Laptop" && <i className="fas fa-laptop text-lg mb-1"></i>}
-                      {type === "Desktop" && <i className="fas fa-desktop text-lg mb-1"></i>}
-                      {type === "Tablet" && <i className="fas fa-tablet-alt text-lg mb-1"></i>}
-                      {type === "Phone" && <i className="fas fa-mobile-alt text-lg mb-1"></i>}
-                      {type === "Server" && <i className="fas fa-server text-lg mb-1"></i>}
-                      {type === "Printer" && <i className="fas fa-print text-lg mb-1"></i>}
-                      {type === "Monitor" && <i className="fas fa-tv text-lg mb-1"></i>}
-                      {type === "Other" && <i className="fas fa-hdd text-lg mb-1"></i>}
-                      {type}
-                    </button>
-                  ))}
+                  {deviceTypes.map((type) => {
+                    // Get icon for device type
+                    let icon;
+                    switch(type) {
+                      case "Laptop": icon = "laptop"; break;
+                      case "Desktop": icon = "desktop"; break;
+                      case "Tablet": icon = "tablet-alt"; break;
+                      case "Phone": icon = "mobile-alt"; break;
+                      case "Server": icon = "server"; break;
+                      case "Printer": icon = "print"; break;
+                      case "Monitor": icon = "tv"; break;
+                      case "Other": icon = "hdd"; break;
+                    }
+                    
+                    // Check if this type is active (use local state for immediate UI feedback)
+                    const isActive = selectedDeviceType === type;
+                    
+                    return (
+                      <button 
+                        key={type}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDeviceType(type);
+                          form.setValue("type", type);
+                          console.log("Selected device type:", type);
+                        }}
+                        className={`p-3 rounded-md flex flex-col items-center justify-center text-xs border cursor-pointer ${
+                          isActive
+                            ? "bg-blue-100 border-blue-500 text-blue-700 font-semibold"
+                            : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                        }`}
+                      >
+                        <i className={`fas fa-${icon} text-xl mb-2 ${isActive ? 'text-blue-600' : 'text-gray-600'}`}></i>
+                        {type}
+                      </button>
+                    );
+                  })}
                 </div>
                 
                 {/* Hidden field to maintain form state */}
