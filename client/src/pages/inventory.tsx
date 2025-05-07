@@ -157,14 +157,14 @@ export default function Inventory() {
             </div>
             <div>
               <Select
-                value={categoryFilter || ""}
-                onValueChange={(value) => setCategoryFilter(value || null)}
+                value={categoryFilter || "all_categories"}
+                onValueChange={(value) => setCategoryFilter(value === "all_categories" ? null : value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Filter by category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all_categories">All Categories</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category} value={category}>
                       {category}
