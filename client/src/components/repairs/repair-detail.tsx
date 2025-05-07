@@ -1344,17 +1344,15 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
 
       {/* Edit Repair Form */}
       {showEditForm && (
-        <div className="z-[999]">
-          <IntakeForm 
-            repairId={repairId}
-            isOpen={showEditForm}
-            onClose={() => {
-              setShowEditForm(false);
-              // Refresh the repair data
-              queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
-            }}
-          />
-        </div>
+        <IntakeForm 
+          repairId={repairId}
+          isOpen={showEditForm}
+          onClose={() => {
+            setShowEditForm(false);
+            // Refresh the repair data
+            queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+          }}
+        />
       )}
 
       {/* Repair Item Form */}
