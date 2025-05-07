@@ -158,16 +158,20 @@ export default function CreateRepairQuote() {
       // Calculate the final amount
       const quoteTotal = calculateTotal();
       
+      // Generate a unique quote number
+      const quoteNumber = `QT-${Math.floor(Math.random() * 10000000).toString().padStart(7, '0')}`;
+      
       // Create the full quote data
       const quoteData = {
-        ...data,
-        subtotalAmount: subtotal,
-        discountAmount: data.discountType === "amount" 
-          ? parseFloat(data.discount?.toString() || "0") 
-          : (subtotal * (parseFloat(data.discount?.toString() || "0") / 100)),
-        taxAmount: (quoteTotal - (quoteTotal / (1 + (getSelectedTaxRate() / 100)))),
-        totalAmount: quoteTotal,
-        status: "pending"
+        repairId: data.repairId,
+        quoteNumber: quoteNumber,
+        expirationDate: data.validUntil,
+        subtotal: subtotal + (data.includeLabor && data.laborCost ? parseFloat(data.laborCost.toString() || "0") : 0),
+        tax: data.taxRateId ? (quoteTotal - (quoteTotal / (1 + (getSelectedTaxRate() / 100)))) : 0,
+        total: quoteTotal,
+        status: "pending",
+        notes: data.customerNotes,
+        taxRateId: data.taxRateId
       };
       
       return apiRequest("POST", `/api/quotes`, quoteData);
