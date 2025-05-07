@@ -194,7 +194,7 @@ export default function CreateRepairQuote() {
       });
       
       // Navigate back to repair view page
-      navigate(`/repairs/view/${repairId}`);
+      navigate(`/repairs/${repairId}`);
     },
     onError: (error) => {
       console.error("Error creating quote:", error);
@@ -241,7 +241,7 @@ export default function CreateRepairQuote() {
     <div className="container mx-auto px-4 py-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6 pb-4 border-b">
-        <Link to={`/repairs/view/${repairId}`}>
+        <Link to={`/repairs/${repairId}`}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Repair
@@ -309,7 +309,7 @@ export default function CreateRepairQuote() {
         ) : (
           <div className="text-center py-4 border rounded-md">
             <p className="text-muted-foreground">No items added to this repair yet.</p>
-            <Link to={`/repairs/view/${repairId}`}>
+            <Link to={`/repairs/${repairId}`}>
               <Button variant="outline" size="sm" className="mt-2">
                 Go back to add items
               </Button>
@@ -575,7 +575,7 @@ export default function CreateRepairQuote() {
             </div>
             
             <div className="pt-4 flex justify-end gap-4">
-              <Link to={`/repairs/view/${repairId}`}>
+              <Link to={`/repairs/${repairId}`}>
                 <Button variant="outline" type="button">Cancel</Button>
               </Link>
               <Button 
