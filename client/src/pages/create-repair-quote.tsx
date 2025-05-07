@@ -314,7 +314,7 @@ export default function CreateRepairQuote() {
         // Add calculated totals
         subtotal,
         taxAmount,
-        totalAmount: total,
+        total, // Using "total" instead of "totalAmount" to match backend
       });
     },
     onSuccess: () => {
@@ -340,9 +340,48 @@ export default function CreateRepairQuote() {
     }
   });
   
+  // Update quote mutation
+  const updateQuoteMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof quoteSchema>) => {
+      return apiRequest("PUT", `/api/quotes/${quoteId}`, {
+        ...data,
+        // Add calculated totals
+        subtotal,
+        taxAmount,
+        total, // Using "total" instead of "totalAmount" to match backend
+      });
+    },
+    onSuccess: () => {
+      // Invalidate query caches
+      queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/quotes/${quoteId}`] });
+      
+      toast({
+        title: "Quote updated",
+        description: "The quote has been updated successfully",
+      });
+      
+      // Navigate back to the repair details page with the quotes tab selected
+      navigate(`/repairs/${repairId}?tab=quotes`);
+    },
+    onError: (error: any) => {
+      console.error("Failed to update quote:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update quote. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+  
   // Handle form submission
   const onSubmit = (values: z.infer<typeof quoteSchema>) => {
-    createQuoteMutation.mutate(values);
+    if (isEditing && quoteId) {
+      updateQuoteMutation.mutate(values);
+    } else {
+      createQuoteMutation.mutate(values);
+    }
   };
   
   // Add a new empty item to the quote
@@ -377,7 +416,7 @@ export default function CreateRepairQuote() {
             Back to Repair
           </Button>
         </Link>
-        <h1 className="text-2xl font-bold">Create Quote</h1>
+        <h1 className="text-2xl font-bold">{isEditing ? "Edit Quote" : "Create Quote"}</h1>
         <div className="w-[100px]"></div>
       </div>
       
@@ -740,8 +779,13 @@ export default function CreateRepairQuote() {
             <Link to={`/repairs/${repairId}`}>
               <Button variant="outline" type="button">Cancel</Button>
             </Link>
-            <Button type="submit" disabled={createQuoteMutation.isPending}>
-              {createQuoteMutation.isPending ? "Creating..." : "Create Quote"}
+            <Button 
+              type="submit" 
+              disabled={isEditing ? updateQuoteMutation.isPending : createQuoteMutation.isPending}
+            >
+              {isEditing 
+                ? (updateQuoteMutation.isPending ? "Updating..." : "Update Quote") 
+                : (createQuoteMutation.isPending ? "Creating..." : "Create Quote")}
             </Button>
           </div>
         </form>

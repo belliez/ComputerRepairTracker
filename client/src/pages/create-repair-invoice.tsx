@@ -72,7 +72,12 @@ const invoiceSchema = z.object({
 
 export default function CreateRepairInvoice() {
   const [location, navigate] = useLocation();
-  const [, params] = useRoute<{ repairId: string }>("/repairs/:repairId/invoices/create");
+  const [matchCreate, paramsCreate] = useRoute<{ repairId: string }>("/repairs/:repairId/invoices/create");
+  const [matchEdit, paramsEdit] = useRoute<{ repairId: string, invoiceId: string }>("/repairs/:repairId/invoices/:invoiceId/edit");
+  
+  // Determine if we're editing or creating
+  const isEditing = !!matchEdit;
+  const params = isEditing ? paramsEdit : paramsCreate;
   const queryClient = useQueryClient();
   const { formatCurrency } = useCurrency();
   
@@ -86,6 +91,18 @@ export default function CreateRepairInvoice() {
   const [selectedCurrencyCode, setSelectedCurrencyCode] = useState<string>('USD');
   const [selectedTaxRateId, setSelectedTaxRateId] = useState<number | undefined>(undefined);
   
+  // Get the invoice ID if we're editing
+  const invoiceId = isEditing ? parseInt(params?.invoiceId || '0') : undefined;
+
+  // Get existing invoice data if we're editing
+  const {
+    data: existingInvoice = {},
+    isLoading: isLoadingExistingInvoice
+  } = useQuery({
+    queryKey: [`/api/invoices/${invoiceId}`],
+    enabled: !!invoiceId && isEditing,
+  });
+
   // Get existing repair data
   const { 
     data: repair = {},
@@ -251,6 +268,45 @@ export default function CreateRepairInvoice() {
       form.setValue('taxRateId', defaultTaxRate.id);
     }
   }, [defaultCurrency, defaultTaxRate, form.setValue, form]);
+  
+  // Load existing invoice data when editing
+  useEffect(() => {
+    if (existingInvoice && isEditing) {
+      // Set the initial values from the existing invoice
+      if (existingInvoice.currencyCode) {
+        setSelectedCurrencyCode(existingInvoice.currencyCode);
+      }
+      
+      if (existingInvoice.taxRateId) {
+        setSelectedTaxRateId(existingInvoice.taxRateId);
+      }
+      
+      // Prepare form values
+      const formValues = {
+        repairId: repairId,
+        invoiceNumber: existingInvoice.invoiceNumber || '',
+        notes: existingInvoice.notes || '',
+        dueDate: existingInvoice.dueDate ? new Date(existingInvoice.dueDate) : undefined,
+        currencyCode: existingInvoice.currencyCode || 'USD',
+        taxRateId: existingInvoice.taxRateId,
+        // TODO: we don't have line items directly in the invoice,
+        // so we'll use the repair items as a starting point
+        items: repairItems?.map((item: any) => ({
+          description: item.description,
+          quantity: parseFloat(item.quantity),
+          unitPrice: parseFloat(item.unitPrice),
+        })) || []
+      };
+      
+      // Reset the form with the invoice data
+      form.reset(formValues);
+      
+      // Set calculated values
+      setSubtotal(existingInvoice.subtotal || 0);
+      setTaxAmount(existingInvoice.taxAmount || 0);
+      setTotal(existingInvoice.total || 0);
+    }
+  }, [existingInvoice, isEditing, repairId, repairItems, form]);
   
   // Create invoice mutation
   const createInvoiceMutation = useMutation({
