@@ -274,6 +274,9 @@ export default function EditRepairPage() {
                     {repair.device.serialNumber && (
                       <p><span className="font-medium">Serial Number:</span> {repair.device.serialNumber}</p>
                     )}
+                    {repair.device.password && (
+                      <p><span className="font-medium">Password:</span> {repair.device.password}</p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm">No device associated with this repair</p>

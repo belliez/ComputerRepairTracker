@@ -652,6 +652,11 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                             <span className="font-medium">Serial Number:</span> {safeGet(repair, 'device.serialNumber', '')}
                           </div>
                         )}
+                        {safeGet(repair, 'device.password', '') && (
+                          <div>
+                            <span className="font-medium">Password:</span> {safeGet(repair, 'device.password', '')}
+                          </div>
+                        )}
                         {safeGet(repair, 'device.condition', '') && (
                           <div>
                             <span className="font-medium">Condition:</span> {safeGet(repair, 'device.condition', '')}
