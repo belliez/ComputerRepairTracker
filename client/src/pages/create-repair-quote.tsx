@@ -132,13 +132,7 @@ export default function CreateRepairQuote() {
     data: defaultCurrency,
     isLoading: isLoadingDefaultCurrency
   } = useQuery({
-    queryKey: ['/api/settings/currencies/default'],
-    onSuccess: (data) => {
-      if (data && data.code) {
-        setSelectedCurrencyCode(data.code);
-        form.setValue('currencyCode', data.code);
-      }
-    }
+    queryKey: ['/api/settings/currencies/default']
   });
   
   // Get available tax rates
@@ -146,7 +140,7 @@ export default function CreateRepairQuote() {
     data: taxRates = [],
     isLoading: isLoadingTaxRates
   } = useQuery({
-    queryKey: ['/api/settings/tax-rates'],
+    queryKey: ['/api/settings/tax-rates']
   });
   
   // Get default tax rate
@@ -154,13 +148,7 @@ export default function CreateRepairQuote() {
     data: defaultTaxRate,
     isLoading: isLoadingDefaultTaxRate
   } = useQuery({
-    queryKey: ['/api/settings/tax-rates/default'],
-    onSuccess: (data) => {
-      if (data && data.id) {
-        setSelectedTaxRateId(data.id);
-        form.setValue('taxRateId', data.id);
-      }
-    }
+    queryKey: ['/api/settings/tax-rates/default']
   });
   
   // Generate a quote number
@@ -598,7 +586,7 @@ export default function CreateRepairQuote() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">No Tax</SelectItem>
+                          <SelectItem value="0">No Tax</SelectItem>
                           {isLoadingTaxRates ? (
                             <div className="flex justify-center p-2">
                               <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
