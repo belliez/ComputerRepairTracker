@@ -18,7 +18,7 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
         >
           <i className="fas fa-bars text-gray-600"></i>
         </Button>
-        <Link href="/" className="md:hidden text-xl font-bold">RepairTrack</Link>
+        <Link to="/" className="md:hidden text-xl font-bold">RepairTrack</Link>
       </div>
       
       <div className="ml-4 relative flex-1 max-w-xl">

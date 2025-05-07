@@ -38,7 +38,7 @@ export default function Sidebar({ isVisible, onClose }: SidebarProps) {
 
   const renderSidebarContent = () => (
     <>
-      <Link href="/" onClick={() => onClose()}>
+      <Link to="/" onClick={() => onClose()}>
         <div className="p-4 border-b border-gray-700 hover:bg-gray-700 transition-colors cursor-pointer">
           <h1 className="text-xl font-bold">RepairTrack</h1>
           <p className="text-xs text-gray-400">Computer Repair Management</p>
