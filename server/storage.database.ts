@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { 
   Customer, 
   Device, 
@@ -192,6 +192,17 @@ export class DatabaseStorage implements IStorage {
 
   async getRepairsByStatus(status: typeof repairStatuses[number]): Promise<Repair[]> {
     return db.select().from(repairs).where(eq(repairs.status, status));
+  }
+
+  async getRepairsByPriority(priority: number | number[]): Promise<Repair[]> {
+    if (Array.isArray(priority)) {
+      // If it's an array of priorities, use SQL IN clause
+      const priorityNumbers = priority.map(p => Number(p));
+      return db.select().from(repairs).where(inArray(repairs.priorityLevel, priorityNumbers));
+    } else {
+      // If it's a single priority level
+      return db.select().from(repairs).where(eq(repairs.priorityLevel, Number(priority)));
+    }
   }
 
   async createRepair(repair: InsertRepair): Promise<Repair> {

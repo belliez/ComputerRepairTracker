@@ -408,8 +408,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const customerId = req.query.customerId ? parseInt(req.query.customerId as string) : undefined;
       const technicianId = req.query.technicianId ? parseInt(req.query.technicianId as string) : undefined;
       const status = req.query.status as string;
+      const priority = req.query.priority as string;
       
-      console.log("GET /repairs with query params:", { customerId, technicianId, status });
+      console.log("GET /repairs with query params:", { customerId, technicianId, status, priority });
       
       // Filter by customer first if specified
       if (customerId) {
@@ -428,6 +429,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`Filtering repairs by status: ${status}`);
         const repairs = await storage.getRepairsByStatus(status as any);
         return res.json(repairs);
+      }
+      
+      // Filter by priority if it's provided
+      if (priority) {
+        console.log(`Filtering repairs by priority: ${priority}`);
+        // Check if it's an array (comma-separated values) or a single value
+        if (priority.includes(',')) {
+          // Handle array of priorities
+          const priorityLevels = priority.split(',').map(p => parseInt(p.trim()));
+          const repairs = await storage.getRepairsByPriority(priorityLevels);
+          return res.json(repairs);
+        } else {
+          // Handle single priority
+          const priorityLevel = parseInt(priority);
+          const repairs = await storage.getRepairsByPriority(priorityLevel);
+          return res.json(repairs);
+        }
       }
       
       // If no filters are active, return all repairs

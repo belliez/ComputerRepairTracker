@@ -59,6 +59,7 @@ export interface IStorage {
   getRepairsByCustomer(customerId: number): Promise<Repair[]>;
   getRepairsByTechnician(technicianId: number): Promise<Repair[]>;
   getRepairsByStatus(status: (typeof repairStatuses)[number]): Promise<Repair[]>;
+  getRepairsByPriority(priority: number | number[]): Promise<Repair[]>;
   createRepair(repair: InsertRepair): Promise<Repair>;
   updateRepair(id: number, repair: Partial<Repair>): Promise<Repair | undefined>;
   deleteRepair(id: number): Promise<boolean>;
@@ -733,6 +734,20 @@ export class MemStorage implements IStorage {
     return Array.from(this.repairs.values()).filter(
       (repair) => repair.status === status,
     );
+  }
+
+  async getRepairsByPriority(priority: number | number[]): Promise<Repair[]> {
+    if (Array.isArray(priority)) {
+      // If it's an array of priorities, filter by any matching priority
+      return Array.from(this.repairs.values()).filter(
+        repair => priority.includes(repair.priorityLevel)
+      );
+    } else {
+      // If it's a single priority level
+      return Array.from(this.repairs.values()).filter(
+        repair => repair.priorityLevel === Number(priority)
+      );
+    }
   }
 
   async createRepair(repair: InsertRepair): Promise<Repair> {
