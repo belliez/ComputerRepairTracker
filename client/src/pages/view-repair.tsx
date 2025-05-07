@@ -33,7 +33,8 @@ import StatusBadge from "@/components/repairs/status-badge";
 import { RepairWithRelations } from "@/types";
 import { repairStatuses } from "@shared/schema";
 import { ArrowLeft, Pencil, Printer, Mail, CreditCard, Plus, Trash2 } from "lucide-react";
-import { formatCurrency, safeGet } from "@/lib/utils";
+import { safeGet } from "@/lib/utils";
+import { useCurrency } from "@/hooks/use-currency";
 import { printDocument, createQuoteDocument, createInvoiceDocument } from "@/lib/print-utils";
 // Import our new components
 import CustomerInformation from "@/components/repairs/customer-information";
@@ -44,6 +45,7 @@ export default function ViewRepair() {
   const [location, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { formatCurrency } = useCurrency();
   
   // Get the tab from the URL query parameters if available
   const urlParams = new URLSearchParams(window.location.search);
