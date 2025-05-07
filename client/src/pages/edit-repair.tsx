@@ -16,19 +16,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Customer, Device, Technician, repairStatuses } from "@shared/schema";
-import { X, ArrowLeft, Save } from "lucide-react";
+import { repairStatuses } from "@shared/schema";
+import { ArrowLeft, Save } from "lucide-react";
+
+// Import our reusable components
+import CustomerInformation from "@/components/repairs/customer-information";
+import DeviceInformation from "@/components/repairs/device-information";
+import RepairInformation from "@/components/repairs/repair-information";
 
 export default function EditRepairPage() {
   const [location, navigate] = useLocation();
@@ -45,21 +39,12 @@ export default function EditRepairPage() {
   });
 
   // Get data for form
-  const { data: customers } = useQuery<Customer[]>({
-    queryKey: ["/api/customers"],
-  });
-
-  const { data: technicians } = useQuery<Technician[]>({
+  const { data: technicians } = useQuery({
     queryKey: ["/api/technicians"],
   });
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   
-  const { data: devices } = useQuery<Device[]>({
-    queryKey: ["/api/devices", selectedCustomerId ? { customerId: selectedCustomerId } : null],
-    enabled: !!selectedCustomerId,
-  });
-
   // Form validation schema
   const formSchema = z.object({
     customerId: z.number().positive("Customer is required"),
@@ -251,206 +236,86 @@ export default function EditRepairPage() {
       
       {/* Content - Scrollable */}
       <div className="flex-1 overflow-y-auto p-4">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-md">
-                <h2 className="font-semibold mb-2">Customer Information</h2>
-                {repair.customer && (
-                  <div className="text-sm">
-                    <p><span className="font-medium">Name:</span> {repair.customer.firstName} {repair.customer.lastName}</p>
-                    <p><span className="font-medium">Email:</span> {repair.customer.email || "N/A"}</p>
-                    <p><span className="font-medium">Phone:</span> {repair.customer.phone || "N/A"}</p>
-                  </div>
-                )}
-              </div>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Customer Information Section */}
+            {repair.customer && (
+              <CustomerInformation 
+                customer={repair.customer} 
+                onCustomerUpdated={() => {
+                  // Refresh repair details to reflect updated customer info
+                  queryClient.invalidateQueries({ 
+                    queryKey: [`/api/repairs/${repairId}/details`],
+                    refetchType: 'active'
+                  });
+                }}
+              />
+            )}
+
+            {/* Device Information Section */}
+            <DeviceInformation 
+              device={repair.device} 
+              customerId={repair.customerId}
+              onDeviceUpdated={() => {
+                // Refresh repair details to reflect updated device info
+                queryClient.invalidateQueries({ 
+                  queryKey: [`/api/repairs/${repairId}/details`],
+                  refetchType: 'active'
+                });
+              }}
+              onDeviceCreated={(deviceId) => {
+                // Update the repair with the new device ID
+                mutation.mutate({
+                  ...form.getValues(),
+                  deviceId: deviceId
+                });
+                
+                // Refresh repair details to reflect the new device
+                queryClient.invalidateQueries({ 
+                  queryKey: [`/api/repairs/${repairId}/details`],
+                  refetchType: 'active'
+                });
+                
+                toast({
+                  title: "Device added",
+                  description: "The device has been added to this repair",
+                });
+              }}
+            />
+          </div>
+
+          {/* Repair Information Section */}
+          <RepairInformation 
+            repair={repair}
+            onRepairUpdated={() => {
+              // Refresh repair details to reflect updated repair info
+              queryClient.invalidateQueries({ 
+                queryKey: [`/api/repairs/${repairId}/details`],
+                refetchType: 'active'
+              });
               
-              <div className="bg-gray-50 p-4 rounded-md">
-                <h2 className="font-semibold mb-2">Device Information</h2>
-                {repair.device ? (
-                  <div className="text-sm">
-                    <p><span className="font-medium">Type:</span> {repair.device.type}</p>
-                    <p><span className="font-medium">Make/Model:</span> {repair.device.brand} {repair.device.model}</p>
-                    {repair.device.serialNumber && (
-                      <p><span className="font-medium">Serial Number:</span> {repair.device.serialNumber}</p>
-                    )}
-                    {repair.device.password && (
-                      <p><span className="font-medium">Password:</span> {repair.device.password}</p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-sm">No device associated with this repair</p>
-                )}
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="issue"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Issue Description *</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Describe the issue with the device"
-                        className="min-h-[80px]" 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {repairStatuses.map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="priorityLevel"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel>Priority Level</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                        defaultValue={field.value.toString()}
-                        className="flex space-x-2"
-                      >
-                        {[1, 2, 3, 4, 5].map((level) => (
-                          <FormItem key={level} className="flex items-center space-x-1">
-                            <FormControl>
-                              <RadioGroupItem value={level.toString()} id={`priority-${level}`} />
-                            </FormControl>
-                            <FormLabel htmlFor={`priority-${level}`} className="cursor-pointer">
-                              {level}
-                            </FormLabel>
-                          </FormItem>
-                        ))}
-                      </RadioGroup>
-                    </FormControl>
-                    <FormDescription>
-                      1 = Lowest, 5 = Highest
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="isUnderWarranty"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>
-                        Device Under Warranty
-                      </FormLabel>
-                      <FormDescription>
-                        Check if the device is still under manufacturer's warranty
-                      </FormDescription>
-                    </div>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="technicianId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assigned Technician</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(value === "null" ? null : parseInt(value))}
-                      defaultValue={field.value?.toString() || "null"}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select technician" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="null">Not Assigned</SelectItem>
-                        {technicians?.map((tech) => (
-                          <SelectItem key={tech.id} value={tech.id.toString()}>
-                            {tech.firstName} {tech.lastName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="estimatedCompletionDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estimated Completion Date</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} value={field.value || ""} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notes</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Any additional notes about the repair"
-                        className="min-h-[80px]" 
-                        {...field} 
-                        value={field.value || ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </form>
-        </Form>
+              // Also refresh the repair list
+              queryClient.invalidateQueries({ 
+                queryKey: ["/api/repairs"],
+                refetchType: 'active'
+              });
+              
+              toast({
+                title: "Repair Updated",
+                description: "The repair has been updated successfully",
+              });
+            }}
+          />
+          
+          {/* Hidden form for submit actions */}
+          <div className="hidden">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleSubmit)} id="editRepairForm">
+                {/* Hidden but necessary for form submission */}
+              </form>
+            </Form>
+          </div>
+        </div>
       </div>
       
       {/* Footer */}

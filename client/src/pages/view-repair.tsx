@@ -35,6 +35,10 @@ import { repairStatuses } from "@shared/schema";
 import { ArrowLeft, Pencil, Printer, Mail, CreditCard, Plus } from "lucide-react";
 import { formatCurrency, safeGet } from "@/lib/utils";
 import { printDocument, createQuoteDocument, createInvoiceDocument } from "@/lib/print-utils";
+// Import our new components
+import CustomerInformation from "@/components/repairs/customer-information";
+import DeviceInformation from "@/components/repairs/device-information";
+import RepairInformation from "@/components/repairs/repair-information";
 
 export default function ViewRepair() {
   const [location, navigate] = useLocation();
@@ -328,162 +332,67 @@ export default function ViewRepair() {
         {/* Details Tab */}
         <TabsContent value="details" className="space-y-6 px-0 sm:px-2">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Customer Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {safeGet(repair, 'customer', null) ? (
-                  <div className="space-y-2">
-                    <div>
-                      <span className="font-medium">Name:</span> {safeGet(repair, 'customer.firstName', '')} {safeGet(repair, 'customer.lastName', '')}
-                    </div>
-                    <div>
-                      <span className="font-medium">Email:</span> {safeGet(repair, 'customer.email', 'N/A')}
-                    </div>
-                    <div>
-                      <span className="font-medium">Phone:</span> {safeGet(repair, 'customer.phone', 'N/A')}
-                    </div>
-                    {safeGet(repair, 'customer.address', false) && (
-                      <div>
-                        <span className="font-medium">Address:</span> {safeGet(repair, 'customer.address', '')}, 
-                        {safeGet(repair, 'customer.city', '')}, 
-                        {safeGet(repair, 'customer.state', '')} 
-                        {safeGet(repair, 'customer.postalCode', '')}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-gray-500">Customer information not available</div>
-                )}
-              </CardContent>
-            </Card>
+            {safeGet(repair, 'customer', null) ? (
+              <CustomerInformation 
+                customer={repair.customer} 
+                onCustomerUpdated={() => {
+                  // Refresh repair details to reflect updated customer info
+                  queryClient.invalidateQueries({ 
+                    queryKey: [`/api/repairs/${repairId}/details`],
+                    refetchType: 'active'
+                  });
+                }}
+              />
+            ) : (
+              <div className="text-gray-500">Customer information not available</div>
+            )}
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Device Information</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {safeGet(repair, 'deviceId') === null ? (
-                  <div className="text-gray-500">No device associated with this repair</div>
-                ) : safeGet(repair, 'device', null) ? (
-                  <div className="space-y-2">
-                    <div>
-                      <span className="font-medium">Type:</span> {safeGet(repair, 'device.type', 'N/A')}
-                    </div>
-                    <div>
-                      <span className="font-medium">Brand/Model:</span> {safeGet(repair, 'device.brand', '')} {safeGet(repair, 'device.model', '')}
-                    </div>
-                    {safeGet(repair, 'device.serialNumber', '') && (
-                      <div>
-                        <span className="font-medium">Serial Number:</span> {safeGet(repair, 'device.serialNumber', '')}
-                      </div>
-                    )}
-                    {safeGet(repair, 'device.password', '') && (
-                      <div>
-                        <span className="font-medium">Password:</span> {safeGet(repair, 'device.password', '')}
-                      </div>
-                    )}
-                    {safeGet(repair, 'device.condition', '') && (
-                      <div>
-                        <span className="font-medium">Condition:</span> {safeGet(repair, 'device.condition', '')}
-                      </div>
-                    )}
-                    {safeGet(repair, 'device.accessories', '') && (
-                      <div>
-                        <span className="font-medium">Accessories:</span> {safeGet(repair, 'device.accessories', '')}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-gray-500">Device information not available</div>
-                )}
-              </CardContent>
-            </Card>
+            <DeviceInformation 
+              device={safeGet(repair, 'device', null)}
+              customerId={safeGet(repair, 'customerId', 0)}
+              onDeviceUpdated={() => {
+                // Refresh repair details to reflect updated device info
+                queryClient.invalidateQueries({ 
+                  queryKey: [`/api/repairs/${repairId}/details`],
+                  refetchType: 'active'
+                });
+              }}
+              onDeviceCreated={(deviceId) => {
+                // Update the repair with the new device ID
+                apiRequest("PUT", `/api/repairs/${repairId}`, {
+                  deviceId: deviceId
+                }).then(() => {
+                  // Refresh repair details to reflect the new device
+                  queryClient.invalidateQueries({ 
+                    queryKey: [`/api/repairs/${repairId}/details`],
+                    refetchType: 'active'
+                  });
+                  
+                  toast({
+                    title: "Device added",
+                    description: "The device has been added to this repair",
+                  });
+                });
+              }}
+            />
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Repair Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium">Issue</h4>
-                  <p className="text-gray-700">{safeGet(repair, 'issue', 'No issue description')}</p>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium">Priority</h4>
-                  <div className="mt-1">
-                    <Badge className={
-                      safeGet(repair, 'priorityLevel', 3) === 1 ? "bg-red-100 text-red-800 border-red-300" :
-                      safeGet(repair, 'priorityLevel', 3) === 2 ? "bg-orange-100 text-orange-800 border-orange-300" :
-                      safeGet(repair, 'priorityLevel', 3) === 3 ? "bg-gray-100 text-gray-800 border-gray-300" :
-                      safeGet(repair, 'priorityLevel', 3) === 4 ? "bg-blue-100 text-blue-800 border-blue-300" :
-                      "bg-green-100 text-green-800 border-green-300"
-                    }>
-                      {safeGet(repair, 'priorityLevel', 3) === 1 ? "Critical" :
-                       safeGet(repair, 'priorityLevel', 3) === 2 ? "High" :
-                       safeGet(repair, 'priorityLevel', 3) === 3 ? "Normal" :
-                       safeGet(repair, 'priorityLevel', 3) === 4 ? "Low" :
-                       "Lowest"}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium">Intake Date</h4>
-                  <p className="text-gray-700">
-                    {format(new Date(safeGet(repair, 'intakeDate', new Date())), "MMMM d, yyyy")}
-                  </p>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium">Estimated Completion</h4>
-                  <p className="text-gray-700">
-                    {safeGet(repair, 'estimatedCompletionDate', null)
-                      ? format(new Date(safeGet(repair, 'estimatedCompletionDate', new Date())), "MMMM d, yyyy")
-                      : "Not specified"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium">Assigned Technician</h4>
-                  <p className="text-gray-700">
-                    {safeGet(repair, 'technician', null)
-                      ? `${safeGet(repair, 'technician.firstName', '')} ${safeGet(repair, 'technician.lastName', '')} (${safeGet(repair, 'technician.role', '')})`
-                      : "Unassigned"}
-                  </p>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium">Warranty</h4>
-                  <p className="text-gray-700">
-                    {safeGet(repair, 'isUnderWarranty', false) ? "Yes - Under Warranty" : "No - Not Under Warranty"}
-                  </p>
-                </div>
-              </div>
-
-              {safeGet(repair, 'diagnosticNotes', '') && (
-                <div>
-                  <h4 className="font-medium">Diagnostic Notes</h4>
-                  <p className="text-gray-700">{safeGet(repair, 'diagnosticNotes', '')}</p>
-                </div>
-              )}
-
-              {safeGet(repair, 'notes', '') && (
-                <div>
-                  <h4 className="font-medium">Additional Notes</h4>
-                  <p className="text-gray-700">{safeGet(repair, 'notes', '')}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <RepairInformation 
+            repair={repair}
+            onRepairUpdated={() => {
+              // Refresh repair details to reflect updated repair info
+              queryClient.invalidateQueries({ 
+                queryKey: [`/api/repairs/${repairId}/details`],
+                refetchType: 'active'
+              });
+              
+              // Also refresh the repair list
+              queryClient.invalidateQueries({ 
+                queryKey: ["/api/repairs"],
+                refetchType: 'active'
+              });
+            }}
+          />
 
           <Card>
             <CardHeader>
