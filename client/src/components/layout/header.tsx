@@ -1,5 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 interface HeaderProps {
   onSidebarToggle: () => void;
@@ -17,7 +18,7 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
         >
           <i className="fas fa-bars text-gray-600"></i>
         </Button>
-        <div className="md:hidden text-xl font-bold">RepairTrack</div>
+        <Link href="/" className="md:hidden text-xl font-bold">RepairTrack</Link>
       </div>
       
       <div className="ml-4 relative flex-1 max-w-xl">

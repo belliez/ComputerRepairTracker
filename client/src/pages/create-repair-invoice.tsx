@@ -158,16 +158,29 @@ export default function CreateRepairInvoice() {
       // Calculate the final amount
       const invoiceTotal = calculateTotal();
       
+      // Generate a unique invoice number
+      const invoiceNumber = `INV-${Math.floor(Math.random() * 10000000).toString().padStart(7, '0')}`;
+      
+      // Calculate values
+      const laborCostValue = data.includeLabor && data.laborCost 
+        ? parseFloat(data.laborCost?.toString() || "0") 
+        : 0;
+      const calculatedSubtotal = subtotal + laborCostValue;
+      const calculatedTax = data.taxRateId 
+        ? (invoiceTotal - (invoiceTotal / (1 + (getSelectedTaxRate() / 100)))) 
+        : 0;
+      
       // Create the full invoice data
       const invoiceData = {
-        ...data,
-        subtotalAmount: subtotal,
-        discountAmount: data.discountType === "amount" 
-          ? parseFloat(data.discount?.toString() || "0") 
-          : (subtotal * (parseFloat(data.discount?.toString() || "0") / 100)),
-        taxAmount: (invoiceTotal - (invoiceTotal / (1 + (getSelectedTaxRate() / 100)))),
-        totalAmount: invoiceTotal,
-        status: "unpaid"
+        repairId: Number(repairId),
+        invoiceNumber: invoiceNumber,
+        dateIssued: new Date(),
+        subtotal: calculatedSubtotal,
+        tax: calculatedTax,
+        total: invoiceTotal,
+        status: "unpaid",
+        notes: data.customerNotes || "",
+        taxRateId: data.taxRateId ? Number(data.taxRateId) : null
       };
       
       return apiRequest("POST", `/api/invoices`, invoiceData);

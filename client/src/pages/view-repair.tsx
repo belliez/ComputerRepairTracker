@@ -32,7 +32,7 @@ import { Separator } from "@/components/ui/separator";
 import StatusBadge from "@/components/repairs/status-badge";
 import { RepairWithRelations } from "@/types";
 import { repairStatuses } from "@shared/schema";
-import { ArrowLeft, Pencil, Printer, Mail, CreditCard, Plus } from "lucide-react";
+import { ArrowLeft, Pencil, Printer, Mail, CreditCard, Plus, Trash2 } from "lucide-react";
 import { formatCurrency, safeGet } from "@/lib/utils";
 import { printDocument, createQuoteDocument, createInvoiceDocument } from "@/lib/print-utils";
 // Import our new components
@@ -579,6 +579,30 @@ export default function ViewRepair() {
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
+                              onClick={() => {
+                                if (window.confirm("Are you sure you want to delete this quote?")) {
+                                  apiRequest("DELETE", `/api/quotes/${quote.id}`).then(() => {
+                                    queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+                                    toast({
+                                      title: "Quote Deleted",
+                                      description: "The quote has been deleted successfully"
+                                    });
+                                  }).catch(() => {
+                                    toast({
+                                      title: "Error",
+                                      description: "Failed to delete quote",
+                                      variant: "destructive"
+                                    });
+                                  });
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -673,6 +697,30 @@ export default function ViewRepair() {
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
+                              onClick={() => {
+                                if (window.confirm("Are you sure you want to delete this invoice?")) {
+                                  apiRequest("DELETE", `/api/invoices/${invoice.id}`).then(() => {
+                                    queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+                                    toast({
+                                      title: "Invoice Deleted",
+                                      description: "The invoice has been deleted successfully"
+                                    });
+                                  }).catch(() => {
+                                    toast({
+                                      title: "Error",
+                                      description: "Failed to delete invoice",
+                                      variant: "destructive"
+                                    });
+                                  });
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
