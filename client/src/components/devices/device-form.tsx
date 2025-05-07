@@ -83,7 +83,7 @@ export default function DeviceForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       customerId: customerId,
-      type: "",
+      type: "Laptop", // Set a default device type
       brand: "",
       model: "",
       serialNumber: "",
@@ -241,7 +241,8 @@ export default function DeviceForm({
                       <Input 
                         placeholder="Device serial number" 
                         {...field} 
-                        value={field.value || ''} 
+                        value={(field.value || '').toUpperCase()}
+                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                       />
                     </FormControl>
                     <FormMessage />
