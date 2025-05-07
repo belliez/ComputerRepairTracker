@@ -161,17 +161,26 @@ export default function CreateRepairQuote() {
       // Generate a unique quote number
       const quoteNumber = `QT-${Math.floor(Math.random() * 10000000).toString().padStart(7, '0')}`;
       
+      // Calculate values
+      const laborCostValue = data.includeLabor && data.laborCost 
+        ? parseFloat(data.laborCost?.toString() || "0") 
+        : 0;
+      const calculatedSubtotal = subtotal + laborCostValue;
+      const calculatedTax = data.taxRateId 
+        ? (quoteTotal - (quoteTotal / (1 + (getSelectedTaxRate() / 100)))) 
+        : 0;
+      
       // Create the full quote data
       const quoteData = {
-        repairId: data.repairId,
+        repairId: Number(repairId),
         quoteNumber: quoteNumber,
         expirationDate: data.validUntil,
-        subtotal: subtotal + (data.includeLabor && data.laborCost ? parseFloat(data.laborCost.toString() || "0") : 0),
-        tax: data.taxRateId ? (quoteTotal - (quoteTotal / (1 + (getSelectedTaxRate() / 100)))) : 0,
+        subtotal: calculatedSubtotal,
+        tax: calculatedTax,
         total: quoteTotal,
         status: "pending",
-        notes: data.customerNotes,
-        taxRateId: data.taxRateId
+        notes: data.customerNotes || "",
+        taxRateId: data.taxRateId ? Number(data.taxRateId) : null
       };
       
       return apiRequest("POST", `/api/quotes`, quoteData);
