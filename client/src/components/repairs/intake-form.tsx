@@ -499,6 +499,19 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   };
 
   const renderDeviceStep = () => {
+    // Filter devices based on search term
+    const filteredDevices = devices?.filter(device => {
+      if (!deviceSearchTerm) return true;
+      
+      const searchTermLower = deviceSearchTerm.toLowerCase();
+      return (
+        device.brand.toLowerCase().includes(searchTermLower) ||
+        device.model.toLowerCase().includes(searchTermLower) ||
+        (device.serialNumber && device.serialNumber.toLowerCase().includes(searchTermLower)) ||
+        device.type.toLowerCase().includes(searchTermLower)
+      );
+    });
+    
     return (
       <>
         <div>
@@ -506,15 +519,29 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
           <p className="mt-1 text-xs sm:text-sm text-gray-500">Select an existing device, add a new one, or skip if no device is involved.</p>
         </div>
         
+        <div className="mb-3">
+          <Input
+            type="text"
+            placeholder="Search devices..."
+            value={deviceSearchTerm}
+            onChange={(e) => setDeviceSearchTerm(e.target.value)}
+            className="w-full"
+          />
+        </div>
+        
         <div className="grid grid-cols-1 gap-4 sm:gap-6">
-          {devices?.length === 0 ? (
+          {!devices || devices.length === 0 ? (
             <div className="text-center py-2 sm:py-4">
               <p className="text-gray-500 text-xs sm:text-sm">No devices found for this customer.</p>
+            </div>
+          ) : filteredDevices.length === 0 ? (
+            <div className="text-center py-2 sm:py-4">
+              <p className="text-gray-500 text-xs sm:text-sm">No devices match your search.</p>
             </div>
           ) : (
             <div className="max-h-56 sm:max-h-60 overflow-y-auto border rounded-md">
               <ul className="divide-y divide-gray-200">
-                {devices?.map(device => (
+                {filteredDevices.map(device => (
                   <li 
                     key={device.id} 
                     className={`p-2 sm:p-3 cursor-pointer hover:bg-gray-50 ${
