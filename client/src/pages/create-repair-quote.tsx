@@ -199,8 +199,8 @@ export default function CreateRepairQuote() {
       // Manually refetch the repair details to ensure we have fresh data
       await queryClient.refetchQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
       
-      // Navigate back to repair view page
-      navigate(`/repairs/${repairId}`);
+      // Navigate back to repair view page with a query parameter to set active tab
+      navigate(`/repairs/${repairId}?tab=quotes`);
     },
     onError: (error) => {
       console.error("Error creating quote:", error);

@@ -42,10 +42,15 @@ import RepairInformation from "@/components/repairs/repair-information";
 
 export default function ViewRepair() {
   const [location, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState("details");
-  const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  
+  // Get the tab from the URL query parameters if available
+  const urlParams = new URLSearchParams(window.location.search);
+  const tabParam = urlParams.get('tab');
+  
+  const [activeTab, setActiveTab] = useState(tabParam || "details");
+  const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   
   // Parse the repair ID from the URL
   const repairId = parseInt(location.split('/').pop() || '0');
@@ -71,6 +76,16 @@ export default function ViewRepair() {
       setCurrentStatus(repair.status);
     }
   }, [repair]);
+  
+  // Clean up the URL parameter after the tab is set
+  useEffect(() => {
+    if (tabParam) {
+      // Update the URL to remove the tab parameter
+      const url = new URL(window.location.href);
+      url.searchParams.delete('tab');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [tabParam]);
 
   const handleStatusChange = async (newStatus: string) => {
     try {
