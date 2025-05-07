@@ -383,70 +383,54 @@ export default function ViewRepair() {
                 }}
               />
             ) : (
-              <div className="text-gray-500">Customer information not available</div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Customer Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">No customer information available</p>
+                </CardContent>
+              </Card>
             )}
-
-            <DeviceInformation 
-              device={safeGet(repair, 'device', null)}
-              customerId={safeGet(repair, 'customerId', 0)}
-              onDeviceUpdated={() => {
-                // Refresh repair details to reflect updated device info
-                queryClient.invalidateQueries({ 
-                  queryKey: [`/api/repairs/${repairId}/details`],
-                  refetchType: 'active'
-                });
-              }}
-              onDeviceCreated={(deviceId) => {
-                // Update the repair with the new device ID
-                apiRequest("PUT", `/api/repairs/${repairId}`, {
-                  deviceId: deviceId
-                }).then(() => {
-                  // Refresh repair details to reflect the new device
+            
+            {safeGet(repair, 'device', null) ? (
+              <DeviceInformation 
+                device={repair.device} 
+                onDeviceUpdated={() => {
+                  // Refresh repair details to reflect updated device info
                   queryClient.invalidateQueries({ 
                     queryKey: [`/api/repairs/${repairId}/details`],
                     refetchType: 'active'
                   });
-                  
-                  toast({
-                    title: "Device added",
-                    description: "The device has been added to this repair",
-                  });
-                });
-              }}
-            />
+                }}
+              />
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Device Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">No device information available</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          <RepairInformation 
-            repair={repair}
-            onRepairUpdated={() => {
-              // Refresh repair details to reflect updated repair info
-              queryClient.invalidateQueries({ 
-                queryKey: [`/api/repairs/${repairId}/details`],
-                refetchType: 'active'
-              });
-              
-              // Also refresh the repair list
-              queryClient.invalidateQueries({ 
-                queryKey: ["/api/repairs"],
-                refetchType: 'active'
-              });
-            }}
-          />
-
+          <RepairInformation repair={repair} />
+          
           <Card>
             <CardHeader>
               <CardTitle>Update Status</CardTitle>
-              <CardDescription>
-                Change the current status of this repair
-              </CardDescription>
+              <CardDescription>Change the current status of the repair</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
                 {repairStatuses.map((status) => (
-                  <Button 
+                  <Button
                     key={status}
-                    variant={currentStatus === status ? "default" : "outline"}
                     onClick={() => handleStatusChange(status)}
+                    variant={currentStatus === status ? "default" : "outline"}
+                    size="sm"
                     className={currentStatus === status ? "" : "border-gray-300 text-gray-700 hover:bg-gray-50"}
                   >
                     {status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ')}
@@ -581,7 +565,7 @@ export default function ViewRepair() {
                           {quote.validUntil ? format(new Date(quote.validUntil), "MMM d, yyyy") : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
-                          {formatCurrency(quote.totalAmount)}
+                          {typeof quote.totalAmount === 'number' ? formatCurrency(quote.totalAmount) : '-'}
                         </TableCell>
                         <TableCell>
                           <Badge variant={quote.status === 'approved' ? "default" : 
@@ -621,33 +605,7 @@ export default function ViewRepair() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
-                              onClick={async () => {
-                                if (window.confirm("Are you sure you want to delete this quote?")) {
-                                  try {
-                                    await apiRequest("DELETE", `/api/quotes/${quote.id}`);
-                                    
-                                    // Invalidate all related queries
-                                    await queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
-                                    await queryClient.invalidateQueries({ queryKey: [`/api/quotes`] });
-                                    await queryClient.invalidateQueries({ queryKey: [`/api/repairs`] });
-                                    
-                                    // Force refetch the data to ensure UI updates
-                                    await queryClient.refetchQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
-                                    
-                                    toast({
-                                      title: "Quote Deleted",
-                                      description: "The quote has been deleted successfully"
-                                    });
-                                  } catch (error) {
-                                    toast({
-                                      title: "Error",
-                                      description: "Failed to delete quote",
-                                      variant: "destructive"
-                                    });
-                                  }
-                                }
-                              }}
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -705,7 +663,7 @@ export default function ViewRepair() {
                           {invoice.dueDate ? format(new Date(invoice.dueDate), "MMM d, yyyy") : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
-                          {formatCurrency(invoice.totalAmount)}
+                          {typeof invoice.totalAmount === 'number' ? formatCurrency(invoice.totalAmount) : '-'}
                         </TableCell>
                         <TableCell>
                           <Badge variant={invoice.status === 'paid' ? "default" : 
@@ -748,33 +706,7 @@ export default function ViewRepair() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
-                              onClick={async () => {
-                                if (window.confirm("Are you sure you want to delete this invoice?")) {
-                                  try {
-                                    await apiRequest("DELETE", `/api/invoices/${invoice.id}`);
-                                    
-                                    // Invalidate all related queries
-                                    await queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
-                                    await queryClient.invalidateQueries({ queryKey: [`/api/invoices`] });
-                                    await queryClient.invalidateQueries({ queryKey: [`/api/repairs`] });
-                                    
-                                    // Force refetch the data to ensure UI updates
-                                    await queryClient.refetchQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
-                                    
-                                    toast({
-                                      title: "Invoice Deleted",
-                                      description: "The invoice has been deleted successfully"
-                                    });
-                                  } catch (error) {
-                                    toast({
-                                      title: "Error",
-                                      description: "Failed to delete invoice",
-                                      variant: "destructive"
-                                    });
-                                  }
-                                }
-                              }}
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
