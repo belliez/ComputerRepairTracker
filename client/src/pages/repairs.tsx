@@ -77,8 +77,18 @@ export default function Repairs() {
 
   const handleTabChange = (tab: RepairTab) => {
     setActiveTab(tab);
+    
+    // Reset priority filter when switching tabs
+    if (tab !== "urgent") {
+      setFilterPriority(undefined);
+    }
+    
+    // Set status filter based on tab
     if (tab === "all") {
       setFilterStatus(undefined);
+    } else if (tab === "urgent") {
+      setFilterStatus(undefined);
+      setFilterPriority(URGENT_PRIORITY_LEVELS.join(','));
     } else {
       setFilterStatus(tab);
     }
@@ -136,6 +146,25 @@ export default function Repairs() {
               }}
             >
               All Repairs
+            </a>
+          </li>
+          <li className="mr-1">
+            <a 
+              href="#" 
+              className={`inline-block py-2 px-4 text-sm font-medium ${
+                activeTab === "urgent" 
+                  ? "text-red-600 border-b-2 border-red-600"
+                  : "text-gray-500 hover:text-gray-700 hover:border-gray-300 border-b-2 border-transparent"
+              }`}
+              onClick={(e) => {
+                e.preventDefault();
+                handleTabChange("urgent");
+              }}
+            >
+              <span className="flex items-center">
+                <span className="mr-1 text-red-500">●</span>
+                Urgent
+              </span>
             </a>
           </li>
           {repairStatuses.map((status) => {

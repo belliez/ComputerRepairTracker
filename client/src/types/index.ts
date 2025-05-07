@@ -108,4 +108,4 @@ export interface NavItem {
 export type UserRole = "technician" | "manager" | "frontdesk";
 
 // Type for active tab in repairs page
-export type RepairTab = "all" | RepairStatus;
+export type RepairTab = "all" | "urgent" | RepairStatus;
