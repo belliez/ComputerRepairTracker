@@ -296,9 +296,9 @@ export default function CreateRepairQuote() {
         ) : (
           <div className="text-center py-4 border rounded-md">
             <p className="text-muted-foreground">No items added to this repair yet.</p>
-            <Link to={`/repairs/${repairId}/items/add`}>
+            <Link to={`/repairs/view/${repairId}`}>
               <Button variant="outline" size="sm" className="mt-2">
-                Add Item
+                Go back to add items
               </Button>
             </Link>
           </div>
@@ -562,7 +562,7 @@ export default function CreateRepairQuote() {
             </div>
             
             <div className="pt-4 flex justify-end gap-4">
-              <Link to={`/repairs/${repairId}`}>
+              <Link to={`/repairs/view/${repairId}`}>
                 <Button variant="outline" type="button">Cancel</Button>
               </Link>
               <Button 
