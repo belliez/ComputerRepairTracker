@@ -196,11 +196,13 @@ export default function AddRepairItem() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="null">None</SelectItem>
+                        <SelectItem key="none" value="null">None</SelectItem>
                         {Array.isArray(inventoryItems) && inventoryItems.map((item: any) => (
-                          <SelectItem key={item.id} value={item.id.toString()}>
-                            {item.name} ({formatCurrency(item.price)}) - {item.quantity > 0 ? `${item.quantity} in stock` : 'Out of stock'}
-                          </SelectItem>
+                          item.id && (
+                            <SelectItem key={item.id} value={item.id.toString()}>
+                              {item.name} ({formatCurrency(item.price)}) - {item.quantity > 0 ? `${item.quantity} in stock` : 'Out of stock'}
+                            </SelectItem>
+                          )
                         ))}
                       </SelectContent>
                     </Select>
