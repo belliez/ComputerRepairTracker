@@ -1,24 +1,23 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation, Link } from "wouter";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
+import { useLocation, useRoute, Link } from "wouter";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { safeGet } from "@/lib/utils";
+import { useCurrency } from "@/hooks/use-currency";
+import { z } from "zod";
+import { useForm, useFieldArray } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { 
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Form,
   FormControl,
   FormDescription,
@@ -28,230 +27,298 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, CalendarIcon } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
-import { cn, formatCurrency } from "@/lib/utils";
-import { format, addDays } from "date-fns";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { format } from "date-fns";
+import { CalendarIcon, ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+// Schema for invoice creation
+const invoiceSchema = z.object({
+  repairId: z.number(),
+  invoiceNumber: z.string(),
+  notes: z.string().optional(),
+  dueDate: z.date().optional(),
+  currencyCode: z.string().min(1, "Please select a currency"),
+  taxRateId: z.number().optional(),
+  items: z.array(
+    z.object({
+      description: z.string().min(1, "Description is required"),
+      quantity: z.number().min(1, "Quantity must be at least 1"),
+      unitPrice: z.number().min(0, "Price cannot be negative"),
+    })
+  ),
+});
 
 export default function CreateRepairInvoice() {
   const [location, navigate] = useLocation();
-  const { toast } = useToast();
-  const [dueDatePeriod, setDueDatePeriod] = useState(30);
+  const [, params] = useRoute<{ repairId: string }>("/repairs/:repairId/invoices/create");
+  const queryClient = useQueryClient();
+  const { formatCurrency } = useCurrency();
   
   // Parse the repair ID from the URL
-  const repairId = parseInt(location.split('/')[2]);
+  const repairId = parseInt(params?.repairId || '0');
   
-  // Get repair details for context
-  const { data: repair } = useQuery({
+  // State to store total calculations
+  const [subtotal, setSubtotal] = useState(0);
+  const [taxAmount, setTaxAmount] = useState(0);
+  const [total, setTotal] = useState(0);
+  const [selectedCurrencyCode, setSelectedCurrencyCode] = useState<string>('USD');
+  const [selectedTaxRateId, setSelectedTaxRateId] = useState<number | undefined>(undefined);
+  
+  // Get existing repair data
+  const { 
+    data: repair = {},
+    isLoading: isLoadingRepair 
+  } = useQuery({
     queryKey: [`/api/repairs/${repairId}/details`],
     enabled: !!repairId,
   });
-
+  
   // Get repair items
-  const { data: repairItems = [] } = useQuery({
+  const { 
+    data: repairItems = [],
+    isLoading: isLoadingItems 
+  } = useQuery({
     queryKey: [`/api/repairs/${repairId}/items`],
     enabled: !!repairId,
   });
-
-  // Get tax rates
-  const { data: taxRates = [] } = useQuery({
-    queryKey: ["/api/settings/tax-rates"],
-  });
-
-  // Get default tax rate
-  const { data: defaultTaxRate } = useQuery({
-    queryKey: ["/api/settings/tax-rates/default"],
-  });
-
-  // Calculate subtotal of all items
-  const subtotal = repairItems.reduce((acc: number, item: any) => {
-    return acc + (item.quantity * item.unitPrice);
-  }, 0);
   
-  // Form validation schema
-  const formSchema = z.object({
-    repairId: z.number(),
-    customerNotes: z.string().optional(),
-    dueDate: z.date().optional(),
-    taxRateId: z.number().nullable().optional(),
-    includeLabor: z.boolean().default(true),
-    laborCost: z.coerce.number().min(0).optional(),
-    discount: z.coerce.number().min(0).optional(),
-    discountType: z.enum(["amount", "percentage"]).default("amount")
+  // Get available currencies
+  const {
+    data: currencies = [],
+    isLoading: isLoadingCurrencies
+  } = useQuery({
+    queryKey: ['/api/settings/currencies'],
   });
-
-  // Form initialization
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+  
+  // Get default currency
+  const {
+    data: defaultCurrency,
+    isLoading: isLoadingDefaultCurrency
+  } = useQuery({
+    queryKey: ['/api/settings/currencies/default'],
+    onSuccess: (data) => {
+      if (data && data.code) {
+        setSelectedCurrencyCode(data.code);
+        form.setValue('currencyCode', data.code);
+      }
+    }
+  });
+  
+  // Get available tax rates
+  const {
+    data: taxRates = [],
+    isLoading: isLoadingTaxRates
+  } = useQuery({
+    queryKey: ['/api/settings/tax-rates'],
+  });
+  
+  // Get default tax rate
+  const {
+    data: defaultTaxRate,
+    isLoading: isLoadingDefaultTaxRate
+  } = useQuery({
+    queryKey: ['/api/settings/tax-rates/default'],
+    onSuccess: (data) => {
+      if (data && data.id) {
+        setSelectedTaxRateId(data.id);
+        form.setValue('taxRateId', data.id);
+      }
+    }
+  });
+  
+  // Generate an invoice number
+  const generateInvoiceNumber = () => {
+    const now = new Date();
+    const year = now.getFullYear().toString().substring(2);
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const day = now.getDate().toString().padStart(2, '0');
+    const randomDigits = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+    
+    return `INV-${year}${month}${day}${randomDigits}`;
+  };
+  
+  // Set up form with react-hook-form
+  const form = useForm<z.infer<typeof invoiceSchema>>({
+    resolver: zodResolver(invoiceSchema),
     defaultValues: {
       repairId: repairId,
-      customerNotes: "",
-      dueDate: addDays(new Date(), dueDatePeriod),
-      taxRateId: defaultTaxRate?.id || null,
-      includeLabor: true,
-      laborCost: 0,
-      discount: 0,
-      discountType: "amount"
+      invoiceNumber: generateInvoiceNumber(),
+      notes: "",
+      dueDate: new Date(new Date().setDate(new Date().getDate() + 30)),  // Default: 30 days from now
+      currencyCode: defaultCurrency?.code || 'USD',
+      taxRateId: defaultTaxRate?.id,
+      items: repairItems && repairItems.length > 0 ? 
+        // Map repair items to invoice items
+        repairItems.map((item: any) => ({
+          description: item.description,
+          quantity: parseFloat(item.quantity),
+          unitPrice: parseFloat(item.unitPrice),
+        })) : 
+        // Default empty item if no repair items
+        [{ description: "", quantity: 1, unitPrice: 0 }],
     },
   });
-
-  // Update due date when period changes
-  useEffect(() => {
-    const newDueDate = addDays(new Date(), dueDatePeriod);
-    form.setValue("dueDate", newDueDate);
-  }, [dueDatePeriod, form]);
-
-  // Calculate invoice totals
-  const calculateTotal = () => {
-    let total = subtotal;
-    
-    // Add labor if included
-    if (form.watch("includeLabor") && form.watch("laborCost")) {
-      total += parseFloat(form.watch("laborCost").toString() || "0");
-    }
-    
-    // Apply discount
-    const discount = parseFloat(form.watch("discount")?.toString() || "0");
-    if (discount > 0) {
-      if (form.watch("discountType") === "amount") {
-        total -= discount;
-      } else {
-        total -= (total * (discount / 100));
-      }
-    }
-    
-    // Keep total non-negative
-    total = Math.max(0, total);
-    
-    // Add tax if selected
-    const taxRateId = form.watch("taxRateId");
-    if (taxRateId) {
-      const selectedTaxRate = taxRates.find((rate: any) => rate.id === taxRateId);
-      if (selectedTaxRate) {
-        total += total * (selectedTaxRate.rate / 100);
-      }
-    }
-    
-    return total;
-  };
   
-  // Get selected tax rate percentage
-  const getSelectedTaxRate = () => {
-    const taxRateId = form.watch("taxRateId");
-    if (!taxRateId) return 0;
+  // Hook into form values to support the field array for line items
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "items",
+  });
+  
+  // Watch for changes to calculate totals
+  const formValues = form.watch();
+  
+  // Calculate totals when form values change
+  useEffect(() => {
+    if (formValues.items) {
+      // Calculate subtotal
+      const newSubtotal = formValues.items.reduce(
+        (sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0),
+        0
+      );
+      setSubtotal(newSubtotal);
+      
+      // Calculate tax if a tax rate is selected
+      if (selectedTaxRateId && taxRates && taxRates.length > 0) {
+        const selectedTaxRate = taxRates.find((rate: any) => rate.id === selectedTaxRateId);
+        if (selectedTaxRate) {
+          const newTaxAmount = newSubtotal * (selectedTaxRate.rate / 100);
+          setTaxAmount(newTaxAmount);
+          setTotal(newSubtotal + newTaxAmount);
+        } else {
+          setTaxAmount(0);
+          setTotal(newSubtotal);
+        }
+      } else {
+        setTaxAmount(0);
+        setTotal(newSubtotal);
+      }
+    }
+  }, [formValues, selectedTaxRateId, taxRates]);
+  
+  // Initialize with repair items if available
+  useEffect(() => {
+    if (repairItems && repairItems.length > 0 && form) {
+      // Only initialize if the form is empty or only has one empty item
+      const currentItems = form.getValues('items');
+      
+      if (!currentItems || currentItems.length === 0 || 
+          (currentItems.length === 1 && 
+           !currentItems[0].description && 
+           currentItems[0].quantity === 1 && 
+           currentItems[0].unitPrice === 0)) {
+        
+        form.setValue('items', repairItems.map((item: any) => ({
+          description: item.description,
+          quantity: parseFloat(item.quantity),
+          unitPrice: parseFloat(item.unitPrice),
+        })));
+      }
+    }
+  }, [repairItems, form, form.setValue]);
+  
+  // Set default currency and tax rate when they load
+  useEffect(() => {
+    if (defaultCurrency && defaultCurrency.code) {
+      setSelectedCurrencyCode(defaultCurrency.code);
+      form.setValue('currencyCode', defaultCurrency.code);
+    }
     
-    const selectedTaxRate = taxRates.find((rate: any) => rate.id === taxRateId);
-    return selectedTaxRate ? selectedTaxRate.rate : 0;
-  };
-
-  // Mutation for creating an invoice
-  const mutation = useMutation({
-    mutationFn: (data: z.infer<typeof formSchema>) => {
-      // Calculate the final amount
-      const invoiceTotal = calculateTotal();
-      
-      // Generate a unique invoice number
-      const invoiceNumber = `INV-${Math.floor(Math.random() * 10000000).toString().padStart(7, '0')}`;
-      
-      // Calculate values
-      const laborCostValue = data.includeLabor && data.laborCost 
-        ? parseFloat(data.laborCost?.toString() || "0") 
-        : 0;
-      const calculatedSubtotal = subtotal + laborCostValue;
-      const calculatedTax = data.taxRateId 
-        ? (invoiceTotal - (invoiceTotal / (1 + (getSelectedTaxRate() / 100)))) 
-        : 0;
-      
-      // Create the full invoice data
-      const invoiceData = {
-        repairId: Number(repairId),
-        invoiceNumber: invoiceNumber,
-        dateIssued: new Date(),
-        subtotal: calculatedSubtotal,
-        tax: calculatedTax,
-        total: invoiceTotal,
-        status: "unpaid",
-        notes: data.customerNotes || "",
-        taxRateId: data.taxRateId ? Number(data.taxRateId) : null
-      };
-      
-      return apiRequest("POST", `/api/invoices`, invoiceData);
+    if (defaultTaxRate && defaultTaxRate.id) {
+      setSelectedTaxRateId(defaultTaxRate.id);
+      form.setValue('taxRateId', defaultTaxRate.id);
+    }
+  }, [defaultCurrency, defaultTaxRate, form.setValue, form]);
+  
+  // Create invoice mutation
+  const createInvoiceMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof invoiceSchema>) => {
+      return apiRequest("POST", "/api/invoices", {
+        ...data,
+        // Add calculated totals
+        subtotal,
+        taxAmount,
+        totalAmount: total,
+      });
     },
-    onSuccess: async () => {
-      // First, invalidate all relevant queries to mark them as stale
-      await queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
-      await queryClient.invalidateQueries({ queryKey: [`/api/repairs`] });
-      await queryClient.invalidateQueries({ queryKey: [`/api/invoices`] });
+    onSuccess: () => {
+      // Invalidate query caches
+      queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
       
       toast({
-        title: "Invoice Created",
+        title: "Invoice created",
         description: "The invoice has been created successfully",
       });
       
-      // Force immediate refetch of all relevant queries to ensure fresh data
-      await Promise.all([
-        queryClient.fetchQuery({ queryKey: [`/api/repairs/${repairId}/details`] }),
-        queryClient.fetchQuery({ queryKey: [`/api/invoices`] })
-      ]);
-      
-      // Navigate back to repair view page with a query parameter to set active tab
+      // Navigate back to the repair details page with the invoices tab selected
       navigate(`/repairs/${repairId}?tab=invoice`);
     },
-    onError: (error) => {
-      console.error("Error creating invoice:", error);
+    onError: (error: any) => {
+      console.error("Failed to create invoice:", error);
       toast({
         title: "Error",
-        description: "Failed to create invoice. Please try again.",
+        description: error.message || "Failed to create invoice. Please try again.",
         variant: "destructive",
       });
-    },
-  });
-
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    // Check if there are items to include in the invoice
-    if (repairItems.length === 0 && (!values.includeLabor || !values.laborCost)) {
-      toast({
-        title: "No Items",
-        description: "Please add at least one item or include labor cost",
-        variant: "destructive",
-      });
-      return;
     }
-    
-    mutation.mutate(values);
+  });
+  
+  // Handle form submission
+  const onSubmit = (values: z.infer<typeof invoiceSchema>) => {
+    createInvoiceMutation.mutate(values);
   };
   
-  // Function to handle due date period selection
-  const handleDueDatePeriodChange = (days: number) => {
-    setDueDatePeriod(days);
-    const newDueDate = addDays(new Date(), days);
-    form.setValue("dueDate", newDueDate);
+  // Add a new empty item to the invoice
+  const handleAddItem = () => {
+    append({ description: "", quantity: 1, unitPrice: 0 });
   };
-
-  if (!repair) {
+  
+  if (isLoadingRepair) {
     return (
       <div className="container mx-auto px-4 py-6">
-        <div className="flex items-center justify-center h-[50vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        <div className="flex justify-between items-center mb-6">
+          <Button variant="ghost" onClick={() => window.history.back()}>
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
+          </Button>
+          <h1 className="text-2xl font-bold">Loading...</h1>
+          <div className="w-[100px]"></div>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
         </div>
       </div>
     );
   }
-
+  
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6 pb-4 border-b">
+      <div className="flex justify-between items-center mb-6">
         <Link to={`/repairs/${repairId}`}>
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Repair
           </Button>
@@ -260,343 +327,371 @@ export default function CreateRepairInvoice() {
         <div className="w-[100px]"></div>
       </div>
       
-      {/* Repair Info */}
-      <div className="bg-muted/50 p-4 rounded-md mb-6">
-        <h2 className="font-semibold mb-2">Repair #{repair.ticketNumber}</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">Customer</p>
-            <p className="font-medium">{repair.customer?.firstName} {repair.customer?.lastName}</p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Device</p>
-            <p className="font-medium">
-              {repair.device?.type} - {repair.device?.brand} {repair.device?.model}
-            </p>
-          </div>
+      {repair && (
+        <div className="mb-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Repair Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm">
+                <p><span className="font-medium">Ticket:</span> {repair.ticketNumber}</p>
+                <p className="mt-1">
+                  <span className="font-medium">Status:</span> {repair.status ? repair.status.charAt(0).toUpperCase() + repair.status.slice(1) : 'N/A'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Customer</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm">
+                <p>{repair.customer?.firstName} {repair.customer?.lastName}</p>
+                <p className="mt-1">{repair.customer?.email}</p>
+                <p className="mt-1">{repair.customer?.phone}</p>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Device</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-sm">
+                <p><span className="font-medium">{repair.device?.type}:</span> {repair.device?.brand} {repair.device?.model}</p>
+                <p className="mt-1"><span className="font-medium">Serial:</span> {repair.device?.serialNumber}</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </div>
+      )}
       
-      {/* Items Table */}
-      <div className="mb-6">
-        <h2 className="font-semibold mb-2">Items</h2>
-        
-        {repairItems.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {repairItems.map((item: any) => {
-                const itemTotal = item.quantity * item.unitPrice;
-                
-                return (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">
-                      {item.description}
-                      <span className="text-xs text-muted-foreground ml-2">
-                        ({item.itemType === 'part' ? 'Part' : 'Service'})
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
-                    <TableCell className="text-right">{item.quantity}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(itemTotal)}</TableCell>
-                  </TableRow>
-                );
-              })}
-              <TableRow>
-                <TableCell colSpan={3} className="text-right font-medium">Subtotal</TableCell>
-                <TableCell className="text-right font-medium">{formatCurrency(subtotal)}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="text-center py-4 border rounded-md">
-            <p className="text-muted-foreground">No items added to this repair yet.</p>
-            <Link to={`/repairs/${repairId}`}>
-              <Button variant="outline" size="sm" className="mt-2">
-                Go back to add items
-              </Button>
-            </Link>
-          </div>
-        )}
-      </div>
-      
-      {/* Form */}
-      <div className="max-w-2xl mx-auto">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="dueDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Due Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date < new Date()}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <div className="flex gap-2 mt-1">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm"
-                        className={cn(dueDatePeriod === 7 && "border-primary text-primary")}
-                        onClick={() => handleDueDatePeriodChange(7)}
-                      >
-                        7 days
-                      </Button>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm"
-                        className={cn(dueDatePeriod === 14 && "border-primary text-primary")}
-                        onClick={() => handleDueDatePeriodChange(14)}
-                      >
-                        14 days
-                      </Button>
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        size="sm"
-                        className={cn(dueDatePeriod === 30 && "border-primary text-primary")}
-                        onClick={() => handleDueDatePeriodChange(30)}
-                      >
-                        30 days
-                      </Button>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="taxRateId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tax Rate</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(value === "null" ? null : parseInt(value))}
-                      value={field.value?.toString() || "null"}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a tax rate" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="null">No Tax</SelectItem>
-                        {taxRates.map((rate: any) => (
-                          <SelectItem key={rate.id} value={rate.id.toString()}>
-                            {rate.name} ({rate.rate}%)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-4">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoice Information</CardTitle>
+              <CardDescription>Basic information about this invoice</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="includeLabor"
+                  name="invoiceNumber"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormItem>
+                      <FormLabel>Invoice Number</FormLabel>
                       <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
+                        <Input placeholder="Auto-generated" {...field} />
                       </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel>Include Labor</FormLabel>
-                        <FormDescription>
-                          Add a labor charge to this invoice
-                        </FormDescription>
-                      </div>
+                      <FormDescription>
+                        A unique identifier for this invoice
+                      </FormDescription>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
                 
-                {form.watch("includeLabor") && (
-                  <FormField
-                    control={form.control}
-                    name="laborCost"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Labor Cost</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            placeholder="0.00"
-                            {...field}
+                <FormField
+                  control={form.control}
+                  name="dueDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Due Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={"outline"}
+                              className={cn(
+                                "pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "PPP")
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date < new Date() || date > new Date("2099-01-01")
+                            }
+                            initialFocus
                           />
+                        </PopoverContent>
+                      </Popover>
+                      <FormDescription>
+                        The date by which payment is due
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="currencyCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <Select
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedCurrencyCode(value);
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select currency" />
+                          </SelectTrigger>
                         </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+                        <SelectContent>
+                          {isLoadingCurrencies ? (
+                            <div className="flex justify-center p-2">
+                              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                            </div>
+                          ) : currencies && currencies.length > 0 ? (
+                            currencies.map((currency: any) => (
+                              <SelectItem key={currency.code} value={currency.code}>
+                                {currency.symbol} {currency.name} ({currency.code})
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="USD">$ US Dollar (USD)</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Select the currency for this invoice
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="taxRateId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tax Rate</FormLabel>
+                      <Select
+                        value={field.value?.toString() || ''}
+                        onValueChange={(value) => {
+                          const numericValue = parseInt(value);
+                          field.onChange(numericValue);
+                          setSelectedTaxRateId(numericValue);
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select tax rate" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">No Tax</SelectItem>
+                          {isLoadingTaxRates ? (
+                            <div className="flex justify-center p-2">
+                              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                            </div>
+                          ) : taxRates && taxRates.length > 0 ? (
+                            taxRates.map((taxRate: any) => (
+                              <SelectItem key={taxRate.id} value={taxRate.id.toString()}>
+                                {taxRate.name} ({taxRate.rate}%)
+                              </SelectItem>
+                            ))
+                          ) : null}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Apply a tax rate to this invoice
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
               
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-2">
-                  <FormField
-                    control={form.control}
-                    name="discount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Discount</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            step={form.watch("discountType") === "percentage" ? "1" : "0.01"}
-                            min="0"
-                            max={form.watch("discountType") === "percentage" ? "100" : undefined}
-                            placeholder="0"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="discountType"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="amount">Amount ($)</SelectItem>
-                            <SelectItem value="percentage">Percentage (%)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notes</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Enter any notes or payment instructions for this invoice"
+                        className="resize-none min-h-[100px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Optional notes or payment instructions for this invoice
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>Line Items</CardTitle>
+                  <CardDescription>Add the parts and services for this invoice</CardDescription>
                 </div>
+                <Button 
+                  type="button" 
+                  onClick={handleAddItem} 
+                  variant="outline"
+                  className="h-8 gap-1"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>Add Item</span>
+                </Button>
               </div>
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="customerNotes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes for Customer</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Additional information to include on the invoice"
-                      className="resize-none min-h-[100px]"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            {/* Invoice Summary */}
-            <div className="bg-muted/50 p-4 rounded-md border">
-              <h3 className="font-semibold mb-3">Invoice Summary</h3>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[40%]">Description</TableHead>
+                    <TableHead className="text-right">Unit Price</TableHead>
+                    <TableHead className="text-right">Quantity</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {fields.map((field, index) => {
+                    // Calculate item total
+                    const quantity = form.watch(`items.${index}.quantity`) || 0;
+                    const unitPrice = form.watch(`items.${index}.unitPrice`) || 0;
+                    const itemTotal = quantity * unitPrice;
+                    
+                    return (
+                      <TableRow key={field.id}>
+                        <TableCell>
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.description`}
+                            render={({ field }) => (
+                              <FormItem className="mb-0">
+                                <FormControl>
+                                  <Input placeholder="Item description" {...field} className="border-0 p-0 shadow-none focus-visible:ring-0" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.unitPrice`}
+                            render={({ field }) => (
+                              <FormItem className="mb-0">
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                    className="border-0 p-0 text-right shadow-none focus-visible:ring-0"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <FormField
+                            control={form.control}
+                            name={`items.${index}.quantity`}
+                            render={({ field }) => (
+                              <FormItem className="mb-0">
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="1"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                    className="border-0 p-0 text-right shadow-none focus-visible:ring-0"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(itemTotal)}
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => remove(index)}
+                            disabled={fields.length <= 1}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+            <CardFooter className="flex-col border-t px-6 pt-6">
+              <div className="ml-auto flex w-full max-w-md flex-col gap-2">
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal</span>
                   <span>{formatCurrency(subtotal)}</span>
                 </div>
-                
-                {form.watch("includeLabor") && form.watch("laborCost") > 0 && (
-                  <div className="flex justify-between">
-                    <span>Labor:</span>
-                    <span>{formatCurrency(parseFloat(form.watch("laborCost").toString()))}</span>
-                  </div>
-                )}
-                
-                {form.watch("discount") > 0 && (
-                  <div className="flex justify-between text-red-600">
-                    <span>Discount{form.watch("discountType") === "percentage" && ` (${form.watch("discount")}%)`}:</span>
-                    <span>-{form.watch("discountType") === "amount" 
-                      ? formatCurrency(parseFloat(form.watch("discount").toString())) 
-                      : formatCurrency((subtotal + (form.watch("includeLabor") ? parseFloat(form.watch("laborCost").toString() || "0") : 0)) * (parseFloat(form.watch("discount").toString()) / 100))
-                    }</span>
-                  </div>
-                )}
-                
-                {form.watch("taxRateId") && (
-                  <div className="flex justify-between">
-                    <span>Tax ({getSelectedTaxRate()}%):</span>
-                    <span>{formatCurrency(calculateTotal() - (calculateTotal() / (1 + (getSelectedTaxRate() / 100))))}</span>
-                  </div>
-                )}
-                
-                <div className="flex justify-between font-bold pt-2 border-t mt-2">
-                  <span>Total:</span>
-                  <span>{formatCurrency(calculateTotal())}</span>
+                <div className="flex justify-between text-sm">
+                  <span>Tax</span>
+                  <span>{formatCurrency(taxAmount)}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                  <span>Total</span>
+                  <span>{formatCurrency(total)}</span>
                 </div>
               </div>
-            </div>
-            
-            <div className="pt-4 flex justify-end gap-4">
-              <Link to={`/repairs/${repairId}`}>
-                <Button variant="outline" type="button">Cancel</Button>
-              </Link>
-              <Button 
-                type="submit"
-                disabled={mutation.isPending}
-              >
-                {mutation.isPending ? "Creating..." : "Create Invoice"}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </div>
+            </CardFooter>
+          </Card>
+          
+          <div className="flex justify-end gap-4">
+            <Link to={`/repairs/${repairId}`}>
+              <Button variant="outline" type="button">Cancel</Button>
+            </Link>
+            <Button type="submit" disabled={createInvoiceMutation.isPending}>
+              {createInvoiceMutation.isPending ? "Creating..." : "Create Invoice"}
+            </Button>
+          </div>
+        </form>
+      </Form>
     </div>
   );
 }
