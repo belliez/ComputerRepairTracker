@@ -181,10 +181,10 @@ export default function AddRepairItem() {
                     <FormLabel>Select from Inventory (Optional)</FormLabel>
                     <Select
                       onValueChange={(value) => {
-                        field.onChange(value ? parseInt(value) : null);
-                        if (value) handleInventoryItemSelect(parseInt(value));
+                        field.onChange(value === "null" ? null : parseInt(value));
+                        if (value && value !== "null") handleInventoryItemSelect(parseInt(value));
                       }}
-                      value={field.value?.toString() || ""}
+                      value={field.value?.toString() || "null"}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -192,7 +192,7 @@ export default function AddRepairItem() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="null">None</SelectItem>
                         {inventoryItems.map((item: any) => (
                           <SelectItem key={item.id} value={item.id.toString()}>
                             {item.name} (${item.price.toFixed(2)}) - {item.quantity > 0 ? `${item.quantity} in stock` : 'Out of stock'}
