@@ -316,7 +316,7 @@ export default function CreateRepairInvoice() {
         // Add calculated totals
         subtotal,
         taxAmount,
-        totalAmount: total,
+        total, // Using "total" instead of "totalAmount" to match backend
       });
     },
     onSuccess: () => {
@@ -342,9 +342,48 @@ export default function CreateRepairInvoice() {
     }
   });
   
+  // Update invoice mutation
+  const updateInvoiceMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof invoiceSchema>) => {
+      return apiRequest("PUT", `/api/invoices/${invoiceId}`, {
+        ...data,
+        // Add calculated totals
+        subtotal,
+        taxAmount,
+        total, // Using "total" instead of "totalAmount" to match backend
+      });
+    },
+    onSuccess: () => {
+      // Invalidate query caches
+      queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/invoices/${invoiceId}`] });
+      
+      toast({
+        title: "Invoice updated",
+        description: "The invoice has been updated successfully",
+      });
+      
+      // Navigate back to the repair details page with the invoices tab selected
+      navigate(`/repairs/${repairId}?tab=invoice`);
+    },
+    onError: (error: any) => {
+      console.error("Failed to update invoice:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update invoice. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+  
   // Handle form submission
   const onSubmit = (values: z.infer<typeof invoiceSchema>) => {
-    createInvoiceMutation.mutate(values);
+    if (isEditing && invoiceId) {
+      updateInvoiceMutation.mutate(values);
+    } else {
+      createInvoiceMutation.mutate(values);
+    }
   };
   
   // Add a new empty item to the invoice
@@ -379,7 +418,7 @@ export default function CreateRepairInvoice() {
             Back to Repair
           </Button>
         </Link>
-        <h1 className="text-2xl font-bold">Create Invoice</h1>
+        <h1 className="text-2xl font-bold">{isEditing ? "Edit Invoice" : "Create Invoice"}</h1>
         <div className="w-[100px]"></div>
       </div>
       
@@ -742,8 +781,13 @@ export default function CreateRepairInvoice() {
             <Link to={`/repairs/${repairId}`}>
               <Button variant="outline" type="button">Cancel</Button>
             </Link>
-            <Button type="submit" disabled={createInvoiceMutation.isPending}>
-              {createInvoiceMutation.isPending ? "Creating..." : "Create Invoice"}
+            <Button 
+              type="submit" 
+              disabled={isEditing ? updateInvoiceMutation.isPending : createInvoiceMutation.isPending}
+            >
+              {isEditing 
+                ? (updateInvoiceMutation.isPending ? "Updating..." : "Update Invoice") 
+                : (createInvoiceMutation.isPending ? "Creating..." : "Create Invoice")}
             </Button>
           </div>
         </form>
