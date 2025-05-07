@@ -53,6 +53,9 @@ export default function ViewRepair() {
   
   const [activeTab, setActiveTab] = useState(tabParam || "details");
   const [currentStatus, setCurrentStatus] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteItemType, setDeleteItemType] = useState<'quote' | 'invoice' | null>(null);
+  const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   
   // Parse the repair ID from the URL
   const repairId = parseInt(location.split('/').pop() || '0');
