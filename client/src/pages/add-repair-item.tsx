@@ -102,8 +102,8 @@ export default function AddRepairItem() {
         description: "The item has been added to the repair successfully",
       });
       
-      // Navigate back to repair page
-      navigate(`/repairs/${repairId}`);
+      // Navigate back to repair view page
+      navigate(`/repairs/view/${repairId}`);
     },
     onError: (error) => {
       console.error("Error adding repair item:", error);
@@ -123,7 +123,7 @@ export default function AddRepairItem() {
     <div className="container mx-auto px-4 py-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6 pb-4 border-b">
-        <Link to={`/repairs/${repairId}`}>
+        <Link to={`/repairs/view/${repairId}`}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Repair
@@ -309,7 +309,7 @@ export default function AddRepairItem() {
             />
             
             <div className="pt-4 flex justify-end gap-4">
-              <Link to={`/repairs/${repairId}`}>
+              <Link to={`/repairs/view/${repairId}`}>
                 <Button variant="outline" type="button">Cancel</Button>
               </Link>
               <Button 

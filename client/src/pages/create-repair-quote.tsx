@@ -180,8 +180,8 @@ export default function CreateRepairQuote() {
         description: "The quote has been created successfully",
       });
       
-      // Navigate back to repair page
-      navigate(`/repairs/${repairId}`);
+      // Navigate back to repair view page
+      navigate(`/repairs/view/${repairId}`);
     },
     onError: (error) => {
       console.error("Error creating quote:", error);
@@ -228,7 +228,7 @@ export default function CreateRepairQuote() {
     <div className="container mx-auto px-4 py-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6 pb-4 border-b">
-        <Link to={`/repairs/${repairId}`}>
+        <Link to={`/repairs/view/${repairId}`}>
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Repair
