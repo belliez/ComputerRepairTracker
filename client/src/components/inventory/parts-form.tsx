@@ -300,7 +300,7 @@ export default function PartsForm({ itemId, isOpen, onClose }: PartsFormProps) {
                       <FormLabel>Cost</FormLabel>
                       <FormControl>
                         <div className="flex items-center">
-                          <span className="mr-1">$</span>
+                          <span className="mr-1">{defaultCurrency?.symbol || '$'}</span>
                           <Input
                             type="number"
                             step="0.01"
