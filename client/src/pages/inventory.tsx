@@ -29,6 +29,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import PartsForm from "@/components/inventory/parts-form";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrency } from "@/hooks/use-currency";
 
 export default function Inventory() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,6 +37,7 @@ export default function Inventory() {
   const [showPartsForm, setShowPartsForm] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const { toast } = useToast();
+  const { formatCurrency } = useCurrency();
 
   const { data: inventoryItems, isLoading, refetch } = useQuery<InventoryItem[]>({
     queryKey: ["/api/inventory"],
@@ -131,13 +133,13 @@ export default function Inventory() {
         </Card>
         <Card>
           <CardContent className="p-4 flex flex-col items-center justify-center">
-            <div className="text-3xl font-bold text-blue-600">${totalValueRetail.toFixed(2)}</div>
+            <div className="text-3xl font-bold text-blue-600">{formatCurrency(totalValueRetail)}</div>
             <div className="text-sm text-gray-500">Retail Value</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex flex-col items-center justify-center">
-            <div className="text-3xl font-bold text-green-600">${totalValueCost.toFixed(2)}</div>
+            <div className="text-3xl font-bold text-green-600">{formatCurrency(totalValueCost)}</div>
             <div className="text-sm text-gray-500">Cost Value</div>
           </CardContent>
         </Card>
@@ -245,7 +247,7 @@ export default function Inventory() {
                       </TableCell>
                       <TableCell>{item.category}</TableCell>
                       <TableCell>{item.sku}</TableCell>
-                      <TableCell>${item.price.toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(item.price)}</TableCell>
                       <TableCell>{item.quantity}</TableCell>
                       <TableCell>
                         {item.quantity <= 0 ? (
