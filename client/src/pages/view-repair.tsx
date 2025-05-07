@@ -56,19 +56,33 @@ export default function ViewRepair() {
   const repairId = parseInt(location.split('/').pop() || '0');
   
   // Get existing repair data
-  const { data: repair, isLoading: isLoadingRepair } = useQuery<RepairWithRelations>({
+  const { 
+    data: repair, 
+    isLoading: isLoadingRepair,
+    refetch: refetchRepair 
+  } = useQuery<RepairWithRelations>({
     queryKey: [`/api/repairs/${repairId}/details`],
     enabled: !!repairId,
+    staleTime: 0, // Consider data always stale to ensure fresh data
   });
 
   // Fetch repair items separately for better real-time updates
   const { 
     data: repairItems = [], 
     isLoading: isLoadingItems,
+    refetch: refetchItems
   } = useQuery<any[]>({
     queryKey: [`/api/repairs/${repairId}/items`],
     enabled: !!repairId,
+    staleTime: 0, // Consider data always stale to ensure fresh data
   });
+  
+  // Force refresh data when tab changes, especially for quotes/invoices tabs
+  useEffect(() => {
+    if (activeTab === 'quotes' || activeTab === 'invoice') {
+      refetchRepair();
+    }
+  }, [activeTab, refetchRepair]);
 
   // Initialize the current status from the repair data
   useEffect(() => {

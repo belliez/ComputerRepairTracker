@@ -186,7 +186,7 @@ export default function CreateRepairInvoice() {
       return apiRequest("POST", `/api/invoices`, invoiceData);
     },
     onSuccess: async () => {
-      // Invalidate multiple query keys to ensure all data is refreshed
+      // First, invalidate all relevant queries to mark them as stale
       await queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
       await queryClient.invalidateQueries({ queryKey: [`/api/repairs`] });
       await queryClient.invalidateQueries({ queryKey: [`/api/invoices`] });
@@ -196,8 +196,11 @@ export default function CreateRepairInvoice() {
         description: "The invoice has been created successfully",
       });
       
-      // Manually refetch the repair details to ensure we have fresh data
-      await queryClient.refetchQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      // Force immediate refetch of all relevant queries to ensure fresh data
+      await Promise.all([
+        queryClient.fetchQuery({ queryKey: [`/api/repairs/${repairId}/details`] }),
+        queryClient.fetchQuery({ queryKey: [`/api/invoices`] })
+      ]);
       
       // Navigate back to repair view page with a query parameter to set active tab
       navigate(`/repairs/${repairId}?tab=invoice`);
