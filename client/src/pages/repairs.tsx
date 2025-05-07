@@ -3,9 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { Repair } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { RepairTab, repairStatuses, statusConfigs } from "@/types";
+import { Link, useLocation } from "wouter";
 import RepairList from "@/components/repairs/repair-list";
 import RepairDetail from "@/components/repairs/repair-detail";
-import IntakeForm from "@/components/repairs/intake-form";
 
 export default function Repairs() {
   const [activeTab, setActiveTab] = useState<RepairTab>("all");
@@ -31,10 +31,8 @@ export default function Repairs() {
     }
   };
 
-  const handleNewRepair = () => {
-    setSelectedRepairId(null);
-    setShowIntakeForm(true);
-  };
+  // We're now using a dedicated page for creating repairs
+  const [location, navigate] = useLocation();
 
   const handleViewRepair = (repairId: number) => {
     setSelectedRepairId(repairId);
@@ -42,8 +40,7 @@ export default function Repairs() {
   };
 
   const handleEditRepair = (repairId: number) => {
-    setSelectedRepairId(repairId);
-    setShowIntakeForm(true);
+    navigate(`/repairs/edit/${repairId}`);
   };
 
   return (
@@ -62,12 +59,13 @@ export default function Repairs() {
           >
             <i className="fas fa-filter mr-1"></i> Filter
           </Button>
-          <Button
-            onClick={handleNewRepair}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-          >
-            <i className="fas fa-plus mr-1"></i> New Repair
-          </Button>
+          <Link to="/repairs/create">
+            <Button
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+            >
+              <i className="fas fa-plus mr-1"></i> New Repair
+            </Button>
+          </Link>
         </div>
       </div>
 

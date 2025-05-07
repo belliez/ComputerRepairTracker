@@ -4,12 +4,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import Repairs from "@/pages/repairs";
+import CreateRepair from "@/pages/create-repair";
+import EditRepair from "@/pages/edit-repair";
 import Customers from "@/pages/customers";
 import Inventory from "@/pages/inventory";
 import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
-import EditRepair from "@/pages/edit-repair";
 import MainLayout from "@/components/layout/main-layout";
 
 function Router() {
@@ -17,6 +18,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/repairs" component={Repairs} />
+      <Route path="/repairs/create" component={CreateRepair} />
       <Route path="/repairs/edit/:id" component={EditRepair} />
       <Route path="/customers" component={Customers} />
       <Route path="/inventory" component={Inventory} />
