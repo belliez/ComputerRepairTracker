@@ -24,10 +24,11 @@ function Router() {
       <Route path="/repairs" component={Repairs} />
       <Route path="/repairs/create" component={CreateRepair} />
       <Route path="/repairs/edit/:id" component={EditRepair} />
-      <Route path="/repairs/view/:id" component={ViewRepair} />
       <Route path="/repairs/:id/items/add" component={AddRepairItem} />
       <Route path="/repairs/:id/quotes/create" component={CreateRepairQuote} />
       <Route path="/repairs/:id/invoices/create" component={CreateRepairInvoice} />
+      <Route path="/repairs/view/:id" component={ViewRepair} />
+      <Route path="/repairs/:id" component={ViewRepair} />
       <Route path="/customers" component={Customers} />
       <Route path="/inventory" component={Inventory} />
       <Route path="/invoices" component={Invoices} />
