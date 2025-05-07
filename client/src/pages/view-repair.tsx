@@ -565,7 +565,7 @@ export default function ViewRepair() {
                           {quote.validUntil ? format(new Date(quote.validUntil), "MMM d, yyyy") : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
-                          {typeof quote.totalAmount === 'number' ? formatCurrency(quote.totalAmount) : '-'}
+                          {typeof quote.total === 'number' ? formatCurrency(quote.total) : '-'}
                         </TableCell>
                         <TableCell>
                           <Badge variant={quote.status === 'approved' ? "default" : 
@@ -663,7 +663,7 @@ export default function ViewRepair() {
                           {invoice.dueDate ? format(new Date(invoice.dueDate), "MMM d, yyyy") : 'N/A'}
                         </TableCell>
                         <TableCell className="text-right">
-                          {typeof invoice.totalAmount === 'number' ? formatCurrency(invoice.totalAmount) : '-'}
+                          {typeof invoice.total === 'number' ? formatCurrency(invoice.total) : '-'}
                         </TableCell>
                         <TableCell>
                           <Badge variant={invoice.status === 'paid' ? "default" : 
