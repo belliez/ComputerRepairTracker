@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { repairStatuses, statusConfigs } from "@/types";
 import { useState } from "react";
+import { useLocation } from "wouter";
 
 interface RepairStatsProps {
   onNewRepair: () => void;
@@ -28,6 +29,7 @@ export default function RepairStats({
   });
 
   const [showAllTechs, setShowAllTechs] = useState(false);
+  const [location, navigate] = useLocation();
 
   if (isLoadingRepairs || isLoadingTechnicians) {
     return (
@@ -64,7 +66,7 @@ export default function RepairStats({
   // Calculate technician workloads
   const techWorkloads = allTechnicians.map(tech => {
     const techRepairs = allRepairs.filter(repair => repair.technicianId === tech.id);
-    const urgentRepairs = techRepairs.filter(repair => repair.priorityLevel <= 2);
+    const urgentRepairs = techRepairs.filter(repair => repair.priorityLevel != null && repair.priorityLevel <= 2);
     
     return {
       ...tech,
@@ -100,7 +102,11 @@ export default function RepairStats({
             };
             
             return (
-              <div key={status}>
+              <div 
+                key={status} 
+                className="cursor-pointer hover:bg-gray-50 px-2 py-1 -mx-2 rounded transition-colors"
+                onClick={() => navigate(`/repairs?status=${status}`)}
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <div className={`w-3 h-3 rounded-full ${progressColors[color]} mr-2`}></div>
@@ -143,7 +149,11 @@ export default function RepairStats({
               const avatarColorClass = colorClasses[colorIndex];
               
               return (
-                <li key={tech.id} className="py-3 flex justify-between items-center">
+                <li 
+                  key={tech.id} 
+                  className="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 px-2 -mx-2 rounded transition-colors"
+                  onClick={() => navigate(`/repairs?technicianId=${tech.id}`)}
+                >
                   <div className="flex items-center">
                     <div className={`w-8 h-8 rounded-full ${avatarColorClass} flex items-center justify-center mr-3`}>
                       <span className="font-semibold text-sm">{initials}</span>

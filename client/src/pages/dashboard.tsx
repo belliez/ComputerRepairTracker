@@ -1,12 +1,14 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Repair, Technician } from "@shared/schema";
+import { useLocation } from "wouter";
 import { 
   Card, 
   CardContent, 
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { statusConfigs, repairStatuses } from "@/types";
 import RepairList from "@/components/repairs/repair-list";
@@ -72,6 +74,8 @@ export default function Dashboard() {
     setShowPartsForm(true);
   };
 
+  const [location, navigate] = useLocation();
+  
   // Dashboard stats card
   const DashboardStats = () => {
     if (isLoadingRepairs) {
@@ -101,28 +105,40 @@ export default function Dashboard() {
       <Card className="mb-6">
         <CardContent className="p-6">
           <div className="flex flex-wrap gap-4 justify-between">
-            <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
+            <div 
+              className="bg-white p-4 rounded-lg shadow border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => navigate("/repairs")}
+            >
               <div className="text-gray-500 text-sm mb-1">Total Repairs</div>
               <div className="text-3xl font-bold text-gray-800">{totalRepairs}</div>
               <div className="mt-2 text-sm text-gray-400">All time</div>
             </div>
             
-            <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
+            <div 
+              className="bg-white p-4 rounded-lg shadow border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => navigate("/repairs?status=in_repair,diagnosing,on_hold,waiting_approval")}
+            >
               <div className="text-gray-500 text-sm mb-1">Active Repairs</div>
               <div className="text-3xl font-bold text-blue-600">{activeRepairs}</div>
-              <div className="mt-2 text-sm text-gray-400">In progress</div>
+              <div className="mt-2 text-sm text-blue-400">In progress</div>
             </div>
             
-            <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
+            <div 
+              className="bg-white p-4 rounded-lg shadow border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => navigate("/repairs?priority=1,2")}
+            >
               <div className="text-gray-500 text-sm mb-1">Urgent Repairs</div>
               <div className="text-3xl font-bold text-red-500">{urgentRepairs}</div>
-              <div className="mt-2 text-sm text-gray-400">High priority</div>
+              <div className="mt-2 text-sm text-red-400">High priority</div>
             </div>
             
-            <div className="bg-white p-4 rounded-lg shadow border border-gray-100">
+            <div 
+              className="bg-white p-4 rounded-lg shadow border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={() => navigate("/repairs?status=completed")}
+            >
               <div className="text-gray-500 text-sm mb-1">Completed</div>
               <div className="text-3xl font-bold text-green-600">{completedRepairs}</div>
-              <div className="mt-2 text-sm text-gray-400">This month</div>
+              <div className="mt-2 text-sm text-green-400">This month</div>
             </div>
           </div>
         </CardContent>
@@ -132,10 +148,46 @@ export default function Dashboard() {
 
   return (
     <>
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800">Dashboard</h1>
-        <p className="text-sm text-gray-500">Overview of repair operations</p>
+      {/* Page Header with Quick Actions */}
+      <div className="mb-6 flex flex-wrap justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800">Dashboard</h1>
+          <p className="text-sm text-gray-500">Overview of repair operations</p>
+        </div>
+        <div className="flex gap-2 mt-2 sm:mt-0">
+          <Button 
+            variant="default"
+            className="flex items-center gap-1"
+            onClick={handleNewRepair}
+          >
+            <i className="fas fa-plus-circle text-sm"></i>
+            <span>New Repair</span>
+          </Button>
+          <Button 
+            variant="outline"
+            className="flex items-center gap-1"
+            onClick={handleNewCustomer}
+          >
+            <i className="fas fa-user-plus text-sm"></i>
+            <span>New Customer</span>
+          </Button>
+          <Button 
+            variant="outline"
+            className="hidden md:flex items-center gap-1"
+            onClick={handleCreateInvoice}
+          >
+            <i className="fas fa-file-invoice-dollar text-sm"></i>
+            <span>Invoice</span>
+          </Button>
+          <Button 
+            variant="outline"
+            className="hidden md:flex items-center gap-1"
+            onClick={handleOrderParts}
+          >
+            <i className="fas fa-box text-sm"></i>
+            <span>Parts</span>
+          </Button>
+        </div>
       </div>
 
       {/* Dashboard Statistics */}
