@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Repair, Customer, Device } from "@shared/schema";
 import StatusBadge from "./status-badge";
 import { Button } from "@/components/ui/button";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -41,6 +42,7 @@ export default function RepairList({
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
   const queryClient = useQueryClient();
+  const [location, navigate] = useLocation();
 
   // Get customer data for displaying names
   const { data: customers } = useQuery<Customer[]>({
@@ -195,7 +197,7 @@ export default function RepairList({
                 <TableRow
                   key={repair.id}
                   className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => onViewRepair && onViewRepair(repair.id)}
+                  onClick={() => navigate(`/repairs/view/${repair.id}`)}
                 >
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm font-medium text-gray-900">{repair.ticketNumber}</span>
@@ -231,28 +233,30 @@ export default function RepairList({
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-blue-600 hover:text-blue-900"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEditRepair && onEditRepair(repair.id);
-                        }}
-                      >
-                        <i className="fas fa-edit"></i>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-gray-600 hover:text-gray-900"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onViewRepair && onViewRepair(repair.id);
-                        }}
-                      >
-                        <i className="fas fa-eye"></i>
-                      </Button>
+                      <Link to={`/repairs/edit/${repair.id}`}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-blue-600 hover:text-blue-900"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <i className="fas fa-edit"></i>
+                        </Button>
+                      </Link>
+                      <Link to={`/repairs/view/${repair.id}`}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-gray-600 hover:text-gray-900"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <i className="fas fa-eye"></i>
+                        </Button>
+                      </Link>
                     </div>
                   </TableCell>
                 </TableRow>
