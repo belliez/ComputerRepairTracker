@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Repair, Customer, Device } from "@shared/schema";
 import StatusBadge from "./status-badge";
@@ -217,19 +217,41 @@ export default function RepairList({
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="text-sm font-medium text-gray-900">
-                        {customers?.find(c => c.id === repair.customerId)
-                          ? `${customers.find(c => c.id === repair.customerId)?.firstName} ${customers.find(c => c.id === repair.customerId)?.lastName}`
-                          : `Customer #${repair.customerId}`
-                        }
+                        {(() => {
+                          // Find the customer
+                          const customer = customers?.find(c => c.id === repair.customerId);
+                          if (customer) {
+                            return `${customer.firstName} ${customer.lastName}`;
+                          } else {
+                            // Force a query for this specific customer to ensure we have the data
+                            queryClient.prefetchQuery({
+                              queryKey: ["/api/customers"],
+                              staleTime: 0
+                            });
+                            return `Customer #${repair.customerId}`;
+                          }
+                        })()}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {repair.deviceId && devices?.find(d => d.id === repair.deviceId) 
-                        ? `${devices.find(d => d.id === repair.deviceId)?.brand} ${devices.find(d => d.id === repair.deviceId)?.model}`
-                        : repair.deviceId ? `Device #${repair.deviceId}` : "No Device"
-                      }
+                      {(() => {
+                        if (!repair.deviceId) return "No Device";
+                        
+                        // Find the device
+                        const device = devices?.find(d => d.id === repair.deviceId);
+                        if (device) {
+                          return `${device.brand} ${device.model}`;
+                        } else {
+                          // Force a query for devices to ensure we have the data
+                          queryClient.prefetchQuery({
+                            queryKey: ["/api/devices"],
+                            staleTime: 0
+                          });
+                          return `Device #${repair.deviceId}`;
+                        }
+                      })()}
                     </div>
                     <div className="text-xs text-gray-500">
                       {repair.issue}

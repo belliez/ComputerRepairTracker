@@ -181,7 +181,7 @@ export default function DeviceForm({
                     <FormLabel>Device Type</FormLabel>
                     <Select
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger>
