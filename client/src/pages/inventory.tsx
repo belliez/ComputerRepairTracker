@@ -37,8 +37,10 @@ export default function Inventory() {
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const { toast } = useToast();
 
-  const { data: inventoryItems, isLoading } = useQuery<InventoryItem[]>({
+  const { data: inventoryItems, isLoading, refetch } = useQuery<InventoryItem[]>({
     queryKey: ["/api/inventory"],
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Consider the data always stale to ensure fresh data
   });
 
   const handleAddPart = () => {
@@ -101,7 +103,15 @@ export default function Inventory() {
           <h1 className="text-2xl font-semibold text-gray-800">Inventory</h1>
           <p className="text-sm text-gray-500">Manage parts and supplies</p>
         </div>
-        <div className="mt-4 md:mt-0">
+        <div className="mt-4 md:mt-0 flex gap-2">
+          <Button
+            onClick={() => refetch()}
+            variant="outline"
+            size="icon"
+            title="Refresh inventory"
+          >
+            <i className="fas fa-sync-alt"></i>
+          </Button>
           <Button
             onClick={handleAddPart}
             className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"

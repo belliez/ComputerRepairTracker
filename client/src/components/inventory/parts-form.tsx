@@ -118,7 +118,11 @@ export default function PartsForm({ itemId, isOpen, onClose }: PartsFormProps) {
       }
     },
     onSuccess: () => {
+      // Invalidate all inventory queries to ensure all components get fresh data
       queryClient.invalidateQueries({ queryKey: ["/api/inventory"] });
+      
+      // Force refetch to ensure the latest data
+      queryClient.refetchQueries({ queryKey: ["/api/inventory"] });
       
       toast({
         title: itemId ? "Item updated" : "Item created",
@@ -127,7 +131,10 @@ export default function PartsForm({ itemId, isOpen, onClose }: PartsFormProps) {
           : "The inventory item has been created successfully",
       });
       
-      onClose();
+      // Small delay before closing to ensure data is refreshed
+      setTimeout(() => {
+        onClose();
+      }, 100);
     },
     onError: (error) => {
       toast({
