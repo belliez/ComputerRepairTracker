@@ -11,9 +11,9 @@ export default function Repairs() {
   const [activeTab, setActiveTab] = useState<RepairTab>("all");
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
   const [showFilter, setShowFilter] = useState(false);
-  const [showIntakeForm, setShowIntakeForm] = useState(false);
-  const [showRepairDetail, setShowRepairDetail] = useState(false);
   const [selectedRepairId, setSelectedRepairId] = useState<number | null>(null);
+  const [showRepairDetail, setShowRepairDetail] = useState(false);
+  const [location, navigate] = useLocation();
 
   const { data: repairs, isLoading } = useQuery<Repair[]>({
     queryKey: [
@@ -30,9 +30,6 @@ export default function Repairs() {
       setFilterStatus(tab);
     }
   };
-
-  // We're now using a dedicated page for creating repairs
-  const [location, navigate] = useLocation();
 
   const handleViewRepair = (repairId: number) => {
     setSelectedRepairId(repairId);
@@ -126,15 +123,7 @@ export default function Repairs() {
         />
       </div>
 
-      {/* Modals */}
-      {showIntakeForm && (
-        <IntakeForm 
-          repairId={selectedRepairId} 
-          isOpen={showIntakeForm} 
-          onClose={() => setShowIntakeForm(false)}
-        />
-      )}
-
+      {/* Repair Detail Modal - Will be replaced by a standalone page in future updates */}
       {showRepairDetail && selectedRepairId && (
         <RepairDetail 
           repairId={selectedRepairId} 
