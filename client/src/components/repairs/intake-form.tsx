@@ -218,8 +218,10 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
     // Update form with the new customer
     form.setValue("customerId", customerId);
     
-    // Proceed to device selection step
-    setCurrentStep("device");
+    // Proceed to device selection step after a short delay to allow data to load
+    setTimeout(() => {
+      setCurrentStep("device");
+    }, 100);
   };
 
   const handleCustomerSelected = (customerId: number) => {
@@ -251,8 +253,10 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
     queryClient.invalidateQueries({ queryKey: ["/api/devices"] });
     // Update form with the new device
     form.setValue("deviceId", deviceId);
-    // Proceed to service step
-    setCurrentStep("service");
+    // Proceed to service step after a short delay to allow data to load
+    setTimeout(() => {
+      setCurrentStep("service");
+    }, 100);
   };
 
   const handlePrevStep = () => {
