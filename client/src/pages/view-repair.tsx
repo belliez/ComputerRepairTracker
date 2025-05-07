@@ -29,6 +29,16 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import StatusBadge from "@/components/repairs/status-badge";
 import { RepairWithRelations } from "@/types";
 import { repairStatuses } from "@shared/schema";
@@ -277,6 +287,84 @@ export default function ViewRepair() {
       }
     }
   });
+  
+  // Quote delete mutation
+  const deleteQuoteMutation = useMutation({
+    mutationFn: async (quoteId: number) => {
+      return apiRequest("DELETE", `/api/quotes/${quoteId}`, {});
+    },
+    onSuccess: async () => {
+      // Invalidate all related queries to refresh the UI
+      await queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      await queryClient.refetchQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      
+      toast({
+        title: "Quote deleted",
+        description: "Quote was successfully deleted",
+      });
+      
+      // Reset delete state
+      setShowDeleteConfirm(false);
+      setDeleteItemType(null);
+      setDeleteItemId(null);
+    },
+    onError: (error) => {
+      console.error('Failed to delete quote:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete quote. Please try again.",
+        variant: "destructive"
+      });
+      
+      // Reset delete state
+      setShowDeleteConfirm(false);
+      setDeleteItemType(null);
+      setDeleteItemId(null);
+    }
+  });
+  
+  // Invoice delete mutation
+  const deleteInvoiceMutation = useMutation({
+    mutationFn: async (invoiceId: number) => {
+      return apiRequest("DELETE", `/api/invoices/${invoiceId}`, {});
+    },
+    onSuccess: async () => {
+      // Invalidate all related queries to refresh the UI
+      await queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      await queryClient.refetchQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      
+      toast({
+        title: "Invoice deleted",
+        description: "Invoice was successfully deleted",
+      });
+      
+      // Reset delete state
+      setShowDeleteConfirm(false);
+      setDeleteItemType(null);
+      setDeleteItemId(null);
+    },
+    onError: (error) => {
+      console.error('Failed to delete invoice:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete invoice. Please try again.",
+        variant: "destructive"
+      });
+      
+      // Reset delete state
+      setShowDeleteConfirm(false);
+      setDeleteItemType(null);
+      setDeleteItemId(null);
+    }
+  });
+  
+  const handleDeleteConfirm = () => {
+    if (deleteItemType === 'quote' && deleteItemId) {
+      deleteQuoteMutation.mutate(deleteItemId);
+    } else if (deleteItemType === 'invoice' && deleteItemId) {
+      deleteInvoiceMutation.mutate(deleteItemId);
+    }
+  };
   
   const handleEmailQuote = (quoteId: number) => {
     emailQuoteMutation.mutate(quoteId);
@@ -609,6 +697,11 @@ export default function ViewRepair() {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                              onClick={() => {
+                                setDeleteItemType('quote');
+                                setDeleteItemId(quote.id);
+                                setShowDeleteConfirm(true);
+                              }}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -710,6 +803,11 @@ export default function ViewRepair() {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                              onClick={() => {
+                                setDeleteItemType('invoice');
+                                setDeleteItemId(invoice.id);
+                                setShowDeleteConfirm(true);
+                              }}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -731,6 +829,31 @@ export default function ViewRepair() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the {deleteItemType}. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setDeleteItemType(null);
+              setDeleteItemId(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
