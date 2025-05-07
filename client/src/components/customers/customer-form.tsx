@@ -79,18 +79,23 @@ export default function CustomerForm({
   // Create or update customer mutation
   const mutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
+      let response;
       if (customerId) {
         // Update existing customer
-        return apiRequest("PUT", `/api/customers/${customerId}`, values);
+        response = await apiRequest("PUT", `/api/customers/${customerId}`, values);
       } else {
         // Create new customer
-        return apiRequest("POST", "/api/customers", values);
+        response = await apiRequest("POST", "/api/customers", values);
       }
+      // Parse the response JSON to get the actual data with the customer ID
+      return await response.json();
     },
     onSuccess: (data) => {
       // Force immediate refresh of customer data to ensure UI is updated
       queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
       queryClient.refetchQueries({ queryKey: ["/api/customers"] });
+      
+      console.log("Customer form - received customer data:", data);
       
       toast({
         title: customerId ? "Customer updated" : "Customer created",
@@ -100,9 +105,9 @@ export default function CustomerForm({
       });
 
       // Call the callback with the new customer ID if provided
-      if (!customerId && onCustomerCreated && data) {
+      if (!customerId && onCustomerCreated && data && data.id) {
         console.log("Customer form: New customer created with ID:", data.id);
-        // Wait a moment for data to process before calling callback
+        // Wait a moment to ensure state is updated properly
         setTimeout(() => {
           onCustomerCreated(data.id);
         }, 100);

@@ -105,18 +105,23 @@ export default function DeviceForm({
   // Create or update device mutation
   const mutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
+      let response;
       if (deviceId) {
         // Update existing device
-        return apiRequest("PUT", `/api/devices/${deviceId}`, values);
+        response = await apiRequest("PUT", `/api/devices/${deviceId}`, values);
       } else {
         // Create new device
-        return apiRequest("POST", "/api/devices", values);
+        response = await apiRequest("POST", "/api/devices", values);
       }
+      // Parse the response JSON to get the actual data with the device ID
+      return await response.json();
     },
     onSuccess: (data) => {
       // Force immediate refresh of device data
       queryClient.invalidateQueries({ queryKey: ["/api/devices"] });
       queryClient.refetchQueries({ queryKey: ["/api/devices"] });
+      
+      console.log("Device form - received device data:", data);
       
       toast({
         title: deviceId ? "Device updated" : "Device created",
@@ -126,7 +131,7 @@ export default function DeviceForm({
       });
 
       // Call the callback with the new device ID if provided
-      if (!deviceId && onDeviceCreated && data) {
+      if (!deviceId && onDeviceCreated && data && data.id) {
         console.log("Device form: New device created with ID:", data.id);
         // Wait a moment for data to process before calling callback
         setTimeout(() => {
