@@ -199,7 +199,11 @@ export default function Customers() {
         <CustomerForm
           customerId={selectedCustomerId}
           isOpen={showCustomerForm}
-          onClose={() => setShowCustomerForm(false)}
+          onClose={() => {
+            setShowCustomerForm(false);
+            // Force refresh the customers list when the form is closed
+            refetch();
+          }}
         />
       )}
     </>

@@ -88,8 +88,9 @@ export default function CustomerForm({
       }
     },
     onSuccess: (data) => {
-      // Force refetch customers data to ensure latest data
+      // Force immediate refresh of customer data to ensure UI is updated
       queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      queryClient.refetchQueries({ queryKey: ["/api/customers"] });
       
       toast({
         title: customerId ? "Customer updated" : "Customer created",
