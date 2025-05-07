@@ -155,7 +155,11 @@ export default function ViewRepair() {
     mutationFn: async (quoteId: number) => {
       return apiRequest("POST", `/api/quotes/${quoteId}/email`, {});
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Invalidate all related queries to refresh the UI
+      await queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      await queryClient.refetchQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      
       toast({
         title: "Email sent",
         description: "Quote was successfully emailed to the customer",
@@ -212,7 +216,11 @@ export default function ViewRepair() {
     mutationFn: async (invoiceId: number) => {
       return apiRequest("POST", `/api/invoices/${invoiceId}/email`, {});
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Invalidate all related queries to refresh the UI
+      await queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      await queryClient.refetchQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      
       toast({
         title: "Email sent",
         description: "Invoice was successfully emailed to the customer",
@@ -583,21 +591,30 @@ export default function ViewRepair() {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
-                              onClick={() => {
+                              onClick={async () => {
                                 if (window.confirm("Are you sure you want to delete this quote?")) {
-                                  apiRequest("DELETE", `/api/quotes/${quote.id}`).then(() => {
-                                    queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+                                  try {
+                                    await apiRequest("DELETE", `/api/quotes/${quote.id}`);
+                                    
+                                    // Invalidate all related queries
+                                    await queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+                                    await queryClient.invalidateQueries({ queryKey: [`/api/quotes`] });
+                                    await queryClient.invalidateQueries({ queryKey: [`/api/repairs`] });
+                                    
+                                    // Force refetch the data to ensure UI updates
+                                    await queryClient.refetchQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+                                    
                                     toast({
                                       title: "Quote Deleted",
                                       description: "The quote has been deleted successfully"
                                     });
-                                  }).catch(() => {
+                                  } catch (error) {
                                     toast({
                                       title: "Error",
                                       description: "Failed to delete quote",
                                       variant: "destructive"
                                     });
-                                  });
+                                  }
                                 }
                               }}
                             >
@@ -701,21 +718,30 @@ export default function ViewRepair() {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
-                              onClick={() => {
+                              onClick={async () => {
                                 if (window.confirm("Are you sure you want to delete this invoice?")) {
-                                  apiRequest("DELETE", `/api/invoices/${invoice.id}`).then(() => {
-                                    queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+                                  try {
+                                    await apiRequest("DELETE", `/api/invoices/${invoice.id}`);
+                                    
+                                    // Invalidate all related queries
+                                    await queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+                                    await queryClient.invalidateQueries({ queryKey: [`/api/invoices`] });
+                                    await queryClient.invalidateQueries({ queryKey: [`/api/repairs`] });
+                                    
+                                    // Force refetch the data to ensure UI updates
+                                    await queryClient.refetchQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+                                    
                                     toast({
                                       title: "Invoice Deleted",
                                       description: "The invoice has been deleted successfully"
                                     });
-                                  }).catch(() => {
+                                  } catch (error) {
                                     toast({
                                       title: "Error",
                                       description: "Failed to delete invoice",
                                       variant: "destructive"
                                     });
-                                  });
+                                  }
                                 }
                               }}
                             >
