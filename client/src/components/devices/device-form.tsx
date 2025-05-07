@@ -173,37 +173,52 @@ export default function DeviceForm({
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Device Type</FormLabel>
-                    <Select
-                      onValueChange={(value) => {
-                        field.onChange(value);
-                        console.log("Selected device type:", value);
+              <div>
+                <FormLabel className="block mb-2">Device Type</FormLabel>
+                
+                {/* Quick Select Icons for Device Types */}
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  {deviceTypes.map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        console.log("Quick select:", type);
+                        form.setValue("type", type);
                       }}
-                      value={field.value || "Laptop"}
-                      defaultValue="Laptop"
+                      className={`p-2 rounded-md flex flex-col items-center text-xs border ${
+                        form.getValues("type") === type
+                          ? "bg-blue-100 border-blue-500 text-blue-700"
+                          : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                      }`}
                     >
+                      {type === "Laptop" && <i className="fas fa-laptop text-lg mb-1"></i>}
+                      {type === "Desktop" && <i className="fas fa-desktop text-lg mb-1"></i>}
+                      {type === "Tablet" && <i className="fas fa-tablet-alt text-lg mb-1"></i>}
+                      {type === "Phone" && <i className="fas fa-mobile-alt text-lg mb-1"></i>}
+                      {type === "Server" && <i className="fas fa-server text-lg mb-1"></i>}
+                      {type === "Printer" && <i className="fas fa-print text-lg mb-1"></i>}
+                      {type === "Monitor" && <i className="fas fa-tv text-lg mb-1"></i>}
+                      {type === "Other" && <i className="fas fa-hdd text-lg mb-1"></i>}
+                      {type}
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Hidden field to maintain form state */}
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field }) => (
+                    <FormItem className="hidden">
                       <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a device type" />
-                        </SelectTrigger>
+                        <Input {...field} />
                       </FormControl>
-                      <SelectContent position="popper">
-                        {deviceTypes.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
