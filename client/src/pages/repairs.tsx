@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Repair } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -10,15 +10,68 @@ import RepairDetail from "@/components/repairs/repair-detail";
 export default function Repairs() {
   const [activeTab, setActiveTab] = useState<RepairTab>("all");
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
+  const [filterPriority, setFilterPriority] = useState<string | undefined>(undefined);
+  const [filterTechnicianId, setFilterTechnicianId] = useState<number | undefined>(undefined);
+  const [filterCustomerId, setFilterCustomerId] = useState<number | undefined>(undefined);
   const [showFilter, setShowFilter] = useState(false);
   const [selectedRepairId, setSelectedRepairId] = useState<number | null>(null);
   const [showRepairDetail, setShowRepairDetail] = useState(false);
   const [location, navigate] = useLocation();
+  
+  // Parse URL query parameters
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    
+    // Handle status filter
+    const statusParam = params.get('status');
+    if (statusParam) {
+      if (statusParam.includes(',')) {
+        // Multiple statuses - set active tab to 'all' but apply filter
+        setActiveTab("all");
+        setFilterStatus(statusParam);
+      } else {
+        // Single status - set as active tab if it's a valid tab
+        const validStatus = repairStatuses.includes(statusParam as any) ? statusParam as RepairTab : "all";
+        setActiveTab(validStatus);
+        setFilterStatus(statusParam);
+      }
+    }
+    
+    // Handle priority filter
+    const priorityParam = params.get('priority');
+    if (priorityParam) {
+      setFilterPriority(priorityParam);
+    }
+    
+    // Handle technician filter
+    const technicianParam = params.get('technicianId');
+    if (technicianParam && !isNaN(Number(technicianParam))) {
+      setFilterTechnicianId(Number(technicianParam));
+    }
+    
+    // Handle customer filter
+    const customerParam = params.get('customerId');
+    if (customerParam && !isNaN(Number(customerParam))) {
+      setFilterCustomerId(Number(customerParam));
+    }
+  }, [location]);
 
+  // Build query key with all filters
+  const buildQueryKey = () => {
+    const filters = {};
+    
+    if (filterStatus) Object.assign(filters, { status: filterStatus });
+    if (filterPriority) Object.assign(filters, { priority: filterPriority });
+    if (filterTechnicianId) Object.assign(filters, { technicianId: filterTechnicianId });
+    if (filterCustomerId) Object.assign(filters, { customerId: filterCustomerId });
+    
+    return Object.keys(filters).length > 0 ? filters : null;
+  };
+  
   const { data: repairs, isLoading } = useQuery<Repair[]>({
     queryKey: [
       "/api/repairs",
-      filterStatus ? { status: filterStatus } : null,
+      buildQueryKey(),
     ],
   });
 
@@ -120,6 +173,9 @@ export default function Repairs() {
           onViewRepair={handleViewRepair}
           onEditRepair={handleEditRepair}
           filterStatus={filterStatus}
+          technicianId={filterTechnicianId}
+          customerId={filterCustomerId}
+          priorityLevel={filterPriority}
         />
       </div>
 

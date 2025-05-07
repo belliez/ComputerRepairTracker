@@ -29,6 +29,7 @@ interface RepairListProps {
   filterStatus?: string;
   technicianId?: number;
   customerId?: number;
+  priorityLevel?: string;
 }
 
 export default function RepairList({
@@ -37,6 +38,7 @@ export default function RepairList({
   filterStatus,
   technicianId,
   customerId,
+  priorityLevel,
 }: RepairListProps) {
   const [timeFilter, setTimeFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -61,6 +63,7 @@ export default function RepairList({
     if (filterStatus) params.append('status', filterStatus);
     if (technicianId) params.append('technicianId', technicianId.toString());
     if (customerId) params.append('customerId', customerId.toString());
+    if (priorityLevel) params.append('priority', priorityLevel);
     
     const paramString = params.toString();
     return paramString ? `?${paramString}` : '';
@@ -87,7 +90,7 @@ export default function RepairList({
     );
   }
 
-  // Filter repairs by time selected
+  // Filter repairs by time selected and priority if needed
   const getFilteredRepairs = () => {
     if (!repairs) return [];
     
@@ -117,6 +120,15 @@ export default function RepairList({
         );
         break;
       // 'all' - no filtering needed
+    }
+    
+    // Filter by priority level if not already filtered server-side
+    // This is a client-side fallback if server filter wasn't applied
+    if (priorityLevel && priorityLevel !== 'all' && 
+        !buildQueryParams().includes('priority')) {
+      filtered = filtered.filter(repair => 
+        repair.priorityLevel === parseInt(priorityLevel, 10)
+      );
     }
     
     // Sort by intake date, newest first
