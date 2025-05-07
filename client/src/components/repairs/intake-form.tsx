@@ -429,10 +429,12 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
               }}
             >
               <div className={`rounded-full h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center ${
-                currentStep === "service" ? "bg-blue-500" : "bg-gray-300"
+                currentStep === "service" ? "bg-blue-500" : 
+                selectedCustomerId ? "bg-gray-300" : "bg-gray-200"
               }`}>
                 <i className={`fas fa-wrench ${
-                  currentStep === "service" ? "text-white" : "text-gray-500"
+                  currentStep === "service" ? "text-white" : 
+                  selectedCustomerId ? "text-gray-600" : "text-gray-400"
                 } text-xs sm:text-sm`}></i>
               </div>
               <div className="ml-2 sm:ml-4">
@@ -541,12 +543,14 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
         
         <div className="grid grid-cols-1 gap-4 sm:gap-6">
           {!devices || devices.length === 0 ? (
-            <div className="text-center py-2 sm:py-4">
+            <div className="text-center py-2 sm:py-4 border rounded-md">
               <p className="text-gray-500 text-xs sm:text-sm">No devices found for this customer.</p>
+              <p className="text-gray-500 text-xs mt-1 sm:mt-2">Add a new device or continue without one.</p>
             </div>
           ) : filteredDevices.length === 0 ? (
-            <div className="text-center py-2 sm:py-4">
+            <div className="text-center py-2 sm:py-4 border rounded-md">
               <p className="text-gray-500 text-xs sm:text-sm">No devices match your search.</p>
+              <p className="text-gray-500 text-xs mt-1">Try a different search term or add a new device.</p>
             </div>
           ) : (
             <div className="max-h-56 sm:max-h-60 overflow-y-auto border rounded-md">
