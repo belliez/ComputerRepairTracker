@@ -840,8 +840,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
     };
   }, []);
   
-  // Force mobile mode for this fix
-  const forceMobile = true;
+  // Use auto-detection for layout mode
+  const forceMobile = false;
 
   if (forceMobile || isMobile) {
     return (
@@ -1104,7 +1104,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/50 overflow-y-auto" onClick={(e) => e.currentTarget === e.target && onClose()}>
+      <div className="fixed inset-0 z-30 bg-black/50 overflow-y-auto" onClick={(e) => e.currentTarget === e.target && onClose()}>
         <div className="flex min-h-full items-center justify-center p-0">
           <div className="w-full max-w-3xl bg-white rounded-lg shadow-xl overflow-hidden transform transition-all">
             {/* HEADER */}
