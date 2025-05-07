@@ -54,9 +54,9 @@ export default function ViewRepair() {
 
   // Fetch repair items separately for better real-time updates
   const { 
-    data: repairItems, 
+    data: repairItems = [], 
     isLoading: isLoadingItems,
-  } = useQuery({
+  } = useQuery<any[]>({
     queryKey: [`/api/repairs/${repairId}/items`],
     enabled: !!repairId,
   });
@@ -517,7 +517,7 @@ export default function ViewRepair() {
               </Link>
             </CardHeader>
             <CardContent>
-              {!isLoadingItems && repairItems && repairItems.length > 0 ? (
+              {!isLoadingItems && repairItems.length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -575,7 +575,7 @@ export default function ViewRepair() {
                 </div>
               )}
             </CardContent>
-            {repairItems && repairItems.length > 0 && (
+            {repairItems.length > 0 && (
               <CardFooter className="flex justify-between border-t p-4">
                 <div></div>
                 <div className="text-right">
@@ -605,7 +605,7 @@ export default function ViewRepair() {
               </Link>
             </CardHeader>
             <CardContent>
-              {safeGet(repair, 'quotes', []).length > 0 ? (
+              {(repair.quotes || []).length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -618,7 +618,7 @@ export default function ViewRepair() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {safeGet(repair, 'quotes', []).map((quote: any) => (
+                    {(repair.quotes || []).map((quote: any) => (
                       <TableRow key={quote.id}>
                         <TableCell className="font-medium">{quote.quoteNumber}</TableCell>
                         <TableCell>
@@ -696,7 +696,7 @@ export default function ViewRepair() {
               </Link>
             </CardHeader>
             <CardContent>
-              {safeGet(repair, 'invoices', []).length > 0 ? (
+              {(repair.invoices || []).length > 0 ? (
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -709,7 +709,7 @@ export default function ViewRepair() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {safeGet(repair, 'invoices', []).map((invoice: any) => (
+                    {(repair.invoices || []).map((invoice: any) => (
                       <TableRow key={invoice.id}>
                         <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
                         <TableCell>
