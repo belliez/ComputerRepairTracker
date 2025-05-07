@@ -263,8 +263,8 @@ export default function RepairInformation({
             <FormItem>
               <FormLabel>Assigned Technician</FormLabel>
               <Select
-                value={field.value?.toString() || ""}
-                onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
+                value={field.value?.toString() || "null"}
+                onValueChange={(value) => field.onChange(value === "null" ? null : parseInt(value))}
               >
                 <FormControl>
                   <SelectTrigger>
@@ -272,7 +272,7 @@ export default function RepairInformation({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">None</SelectItem>
+                  <SelectItem value="null">None</SelectItem>
                   {technicians.map((tech) => (
                     <SelectItem key={tech.id} value={tech.id.toString()}>
                       {tech.firstName} {tech.lastName} ({tech.role})
