@@ -101,7 +101,11 @@ export default function CustomerForm({
 
       // Call the callback with the new customer ID if provided
       if (!customerId && onCustomerCreated && data) {
-        onCustomerCreated(data.id);
+        console.log("Customer form: New customer created with ID:", data.id);
+        // Wait a moment for data to process before calling callback
+        setTimeout(() => {
+          onCustomerCreated(data.id);
+        }, 100);
       } else {
         onClose();
       }

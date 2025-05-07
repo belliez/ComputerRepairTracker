@@ -210,18 +210,30 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   };
 
   const handleCustomerCreated = (customerId: number) => {
+    console.log("Customer created with ID:", customerId);
     setShowNewCustomerForm(false);
-    setSelectedCustomerId(customerId);
-    // Force refetch of customer data to ensure dropdown lists are up to date
-    queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
     
-    // Update form with the new customer
+    // Ensure customer ID is properly set in state and form
+    setSelectedCustomerId(customerId);
     form.setValue("customerId", customerId);
+    
+    // Immediately refetch customer data to ensure dropdown lists are up to date
+    queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+    queryClient.refetchQueries({ queryKey: ["/api/customers"] });
+    
+    // Force a query for devices by customer ID
+    queryClient.invalidateQueries({ 
+      queryKey: ["/api/devices", { customerId: customerId }] 
+    });
     
     // Proceed to device selection step after a short delay to allow data to load
     setTimeout(() => {
+      // Double-check that the customer ID is still set correctly
+      if (selectedCustomerId !== customerId) {
+        setSelectedCustomerId(customerId);
+      }
       setCurrentStep("device");
-    }, 100);
+    }, 200);
   };
 
   const handleCustomerSelected = (customerId: number) => {
@@ -515,6 +527,26 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   };
 
   const renderDeviceStep = () => {
+    // Debug customer state
+    console.log("Device step - selected customer ID:", selectedCustomerId);
+    
+    // First, check if we have a valid customer selected
+    if (!selectedCustomerId) {
+      return (
+        <div className="p-4 border border-red-200 rounded-md bg-red-50 text-center">
+          <p className="text-red-500 font-medium mb-2">Customer Required</p>
+          <p className="text-sm text-gray-700">Please select a customer before proceeding.</p>
+          <Button 
+            onClick={() => setCurrentStep("customer")}
+            className="mt-4"
+            variant="secondary"
+          >
+            Go Back and Select Customer
+          </Button>
+        </div>
+      );
+    }
+    
     // Filter devices based on search term
     const filteredDevices = devices ? devices.filter(device => {
       if (!deviceSearchTerm) return true;

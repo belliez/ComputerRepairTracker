@@ -114,7 +114,9 @@ export default function DeviceForm({
       }
     },
     onSuccess: (data) => {
+      // Force immediate refresh of device data
       queryClient.invalidateQueries({ queryKey: ["/api/devices"] });
+      queryClient.refetchQueries({ queryKey: ["/api/devices"] });
       
       toast({
         title: deviceId ? "Device updated" : "Device created",
@@ -125,7 +127,11 @@ export default function DeviceForm({
 
       // Call the callback with the new device ID if provided
       if (!deviceId && onDeviceCreated && data) {
-        onDeviceCreated(data.id);
+        console.log("Device form: New device created with ID:", data.id);
+        // Wait a moment for data to process before calling callback
+        setTimeout(() => {
+          onDeviceCreated(data.id);
+        }, 100);
       } else {
         onClose();
       }
