@@ -185,13 +185,19 @@ export default function CreateRepairQuote() {
       
       return apiRequest("POST", `/api/quotes`, quoteData);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+    onSuccess: async () => {
+      // Invalidate multiple query keys to ensure all data is refreshed
+      await queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/repairs`] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/quotes`] });
       
       toast({
         title: "Quote Created",
         description: "The quote has been created successfully",
       });
+      
+      // Manually refetch the repair details to ensure we have fresh data
+      await queryClient.refetchQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
       
       // Navigate back to repair view page
       navigate(`/repairs/${repairId}`);

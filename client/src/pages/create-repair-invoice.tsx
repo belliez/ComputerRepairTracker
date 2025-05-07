@@ -185,13 +185,19 @@ export default function CreateRepairInvoice() {
       
       return apiRequest("POST", `/api/invoices`, invoiceData);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+    onSuccess: async () => {
+      // Invalidate multiple query keys to ensure all data is refreshed
+      await queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/repairs`] });
+      await queryClient.invalidateQueries({ queryKey: [`/api/invoices`] });
       
       toast({
         title: "Invoice Created",
         description: "The invoice has been created successfully",
       });
+      
+      // Manually refetch the repair details to ensure we have fresh data
+      await queryClient.refetchQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
       
       // Navigate back to repair view page
       navigate(`/repairs/${repairId}`);
