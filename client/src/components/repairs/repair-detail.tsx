@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { RepairWithRelations } from "@/types";
 import { Pencil, Plus, Trash2, Printer, Mail, CreditCard, Check, Calculator } from "lucide-react";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { printDocument, createQuoteDocument, createInvoiceDocument } from "@/lib/print-utils";
@@ -563,15 +564,16 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                 </DialogDescription>
               </div>
               <div className="flex flex-wrap items-center gap-3">
-                <Button 
-                  variant="default" 
-                  size="sm"
-                  onClick={() => setShowEditForm(true)}
-                  className="flex items-center"
-                >
-                  <Pencil className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
+                <Link to={`/repairs/edit/${repairId}`}>
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    className="flex items-center"
+                  >
+                    <Pencil className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                </Link>
                 <Button 
                   variant="outline" 
                   size="sm"

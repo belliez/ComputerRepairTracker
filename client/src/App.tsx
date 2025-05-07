@@ -9,6 +9,7 @@ import Inventory from "@/pages/inventory";
 import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
+import EditRepair from "@/pages/edit-repair";
 import MainLayout from "@/components/layout/main-layout";
 
 function Router() {
@@ -16,6 +17,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Dashboard} />
       <Route path="/repairs" component={Repairs} />
+      <Route path="/repairs/edit/:id" component={EditRepair} />
       <Route path="/customers" component={Customers} />
       <Route path="/inventory" component={Inventory} />
       <Route path="/invoices" component={Invoices} />
