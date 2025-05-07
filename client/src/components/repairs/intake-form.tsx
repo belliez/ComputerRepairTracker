@@ -47,6 +47,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [deviceSearchTerm, setDeviceSearchTerm] = useState("");
   const { toast } = useToast();
 
   // Get existing repair if we're editing
@@ -345,22 +346,18 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             <div 
               className="flex items-center justify-start cursor-pointer" 
               onClick={() => {
-                // Only allow stepping back to customer from device step or when editing
-                if (currentStep === "device" || repairId) {
-                  setCurrentStep("customer");
-                }
+                // Allow stepping back to customer at any time
+                setCurrentStep("customer");
               }}
             >
-              <div className={`rounded-full h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center ${
-                currentStep === "customer" ? "bg-blue-500" : 
-                "bg-blue-500"
-              }`}>
+              <div className={`rounded-full h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center 
+                ${currentStep === "customer" ? "bg-blue-500" : "bg-gray-300"}`}>
                 <i className="fas fa-user text-white text-xs sm:text-sm"></i>
               </div>
               <div className="ml-2 sm:ml-4">
                 <p className={`text-xs sm:text-sm font-medium ${
                   currentStep === "customer" ? "text-gray-900" : 
-                  "text-gray-900"
+                  "text-gray-500"
                 }`}>Customer</p>
               </div>
             </div>
@@ -373,19 +370,25 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
           <div className="flex-1">
             <div 
               className={`flex items-center justify-center cursor-pointer ${
-                // Only enable if we have a customer selected or when editing 
-                selectedCustomerId || repairId ? "" : "opacity-50 pointer-events-none"
+                // Only enable if we have a customer selected
+                selectedCustomerId ? "" : "opacity-50 pointer-events-none"
               }`}
               onClick={() => {
-                // Only allow clicking if customer is selected or when editing
-                if (selectedCustomerId || repairId) {
+                // Only allow clicking if customer is selected
+                if (selectedCustomerId) {
                   setCurrentStep("device");
+                } else {
+                  toast({
+                    title: "Select a customer first",
+                    description: "Please select a customer before proceeding to device selection.",
+                    variant: "destructive"
+                  });
                 }
               }}
             >
               <div className={`rounded-full h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center ${
                 currentStep === "device" ? "bg-blue-500" : 
-                currentStep === "service" ? "bg-blue-500" : "bg-gray-200"
+                currentStep === "service" ? "bg-blue-500" : "bg-gray-300"
               }`}>
                 <i className={`fas fa-laptop ${
                   currentStep === "device" || currentStep === "service" 
@@ -408,18 +411,24 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
           <div className="flex-1">
             <div 
               className={`flex items-center justify-end cursor-pointer ${
-                // Only enable if we have a customer selected or when editing
-                selectedCustomerId || repairId ? "" : "opacity-50 pointer-events-none"
+                // Only enable if we have a customer selected
+                selectedCustomerId ? "" : "opacity-50 pointer-events-none"
               }`}
               onClick={() => {
-                // Only allow clicking if a customer is selected or when editing
-                if (selectedCustomerId || repairId) {
+                // Only allow clicking if a customer is selected
+                if (selectedCustomerId) {
                   setCurrentStep("service");
+                } else {
+                  toast({
+                    title: "Select a customer first",
+                    description: "Please select a customer before proceeding to service details.",
+                    variant: "destructive"
+                  });
                 }
               }}
             >
               <div className={`rounded-full h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center ${
-                currentStep === "service" ? "bg-blue-500" : "bg-gray-200"
+                currentStep === "service" ? "bg-blue-500" : "bg-gray-300"
               }`}>
                 <i className={`fas fa-wrench ${
                   currentStep === "service" ? "text-white" : "text-gray-500"
@@ -1090,7 +1099,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
   
   return (
     <>
-      <div className="fixed inset-0 z-50 bg-black/50 overflow-y-auto" onClick={(e) => e.currentTarget === e.target && onClose()}>
+      <div className="fixed inset-0 z-40 bg-black/50 overflow-y-auto" onClick={(e) => e.currentTarget === e.target && onClose()}>
         <div className="flex min-h-full items-center justify-center p-0">
           <div className="w-full max-w-3xl bg-white rounded-lg shadow-xl overflow-hidden transform transition-all">
             {/* HEADER */}
