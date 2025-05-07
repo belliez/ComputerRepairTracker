@@ -388,12 +388,13 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             >
               <div className={`rounded-full h-6 w-6 sm:h-8 sm:w-8 flex items-center justify-center ${
                 currentStep === "device" ? "bg-blue-500" : 
-                currentStep === "service" ? "bg-blue-500" : "bg-gray-300"
+                currentStep === "service" ? "bg-blue-500" : 
+                selectedCustomerId ? "bg-gray-300" : "bg-gray-200"
               }`}>
                 <i className={`fas fa-laptop ${
                   currentStep === "device" || currentStep === "service" 
                     ? "text-white" 
-                    : "text-gray-500"
+                    : selectedCustomerId ? "text-gray-600" : "text-gray-400"
                 } text-xs sm:text-sm`}></i>
               </div>
               <div className="ml-2 sm:ml-4">
@@ -509,7 +510,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
 
   const renderDeviceStep = () => {
     // Filter devices based on search term
-    const filteredDevices = devices?.filter(device => {
+    const filteredDevices = devices ? devices.filter(device => {
       if (!deviceSearchTerm) return true;
       
       const searchTermLower = deviceSearchTerm.toLowerCase();
@@ -519,7 +520,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
         (device.serialNumber && device.serialNumber.toLowerCase().includes(searchTermLower)) ||
         device.type.toLowerCase().includes(searchTermLower)
       );
-    });
+    }) : [];
     
     return (
       <>
