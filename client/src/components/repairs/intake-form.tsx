@@ -496,7 +496,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 handleNewCustomer();
               }} 
               size="sm" 
-              className="text-xs sm:text-sm py-1 h-8 sm:h-9"
+              className="text-xs sm:text-sm py-2 px-4 h-10 sm:h-11 touch-manipulation"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
             >
               <i className="fas fa-plus mr-1 sm:mr-2"></i> New Customer
             </Button>
@@ -512,7 +513,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 {filteredCustomers?.map(customer => (
                   <li 
                     key={customer.id} 
-                    className={`p-2 sm:p-3 cursor-pointer hover:bg-gray-50 ${
+                    className={`p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-100 touch-manipulation ${
                       selectedCustomerId === customer.id ? "bg-blue-50" : ""
                     }`}
                     onClick={(e) => {
@@ -520,6 +521,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                       e.stopPropagation();
                       handleCustomerSelected(customer.id);
                     }}
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
                     <div className="flex flex-col sm:flex-row sm:justify-between">
                       <div>
@@ -606,7 +608,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 {filteredDevices.map(device => (
                   <li 
                     key={device.id} 
-                    className={`p-2 sm:p-3 cursor-pointer hover:bg-gray-50 ${
+                    className={`p-4 cursor-pointer hover:bg-gray-50 active:bg-blue-100 touch-manipulation ${
                       selectedDeviceId === device.id ? "bg-blue-50" : ""
                     }`}
                     onClick={(e) => {
@@ -614,6 +616,7 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                       e.stopPropagation();
                       handleDeviceSelected(device.id);
                     }}
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
                     <div className="font-medium text-sm sm:text-base">{device.brand} {device.model}</div>
                     <div className="text-xs sm:text-sm text-gray-500">{device.type}</div>
@@ -635,7 +638,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
               }}
               variant="outline"
               size="sm"
-              className="text-xs sm:text-sm py-1 h-8 sm:h-9"
+              className="text-xs sm:text-sm py-2 px-4 h-10 sm:h-11 touch-manipulation"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
             >
               <i className="fas fa-plus mr-1 sm:mr-2"></i> Add New Device
             </Button>
@@ -648,7 +652,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
               }}
               variant="secondary"
               size="sm"
-              className="text-xs sm:text-sm py-1 h-8 sm:h-9"
+              className="text-xs sm:text-sm py-2 px-4 h-10 sm:h-11 touch-manipulation"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
             >
               Skip (No Device)
             </Button>
@@ -961,9 +966,14 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                   <Button 
                     type="button" 
                     variant="outline" 
-                    onClick={handlePrevStep}
-                    className="mr-auto"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handlePrevStep();
+                    }}
+                    className="mr-auto py-2 px-4 h-10 touch-manipulation"
                     size="sm"
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
                     Back
                   </Button>
@@ -972,8 +982,14 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={onClose}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onClose();
+                  }}
                   size="sm"
+                  className="py-2 px-4 h-10 touch-manipulation"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   Cancel
                 </Button>
