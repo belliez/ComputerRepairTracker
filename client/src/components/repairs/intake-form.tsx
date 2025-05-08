@@ -998,7 +998,11 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                   <Button 
                     type="button"
                     size="sm"
-                    onClick={() => {
+                    className="py-2 px-4 h-10 touch-manipulation font-medium"
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
                       // Get form values directly
                       const formValues = form.getValues();
                       console.log("Form values:", formValues);
@@ -1082,9 +1086,19 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 ) : (
                   <Button 
                     type="button" 
-                    onClick={() => currentStep === "customer" && selectedCustomerId ? setCurrentStep("device") : setCurrentStep("service")} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (currentStep === "customer" && selectedCustomerId) {
+                        setCurrentStep("device");
+                      } else {
+                        setCurrentStep("service");
+                      }
+                    }} 
                     disabled={currentStep === "customer" && !selectedCustomerId}
                     size="sm"
+                    className="py-2 px-4 h-10 touch-manipulation font-medium"
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
                   >
                     Next
                   </Button>
@@ -1217,8 +1231,13 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={handlePrevStep}
-                  className="mr-auto"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handlePrevStep();
+                  }}
+                  className="mr-auto py-2 px-4 h-10 touch-manipulation"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   Back
                 </Button>
@@ -1227,7 +1246,13 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={onClose}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onClose();
+                }}
+                className="py-2 px-4 h-10 touch-manipulation"
+                style={{ WebkitTapHighlightColor: 'transparent' }}
               >
                 Cancel
               </Button>
@@ -1235,8 +1260,14 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
               {currentStep === "service" ? (
                 <Button 
                   type="button"
-                  onClick={handleFormSubmit}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleFormSubmit();
+                  }}
                   disabled={mutation.isPending}
+                  className="py-2 px-4 h-10 touch-manipulation font-medium"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   {mutation.isPending ? (
                     <span className="flex items-center">
@@ -1251,8 +1282,18 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
               ) : (
                 <Button 
                   type="button" 
-                  onClick={() => currentStep === "customer" && selectedCustomerId ? setCurrentStep("device") : setCurrentStep("service")} 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (currentStep === "customer" && selectedCustomerId) {
+                      setCurrentStep("device");
+                    } else {
+                      setCurrentStep("service");
+                    }
+                  }} 
                   disabled={currentStep === "customer" && !selectedCustomerId}
+                  className="py-2 px-4 h-10 touch-manipulation font-medium"
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   Next
                 </Button>
