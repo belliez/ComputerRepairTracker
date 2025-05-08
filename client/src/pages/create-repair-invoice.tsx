@@ -206,7 +206,12 @@ export default function CreateRepairInvoice() {
       if (selectedTaxRateId && taxRates && taxRates.length > 0) {
         const selectedTaxRate = taxRates.find((rate: any) => rate.id === selectedTaxRateId);
         if (selectedTaxRate) {
-          const newTaxAmount = newSubtotal * (selectedTaxRate.rate / 100);
+          // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
+          const normalizedRate = selectedTaxRate.rate > 1 
+            ? selectedTaxRate.rate / 100 
+            : selectedTaxRate.rate;
+            
+          const newTaxAmount = newSubtotal * normalizedRate;
           setTaxAmount(newTaxAmount);
           setTotal(newSubtotal + newTaxAmount);
         } else {
@@ -525,7 +530,19 @@ export default function CreateRepairInvoice() {
                 />
               </div>
 
-              {/* Currency and tax rate fields have been removed as they now use global settings */}
+              {/* Hidden fields to maintain form data but not show in UI */}
+              <input 
+                type="hidden" 
+                name="currencyCode" 
+                value={selectedCurrencyCode}
+                {...form.register("currencyCode")}
+              />
+              <input 
+                type="hidden"
+                name="taxRateId"
+                value={selectedTaxRateId}
+                {...form.register("taxRateId")}
+              />
               
               <FormField
                 control={form.control}

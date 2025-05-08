@@ -528,80 +528,19 @@ export default function CreateRepairQuote() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="currencyCode"
-                  render={({ field }) => {
-                    // Get the current currency from the list
-                    const currentCurrency = currencies.find((c: any) => c.code === field.value);
-                    
-                    return (
-                      <FormItem>
-                        <FormLabel>Currency</FormLabel>
-                        <FormControl>
-                          <div className="flex h-10 px-3 py-2 text-sm border rounded-md border-input bg-background">
-                            {isLoadingCurrencies ? (
-                              <div className="flex justify-center w-full">
-                                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                              </div>
-                            ) : currentCurrency ? (
-                              <div>
-                                {currentCurrency.symbol} {currentCurrency.name} ({currentCurrency.code})
-                              </div>
-                            ) : (
-                              <div>$ US Dollar (USD)</div>
-                            )}
-                          </div>
-                        </FormControl>
-                        <FormDescription>
-                          Using system default currency
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="taxRateId"
-                  render={({ field }) => {
-                    // Get the current tax rate from the list
-                    const currentTaxRate = taxRates.find((t: any) => t.id === field.value);
-                    
-                    // Normalize tax rate display
-                    const displayRate = currentTaxRate ? 
-                      (currentTaxRate.rate > 1 ? currentTaxRate.rate.toFixed(2) : (currentTaxRate.rate * 100).toFixed(2)) 
-                      : "0.00";
-                    
-                    return (
-                      <FormItem>
-                        <FormLabel>Tax Rate</FormLabel>
-                        <FormControl>
-                          <div className="flex h-10 px-3 py-2 text-sm border rounded-md border-input bg-background">
-                            {isLoadingTaxRates ? (
-                              <div className="flex justify-center w-full">
-                                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                              </div>
-                            ) : currentTaxRate ? (
-                              <div>
-                                {currentTaxRate.name} ({displayRate}%)
-                              </div>
-                            ) : (
-                              <div>No Tax (0%)</div>
-                            )}
-                          </div>
-                        </FormControl>
-                        <FormDescription>
-                          Using system default tax rate
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-              </div>
+              {/* Hidden fields to maintain form data but not show in UI */}
+              <input 
+                type="hidden" 
+                name="currencyCode" 
+                value={selectedCurrencyCode}
+                {...form.register("currencyCode")}
+              />
+              <input 
+                type="hidden"
+                name="taxRateId"
+                value={selectedTaxRateId}
+                {...form.register("taxRateId")}
+              />
               
               <FormField
                 control={form.control}
