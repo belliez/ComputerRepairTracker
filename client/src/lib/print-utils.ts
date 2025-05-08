@@ -1,11 +1,44 @@
 /**
  * Utility functions for handling printing and document generation
  */
+import { Currency } from "@/hooks/use-currency";
 
 export interface PrintableDocument {
   title: string;
   content: string;
   // Add more properties as needed (e.g., CSS styles)
+}
+
+/**
+ * Format a currency value based on the provided currency
+ * This is a non-hook version of formatCurrency from use-currency.ts
+ */
+export function formatCurrency(
+  amount: number | string | null | undefined,
+  currency?: Currency | null
+): string {
+  // Handle undefined, null, or non-numeric values
+  if (amount === undefined || amount === null) {
+    return '-';
+  }
+  
+  // Convert to number if it's a string
+  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  
+  // Handle NaN values
+  if (isNaN(numericAmount)) {
+    return '-';
+  }
+  
+  // Use the provided currency, or fallback to USD
+  const currencyCode = currency?.code || 'USD';
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currencyCode,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(numericAmount);
 }
 
 /**
@@ -150,6 +183,11 @@ export function createQuoteDocument(quote: any, customer: any, repair: any, item
     ? new Date(quote.expirationDate).toLocaleDateString()
     : 'N/A';
   
+  // Create currency object from quote's currency code
+  const currency = quote.currencyCode 
+    ? { code: quote.currencyCode, name: '', symbol: '', isDefault: false } 
+    : null;
+  
   // Generate items table
   const itemsTable = `
     <table>
@@ -167,9 +205,9 @@ export function createQuoteDocument(quote: any, customer: any, repair: any, item
           <tr>
             <td>${item.description}</td>
             <td>${item.itemType === 'part' ? 'Part' : 'Service'}</td>
-            <td class="text-right">$${item.unitPrice.toFixed(2)}</td>
+            <td class="text-right">${formatCurrency(item.unitPrice, currency)}</td>
             <td class="text-right">${item.quantity}</td>
-            <td class="text-right">$${(item.unitPrice * item.quantity).toFixed(2)}</td>
+            <td class="text-right">${formatCurrency(item.unitPrice * item.quantity, currency)}</td>
           </tr>
         `).join('')}
       </tbody>
@@ -198,6 +236,7 @@ export function createQuoteDocument(quote: any, customer: any, repair: any, item
           <p><strong>Date Created:</strong> ${dateCreated}</p>
           <p><strong>Expiration Date:</strong> ${expirationDate}</p>
           <p><strong>Repair Ticket:</strong> ${repair.ticketNumber}</p>
+          ${quote.currencyCode ? `<p><strong>Currency:</strong> ${quote.currencyCode}</p>` : ''}
         </div>
       </div>
     </div>
@@ -209,15 +248,15 @@ export function createQuoteDocument(quote: any, customer: any, repair: any, item
       <table>
         <tr>
           <th>Subtotal</th>
-          <td class="text-right">$${quote.subtotal.toFixed(2)}</td>
+          <td class="text-right">${formatCurrency(quote.subtotal, currency)}</td>
         </tr>
         <tr>
           <th>Tax</th>
-          <td class="text-right">$${(quote.tax || 0).toFixed(2)}</td>
+          <td class="text-right">${formatCurrency(quote.tax || quote.taxAmount || 0, currency)}</td>
         </tr>
         <tr>
           <th>Total</th>
-          <td class="text-right"><strong>$${quote.total.toFixed(2)}</strong></td>
+          <td class="text-right"><strong>${formatCurrency(quote.total, currency)}</strong></td>
         </tr>
       </table>
     </div>
@@ -246,6 +285,11 @@ export function createInvoiceDocument(invoice: any, customer: any, repair: any, 
     ? new Date(invoice.datePaid).toLocaleDateString()
     : 'Not paid';
   
+  // Create currency object from invoice's currency code
+  const currency = invoice.currencyCode 
+    ? { code: invoice.currencyCode, name: '', symbol: '', isDefault: false } 
+    : null;
+  
   // Generate items table
   const itemsTable = `
     <table>
@@ -263,9 +307,9 @@ export function createInvoiceDocument(invoice: any, customer: any, repair: any, 
           <tr>
             <td>${item.description}</td>
             <td>${item.itemType === 'part' ? 'Part' : 'Service'}</td>
-            <td class="text-right">$${item.unitPrice.toFixed(2)}</td>
+            <td class="text-right">${formatCurrency(item.unitPrice, currency)}</td>
             <td class="text-right">${item.quantity}</td>
-            <td class="text-right">$${(item.unitPrice * item.quantity).toFixed(2)}</td>
+            <td class="text-right">${formatCurrency(item.unitPrice * item.quantity, currency)}</td>
           </tr>
         `).join('')}
       </tbody>
@@ -307,6 +351,7 @@ export function createInvoiceDocument(invoice: any, customer: any, repair: any, 
           <p><strong>Date Paid:</strong> ${datePaid}</p>
           <p><strong>Payment Method:</strong> ${invoice.paymentMethod === 'none' ? 'Not Paid Yet' : invoice.paymentMethod}</p>
           <p><strong>Repair Ticket:</strong> ${repair.ticketNumber}</p>
+          ${invoice.currencyCode ? `<p><strong>Currency:</strong> ${invoice.currencyCode}</p>` : ''}
         </div>
       </div>
     </div>
@@ -318,15 +363,15 @@ export function createInvoiceDocument(invoice: any, customer: any, repair: any, 
       <table>
         <tr>
           <th>Subtotal</th>
-          <td class="text-right">$${invoice.subtotal.toFixed(2)}</td>
+          <td class="text-right">${formatCurrency(invoice.subtotal, currency)}</td>
         </tr>
         <tr>
           <th>Tax</th>
-          <td class="text-right">$${(invoice.tax || 0).toFixed(2)}</td>
+          <td class="text-right">${formatCurrency(invoice.tax || invoice.taxAmount || 0, currency)}</td>
         </tr>
         <tr>
           <th>Total</th>
-          <td class="text-right"><strong>$${invoice.total.toFixed(2)}</strong></td>
+          <td class="text-right"><strong>${formatCurrency(invoice.total, currency)}</strong></td>
         </tr>
       </table>
     </div>
