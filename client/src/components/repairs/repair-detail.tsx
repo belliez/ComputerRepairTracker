@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { RepairWithRelations } from "@/types";
-import { Pencil, Plus, Trash2, Printer, Mail, CreditCard, Check, Calculator } from "lucide-react";
+import { Pencil, Plus, Trash2, Printer, Mail, CreditCard, Check, Calculator, FileText } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -222,6 +222,35 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
     setDeleteItemType("quote");
     setDeleteItemId(quoteId);
     setShowDeleteDialog(true);
+  };
+  
+  const handleConvertToInvoice = (quoteId: number) => {
+    // Find the quote by ID
+    const quote = repair?.quotes?.find(q => q.id === quoteId);
+    if (!quote) {
+      toast({
+        title: "Error",
+        description: "Could not find quote to convert",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Set the active tab to invoice
+    setActiveTab("invoice");
+    
+    // Show the invoice form with pre-populated data from the quote
+    setEditingInvoiceId(undefined); // This is a new invoice, not editing
+    
+    // Store the quote ID in session storage to be used when the invoice form opens
+    sessionStorage.setItem('convertFromQuoteId', quoteId.toString());
+    
+    setShowInvoiceForm(true);
+    
+    toast({
+      title: "Converting to Invoice",
+      description: "Create the invoice with pre-filled data from the quote"
+    });
   };
 
   const handleCreateInvoice = () => {
@@ -1119,6 +1148,15 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                             >
                               <Trash2 className="h-4 w-4 mr-1" /> Delete
                             </Button>
+                            {quote.status === "approved" && (
+                              <Button 
+                                variant="outline"
+                                className="text-green-500 hover:text-green-700"
+                                onClick={() => handleConvertToInvoice(quote.id)}
+                              >
+                                <FileText className="h-4 w-4 mr-1" /> Convert to Invoice
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}
