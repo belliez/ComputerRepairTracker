@@ -28,7 +28,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
 import StatusBadge from "@/components/repairs/status-badge";
 import { RepairWithRelations } from "@/types";
 import { repairStatuses } from "@shared/schema";
@@ -98,7 +98,7 @@ export default function ViewRepair() {
   const [activeTab, setActiveTab] = useState(tabParam || "details");
   const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteItemType, setDeleteItemType] = useState<'quote' | 'invoice' | null>(null);
+  const [deleteItemType, setDeleteItemType] = useState<'quote' | 'invoice' | 'repairItem' | null>(null);
   const [deleteItemId, setDeleteItemId] = useState<number | null>(null);
   
   // Parse the repair ID from the URL
@@ -392,11 +392,48 @@ export default function ViewRepair() {
     }
   });
   
+  // Repair Item delete mutation
+  const deleteRepairItemMutation = useMutation({
+    mutationFn: async (itemId: number) => {
+      return apiRequest("DELETE", `/api/repairs/${repairId}/items/${itemId}`, {});
+    },
+    onSuccess: async () => {
+      // Invalidate the repair items query and refetch
+      await queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/items`] });
+      await queryClient.refetchQueries({ queryKey: [`/api/repairs/${repairId}/items`] });
+      
+      toast({
+        title: "Item deleted",
+        description: "Item was successfully removed from the repair",
+      });
+      
+      // Reset delete state
+      setShowDeleteConfirm(false);
+      setDeleteItemType(null);
+      setDeleteItemId(null);
+    },
+    onError: (error) => {
+      console.error('Failed to delete repair item:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete item. Please try again.",
+        variant: "destructive"
+      });
+      
+      // Reset delete state
+      setShowDeleteConfirm(false);
+      setDeleteItemType(null);
+      setDeleteItemId(null);
+    }
+  });
+  
   const handleDeleteConfirm = () => {
     if (deleteItemType === 'quote' && deleteItemId) {
       deleteQuoteMutation.mutate(deleteItemId);
     } else if (deleteItemType === 'invoice' && deleteItemId) {
       deleteInvoiceMutation.mutate(deleteItemId);
+    } else if (deleteItemType === 'repairItem' && deleteItemId) {
+      deleteRepairItemMutation.mutate(deleteItemId);
     }
   };
   
@@ -621,10 +658,30 @@ export default function ViewRepair() {
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Link to={`/repairs/${repairId}/items/${item.id}/edit`}>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 w-8 p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Allow navigation but prevent bubbling
+                                  }}
+                                >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
                               </Link>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                onClick={(e) => {
+                                  e.preventDefault(); // Prevent navigation
+                                  setDeleteItemType('repairItem');
+                                  setDeleteItemId(item.id);
+                                  setShowDeleteConfirm(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
