@@ -55,12 +55,38 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
 /**
  * Generate HTML for a quote email
  */
-export function generateQuoteEmail(quote: any, customer: any, repair: any, items: any[]): string {
+export function generateQuoteEmail(quote: any, customer: any, repair: any, itemsFromRepair: any[]): string {
   // Format the dates
   const dateCreated = new Date(quote.dateCreated).toLocaleDateString();
   const expirationDate = quote.expirationDate 
     ? new Date(quote.expirationDate).toLocaleDateString()
     : 'N/A';
+  
+  // Use itemsData from quote if available, otherwise fall back to passed items
+  let itemsToDisplay = itemsFromRepair;
+  
+  // Check for itemsData field (new format)
+  if (quote.itemsData) {
+    try {
+      const parsedItems = JSON.parse(quote.itemsData);
+      if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+        itemsToDisplay = parsedItems;
+      }
+    } catch (error) {
+      console.error("Failed to parse quote itemsData:", error);
+    }
+  }
+  // If no itemsData, try legacy itemIds format
+  else if (quote.itemIds && itemsFromRepair.length > 0) {
+    try {
+      const itemIds = JSON.parse(quote.itemIds);
+      if (Array.isArray(itemIds) && itemIds.length > 0) {
+        itemsToDisplay = itemsFromRepair.filter(item => itemIds.includes(item.id));
+      }
+    } catch (error) {
+      console.error("Failed to parse quote itemIds:", error);
+    }
+  }
   
   // Generate items table
   const itemsTable = `
@@ -75,15 +101,21 @@ export function generateQuoteEmail(quote: any, customer: any, repair: any, items
         </tr>
       </thead>
       <tbody>
-        ${items.map(item => `
+        ${itemsToDisplay.length > 0 ? itemsToDisplay.map(item => {
+          const unitPrice = Number(item.unitPrice || 0);
+          const quantity = Number(item.quantity || 1);
+          const total = unitPrice * quantity;
+          
+          return `
           <tr>
-            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: left;">${item.description}</td>
+            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: left;">${item.description || 'N/A'}</td>
             <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: left;">${item.itemType === 'part' ? 'Part' : 'Service'}</td>
-            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">$${item.unitPrice.toFixed(2)}</td>
-            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">${item.quantity}</td>
-            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">$${(item.unitPrice * item.quantity).toFixed(2)}</td>
+            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">$${unitPrice.toFixed(2)}</td>
+            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">${quantity}</td>
+            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">$${total.toFixed(2)}</td>
           </tr>
-        `).join('')}
+        `;
+        }).join('') : '<tr><td colspan="5" style="border: 1px solid #ddd; padding: 8px 12px; text-align: center;">No items</td></tr>'}
       </tbody>
     </table>
   `;
@@ -159,12 +191,38 @@ export function generateQuoteEmail(quote: any, customer: any, repair: any, items
 /**
  * Generate HTML for an invoice email
  */
-export function generateInvoiceEmail(invoice: any, customer: any, repair: any, items: any[]): string {
+export function generateInvoiceEmail(invoice: any, customer: any, repair: any, itemsFromRepair: any[]): string {
   // Format the dates
   const dateIssued = new Date(invoice.dateIssued).toLocaleDateString();
   const datePaid = invoice.datePaid
     ? new Date(invoice.datePaid).toLocaleDateString()
     : 'Not paid';
+  
+  // Use itemsData from invoice if available, otherwise fall back to passed items
+  let itemsToDisplay = itemsFromRepair;
+  
+  // Check for itemsData field (new format)
+  if (invoice.itemsData) {
+    try {
+      const parsedItems = JSON.parse(invoice.itemsData);
+      if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+        itemsToDisplay = parsedItems;
+      }
+    } catch (error) {
+      console.error("Failed to parse invoice itemsData:", error);
+    }
+  }
+  // If no itemsData, try legacy itemIds format
+  else if (invoice.itemIds && itemsFromRepair.length > 0) {
+    try {
+      const itemIds = JSON.parse(invoice.itemIds);
+      if (Array.isArray(itemIds) && itemIds.length > 0) {
+        itemsToDisplay = itemsFromRepair.filter(item => itemIds.includes(item.id));
+      }
+    } catch (error) {
+      console.error("Failed to parse invoice itemIds:", error);
+    }
+  }
   
   // Generate items table
   const itemsTable = `
@@ -179,15 +237,21 @@ export function generateInvoiceEmail(invoice: any, customer: any, repair: any, i
         </tr>
       </thead>
       <tbody>
-        ${items.map(item => `
+        ${itemsToDisplay.length > 0 ? itemsToDisplay.map(item => {
+          const unitPrice = Number(item.unitPrice || 0);
+          const quantity = Number(item.quantity || 1);
+          const total = unitPrice * quantity;
+          
+          return `
           <tr>
-            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: left;">${item.description}</td>
+            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: left;">${item.description || 'N/A'}</td>
             <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: left;">${item.itemType === 'part' ? 'Part' : 'Service'}</td>
-            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">$${item.unitPrice.toFixed(2)}</td>
-            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">${item.quantity}</td>
-            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">$${(item.unitPrice * item.quantity).toFixed(2)}</td>
+            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">$${unitPrice.toFixed(2)}</td>
+            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">${quantity}</td>
+            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">$${total.toFixed(2)}</td>
           </tr>
-        `).join('')}
+        `;
+        }).join('') : '<tr><td colspan="5" style="border: 1px solid #ddd; padding: 8px 12px; text-align: center;">No items</td></tr>'}
       </tbody>
     </table>
   `;
