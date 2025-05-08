@@ -485,7 +485,20 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   };
   
   const handleEditRepairItem = (item: any) => {
-    setCurrentEditingItem(item);
+    console.log("Editing repair item:", item);
+    // Make sure we have all required properties for editing
+    const itemToEdit = {
+      id: item.id,
+      description: item.description,
+      itemType: item.itemType,
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+      isCompleted: item.isCompleted,
+      inventoryItemId: item.inventoryItemId || null,
+      // Include any other properties needed for the form
+    };
+    console.log("Prepared item for editing:", itemToEdit);
+    setCurrentEditingItem(itemToEdit);
     setShowRepairItemForm(true);
   };
   
