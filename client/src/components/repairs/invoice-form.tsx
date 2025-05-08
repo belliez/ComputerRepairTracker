@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,6 +44,7 @@ interface InvoiceFormProps {
 
 export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: InvoiceFormProps) {
   const { toast } = useToast();
+  const [convertFromQuoteId, setConvertFromQuoteId] = useState<number | null>(null);
 
   // Get existing invoice if editing
   const { data: existingInvoice, isLoading: isLoadingInvoice } = useQuery({
@@ -63,18 +64,45 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
     enabled: !!repairId,
   });
 
-  // Get the latest approved quote if available
-  const approvedQuote = quotes?.find(q => q.status === "approved");
+  // Check if we're converting from a quote
+  useEffect(() => {
+    if (isOpen && !invoiceId) {
+      // Check if we have a quote ID in session storage
+      const storedQuoteId = sessionStorage.getItem('convertFromQuoteId');
+      if (storedQuoteId) {
+        const quoteId = parseInt(storedQuoteId);
+        if (!isNaN(quoteId)) {
+          setConvertFromQuoteId(quoteId);
+          // Clear the session storage to avoid reusing it on future opens
+          sessionStorage.removeItem('convertFromQuoteId');
+        }
+      }
+    }
+  }, [isOpen, invoiceId]);
 
-  // Calculate values - either from items or from approved quote
+  // Get a specific quote if we're converting from one
+  const { data: convertQuote } = useQuery({
+    queryKey: [`/api/quotes/${convertFromQuoteId}`],
+    enabled: !!convertFromQuoteId,
+  });
+  
+  // Get the latest approved quote if available and we're not converting from a specific one
+  const approvedQuote = !convertFromQuoteId ? 
+    quotes?.find(q => q.status === "approved") : 
+    null;
+    
+  // Pick the quote to use - prioritize the one we're converting from
+  const quoteToUse = convertQuote || approvedQuote;
+
+  // Calculate values - either from quote or from repair items
   let subtotal = 0;
   let taxAmount = 0;
   let total = 0;
 
-  if (approvedQuote) {
-    subtotal = approvedQuote.subtotal;
-    taxAmount = approvedQuote.tax || 0;
-    total = approvedQuote.total;
+  if (quoteToUse) {
+    subtotal = quoteToUse.subtotal;
+    taxAmount = quoteToUse.tax || 0;
+    total = quoteToUse.total;
   } else if (repairItems) {
     subtotal = repairItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
     const taxRate = 0.0825; // 8.25% tax - would come from settings in a real system
@@ -129,18 +157,55 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
   // Update form when data changes
   useEffect(() => {
     if (!existingInvoice) {
-      if (approvedQuote) {
-        form.setValue("subtotal", approvedQuote.subtotal);
-        form.setValue("tax", approvedQuote.tax || 0);
-        form.setValue("total", approvedQuote.total);
-        form.setValue("notes", approvedQuote.notes || "");
+      // Generate invoice number with timestamp to ensure uniqueness
+      const now = new Date();
+      const year = now.getFullYear().toString().substring(2);
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      const hours = now.getHours().toString().padStart(2, '0');
+      const minutes = now.getMinutes().toString().padStart(2, '0');
+      const seconds = now.getSeconds().toString().padStart(2, '0');
+      const invoiceNumber = `INV-${year}${month}${day}-${hours}${minutes}${seconds}`;
+
+      form.setValue("invoiceNumber", invoiceNumber);
+      
+      if (quoteToUse) {
+        console.log("Using quote data for invoice:", quoteToUse);
+        form.setValue("subtotal", quoteToUse.subtotal);
+        form.setValue("tax", quoteToUse.tax || 0);
+        form.setValue("total", quoteToUse.total);
+        form.setValue("notes", quoteToUse.notes || "");
+        
+        // If converting from a quote, also use its currency code and tax rate
+        if (quoteToUse.currencyCode) {
+          form.setValue("currencyCode", quoteToUse.currencyCode);
+        }
+        
+        if (quoteToUse.taxRateId) {
+          form.setValue("taxRateId", quoteToUse.taxRateId);
+        }
+        
+        // Check if the quote has item data we can use
+        if (quoteToUse.itemsData) {
+          try {
+            const items = JSON.parse(quoteToUse.itemsData);
+            console.log("Successfully parsed items from quote itemsData:", items);
+            form.setValue("itemsData", quoteToUse.itemsData);
+          } catch (error) {
+            console.error("Failed to parse quote itemsData:", error);
+          }
+        } else if (quoteToUse.itemIds && quoteToUse.itemIds.length > 0) {
+          // Handle legacy itemIds format
+          console.log("Using legacy itemIds from quote:", quoteToUse.itemIds);
+          form.setValue("itemIds", quoteToUse.itemIds);
+        }
       } else if (repairItems) {
         form.setValue("subtotal", subtotal);
         form.setValue("tax", taxAmount);
         form.setValue("total", total);
       }
     }
-  }, [approvedQuote, repairItems, subtotal, taxAmount, total, existingInvoice, form]);
+  }, [quoteToUse, repairItems, subtotal, taxAmount, total, existingInvoice, form]);
 
   // Create or update invoice mutation
   const mutation = useMutation({
