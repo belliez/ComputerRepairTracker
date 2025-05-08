@@ -8,6 +8,7 @@ import CreateRepair from "@/pages/create-repair";
 import EditRepair from "@/pages/edit-repair";
 import ViewRepair from "@/pages/view-repair";
 import AddRepairItem from "@/pages/add-repair-item";
+import EditRepairItem from "@/pages/edit-repair-item";
 import CreateRepairQuote from "@/pages/create-repair-quote";
 import CreateRepairInvoice from "@/pages/create-repair-invoice";
 import Customers from "@/pages/customers";
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/repairs/create" component={CreateRepair} />
       <Route path="/repairs/edit/:id" component={EditRepair} />
       <Route path="/repairs/:id/items/add" component={AddRepairItem} />
+      <Route path="/repairs/:id/items/:id/edit" component={EditRepairItem} />
       <Route path="/repairs/:id/quotes/create" component={CreateRepairQuote} />
       <Route path="/repairs/:id/quotes/:quoteId/edit" component={CreateRepairQuote} />
       <Route path="/repairs/:id/invoices/create" component={CreateRepairInvoice} />
