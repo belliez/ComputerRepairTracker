@@ -224,6 +224,43 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
     setShowDeleteDialog(true);
   };
   
+  const approveQuoteMutation = useMutation({
+    mutationFn: async (quoteId: number) => {
+      return apiRequest("PUT", `/api/quotes/${quoteId}`, {
+        status: "approved"
+      });
+    },
+    onSuccess: async () => {
+      toast({
+        title: "Quote approved",
+        description: "The quote has been approved successfully",
+      });
+      
+      // Refresh data
+      await queryClient.invalidateQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        refetchType: 'active'
+      });
+      
+      await queryClient.refetchQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        exact: true
+      });
+    },
+    onError: (error) => {
+      console.error("Failed to approve quote:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve the quote. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+  
+  const handleApproveQuote = (quoteId: number) => {
+    approveQuoteMutation.mutate(quoteId);
+  };
+  
   const handleConvertToInvoice = (quoteId: number) => {
     // Find the quote by ID
     const quote = repair?.quotes?.find(q => q.id === quoteId);
@@ -1083,6 +1120,15 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                             }>
                               {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
                             </Badge>
+                            {quote.status === "pending" && (
+                              <Button 
+                                variant="outline"
+                                className="ml-2 bg-green-50 text-green-600 hover:bg-green-100"
+                                onClick={() => handleApproveQuote(quote.id)}
+                              >
+                                <Check className="h-4 w-4 mr-1" /> Accept Quote
+                              </Button>
+                            )}
                           </div>
 
                           <Separator />

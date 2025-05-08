@@ -374,8 +374,45 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
                 />
               </div>
 
-              {/* Replace with editable line items */}
-              {repairItems && (
+              {/* Display editable line items */}
+              {quoteToUse && quoteToUse.itemsData ? (
+                // If we have converted from a quote with itemsData, use that
+                <EditableLineItems 
+                  items={(() => {
+                    try {
+                      // Try to parse the items from the quote's itemsData
+                      const parsedItems = JSON.parse(quoteToUse.itemsData);
+                      console.log("Using items from quote itemsData:", parsedItems);
+                      return parsedItems.map((item: any) => ({
+                        description: item.description,
+                        itemType: item.itemType || "part",
+                        unitPrice: item.unitPrice,
+                        quantity: item.quantity,
+                        total: item.unitPrice * item.quantity
+                      }));
+                    } catch (e) {
+                      console.error("Error parsing quote items:", e);
+                      return [];
+                    }
+                  })()}
+                  onChange={(updatedItems) => {
+                    // Calculate new totals
+                    const taxRate = quoteToUse.tax ? quoteToUse.tax / quoteToUse.subtotal : 0.0825; // Use quote tax rate if available
+                    const newSubtotal = updatedItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+                    const newTaxAmount = newSubtotal * taxRate;
+                    const newTotal = newSubtotal + newTaxAmount;
+                    
+                    form.setValue("subtotal", newSubtotal);
+                    form.setValue("tax", newTaxAmount);
+                    form.setValue("total", newTotal);
+                    
+                    // Update the itemsData field
+                    form.setValue("itemsData", JSON.stringify(updatedItems));
+                  }}
+                  readOnly={false}
+                />
+              ) : repairItems ? (
+                // Fall back to repair items if no quote is being converted
                 <EditableLineItems 
                   items={repairItems.map(item => ({
                     id: item.id,
@@ -395,10 +432,13 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
                     form.setValue("subtotal", newSubtotal);
                     form.setValue("tax", newTaxAmount);
                     form.setValue("total", newTotal);
+                    
+                    // Update the itemsData field
+                    form.setValue("itemsData", JSON.stringify(updatedItems));
                   }}
                   readOnly={false}
                 />
-              )}
+              ) : null}
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2">
