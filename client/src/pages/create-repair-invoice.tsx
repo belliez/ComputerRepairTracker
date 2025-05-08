@@ -260,6 +260,8 @@ export default function CreateRepairInvoice() {
   // Load existing invoice data when editing
   useEffect(() => {
     if (existingInvoice && isEditing) {
+      console.log("Loading existing invoice:", existingInvoice);
+      
       // Set the initial values from the existing invoice
       if (existingInvoice.currencyCode) {
         setSelectedCurrencyCode(existingInvoice.currencyCode);
@@ -273,23 +275,28 @@ export default function CreateRepairInvoice() {
       let invoiceItems = [];
       
       if (existingInvoice.itemsData) {
+        console.log("Found itemsData:", existingInvoice.itemsData);
         try {
           invoiceItems = JSON.parse(existingInvoice.itemsData);
+          console.log("Parsed items from itemsData:", invoiceItems);
         } catch (error) {
           console.error("Failed to parse invoice itemsData:", error);
         }
       } 
       // Fallback to old format with itemIds
       else if (existingInvoice.itemIds) {
+        console.log("Using legacy itemIds:", existingInvoice.itemIds);
         let invoiceItemIds: number[] = [];
         try {
           invoiceItemIds = JSON.parse(existingInvoice.itemIds);
+          console.log("Parsed itemIds:", invoiceItemIds);
           
           // Filter repair items to only include those associated with this invoice
           if (invoiceItemIds.length > 0) {
             invoiceItems = repairItems?.filter((item: any) => 
               invoiceItemIds.includes(item.id)
             ) || [];
+            console.log("Found items by IDs:", invoiceItems);
           }
         } catch (error) {
           console.error("Failed to parse invoice itemIds:", error);

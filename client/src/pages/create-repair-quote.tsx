@@ -263,6 +263,8 @@ export default function CreateRepairQuote() {
   // Load existing quote data when editing
   useEffect(() => {
     if (existingQuote && isEditing) {
+      console.log("Loading existing quote:", existingQuote);
+      
       // Set the initial values from the existing quote
       if (existingQuote.currencyCode) {
         setSelectedCurrencyCode(existingQuote.currencyCode);
@@ -276,23 +278,28 @@ export default function CreateRepairQuote() {
       let quoteItems = [];
       
       if (existingQuote.itemsData) {
+        console.log("Found itemsData:", existingQuote.itemsData);
         try {
           quoteItems = JSON.parse(existingQuote.itemsData);
+          console.log("Parsed items from itemsData:", quoteItems);
         } catch (error) {
           console.error("Failed to parse quote itemsData:", error);
         }
       } 
       // Fallback to old format with itemIds
       else if (existingQuote.itemIds) {
+        console.log("Using legacy itemIds:", existingQuote.itemIds);
         let quoteItemIds: number[] = [];
         try {
           quoteItemIds = JSON.parse(existingQuote.itemIds);
+          console.log("Parsed itemIds:", quoteItemIds);
           
           // Filter repair items to only include those associated with this quote
           if (quoteItemIds.length > 0) {
             quoteItems = repairItems?.filter((item: any) => 
               quoteItemIds.includes(item.id)
             ) || [];
+            console.log("Found items by IDs:", quoteItems);
           }
         } catch (error) {
           console.error("Failed to parse quote itemIds:", error);
