@@ -115,13 +115,26 @@ export default function RepairItemForm({
     try {
       if (isEditMode && existingItem) {
         // Update existing item
-        await apiRequest("PUT", `/api/repairs/${repairId}/items/${existingItem.id}`, data);
-        toast({
-          title: "Item updated",
-          description: "The repair item has been updated successfully",
-        });
+        console.log(`Updating repair item with ID ${existingItem.id} for repair ${repairId}`);
+        console.log("Item data being sent:", data);
+        
+        try {
+          const response = await apiRequest("PUT", `/api/repairs/${repairId}/items/${existingItem.id}`, data);
+          console.log("Update response:", response);
+          toast({
+            title: "Item updated",
+            description: "The repair item has been updated successfully",
+          });
+        } catch (error: any) {
+          console.error("Error updating repair item:", error);
+          console.error("Error details:", error.response?.data || error.message);
+          throw error; // Re-throw to be caught by the outer catch block
+        }
       } else {
         // Create new item
+        console.log("Creating new repair item for repair", repairId);
+        console.log("Item data being sent:", data);
+        
         await apiRequest("POST", `/api/repairs/${repairId}/items`, data);
         toast({
           title: "Item added",
