@@ -272,26 +272,45 @@ export default function CreateRepairQuote() {
         setSelectedTaxRateId(existingQuote.taxRateId);
       }
       
-      // Get the item IDs associated with this quote
-      let quoteItemIds: number[] = [];
-      if (existingQuote.itemIds) {
+      // Try to get items data from itemsData field first (new format)
+      let quoteItems = [];
+      
+      if (existingQuote.itemsData) {
+        try {
+          quoteItems = JSON.parse(existingQuote.itemsData);
+        } catch (error) {
+          console.error("Failed to parse quote itemsData:", error);
+        }
+      } 
+      // Fallback to old format with itemIds
+      else if (existingQuote.itemIds) {
+        let quoteItemIds: number[] = [];
         try {
           quoteItemIds = JSON.parse(existingQuote.itemIds);
+          
+          // Filter repair items to only include those associated with this quote
+          if (quoteItemIds.length > 0) {
+            quoteItems = repairItems?.filter((item: any) => 
+              quoteItemIds.includes(item.id)
+            ) || [];
+          }
         } catch (error) {
           console.error("Failed to parse quote itemIds:", error);
         }
       }
       
-      // Filter repair items to only include those associated with this quote
-      // Or if no itemIds are stored (for backward compatibility), use all repair items
-      let quoteItems = [];
-      if (quoteItemIds.length > 0) {
-        quoteItems = repairItems?.filter((item: any) => 
-          quoteItemIds.includes(item.id)
-        ) || [];
-      } else {
+      // If no items were loaded from either method, fall back to all repair items
+      if (quoteItems.length === 0) {
         quoteItems = repairItems || [];
       }
+      
+      // Ensure items have the expected structure regardless of source
+      const formattedItems = quoteItems.map((item: any) => ({
+        id: item.id, // Preserve ID if it exists
+        description: item.description || '',
+        quantity: parseFloat(item.quantity) || 1,
+        unitPrice: parseFloat(item.unitPrice) || 0,
+      }));
       
       // Prepare form values
       const formValues = {
@@ -301,13 +320,7 @@ export default function CreateRepairQuote() {
         validUntil: existingQuote.expirationDate ? new Date(existingQuote.expirationDate) : undefined,
         currencyCode: existingQuote.currencyCode || 'USD',
         taxRateId: existingQuote.taxRateId,
-        // Now use the filtered items that belong to this quote
-        items: quoteItems.map((item: any) => ({
-          id: item.id, // Store the original item ID
-          description: item.description,
-          quantity: parseFloat(item.quantity),
-          unitPrice: parseFloat(item.unitPrice),
-        })) || []
+        items: formattedItems
       };
       
       // Reset the form with the quote data
@@ -323,8 +336,8 @@ export default function CreateRepairQuote() {
   // Create quote mutation
   const createQuoteMutation = useMutation({
     mutationFn: async (data: z.infer<typeof quoteSchema>) => {
-      // Extract item IDs from the form data for tracking which items belong to this quote
-      const itemIds = form.getValues("items")?.map((item, index) => item.id || -index) || [];
+      // Store the actual items rather than just IDs
+      const itemsToStore = form.getValues("items") || [];
       
       return apiRequest("POST", "/api/quotes", {
         ...data,
@@ -332,8 +345,8 @@ export default function CreateRepairQuote() {
         subtotal,
         taxAmount,
         total, // Using "total" instead of "totalAmount" to match backend
-        // Store item IDs to associate with this quote
-        itemIds: JSON.stringify(itemIds),
+        // Store the complete items data in JSON format
+        itemsData: JSON.stringify(itemsToStore),
       });
     },
     onSuccess: () => {
@@ -362,8 +375,8 @@ export default function CreateRepairQuote() {
   // Update quote mutation
   const updateQuoteMutation = useMutation({
     mutationFn: async (data: z.infer<typeof quoteSchema>) => {
-      // Extract item IDs from the form data for tracking which items belong to this quote
-      const itemIds = form.getValues("items")?.map((item, index) => item.id || -index) || [];
+      // Store the actual items rather than just IDs
+      const itemsToStore = form.getValues("items") || [];
       
       return apiRequest("PUT", `/api/quotes/${quoteId}`, {
         ...data,
@@ -371,8 +384,8 @@ export default function CreateRepairQuote() {
         subtotal,
         taxAmount,
         total, // Using "total" instead of "totalAmount" to match backend
-        // Store item IDs to associate with this quote
-        itemIds: JSON.stringify(itemIds),
+        // Store the complete items data in JSON format
+        itemsData: JSON.stringify(itemsToStore),
       });
     },
     onSuccess: () => {

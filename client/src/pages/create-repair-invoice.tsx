@@ -269,26 +269,45 @@ export default function CreateRepairInvoice() {
         setSelectedTaxRateId(existingInvoice.taxRateId);
       }
       
-      // Get the item IDs associated with this invoice
-      let invoiceItemIds: number[] = [];
-      if (existingInvoice.itemIds) {
+      // Try to get items data from itemsData field first (new format)
+      let invoiceItems = [];
+      
+      if (existingInvoice.itemsData) {
+        try {
+          invoiceItems = JSON.parse(existingInvoice.itemsData);
+        } catch (error) {
+          console.error("Failed to parse invoice itemsData:", error);
+        }
+      } 
+      // Fallback to old format with itemIds
+      else if (existingInvoice.itemIds) {
+        let invoiceItemIds: number[] = [];
         try {
           invoiceItemIds = JSON.parse(existingInvoice.itemIds);
+          
+          // Filter repair items to only include those associated with this invoice
+          if (invoiceItemIds.length > 0) {
+            invoiceItems = repairItems?.filter((item: any) => 
+              invoiceItemIds.includes(item.id)
+            ) || [];
+          }
         } catch (error) {
           console.error("Failed to parse invoice itemIds:", error);
         }
       }
       
-      // Filter repair items to only include those associated with this invoice
-      // Or if no itemIds are stored (for backward compatibility), use all repair items
-      let invoiceItems = [];
-      if (invoiceItemIds.length > 0) {
-        invoiceItems = repairItems?.filter((item: any) => 
-          invoiceItemIds.includes(item.id)
-        ) || [];
-      } else {
+      // If no items were loaded from either method, fall back to all repair items
+      if (invoiceItems.length === 0) {
         invoiceItems = repairItems || [];
       }
+      
+      // Ensure items have the expected structure regardless of source
+      const formattedItems = invoiceItems.map((item: any) => ({
+        id: item.id, // Preserve ID if it exists
+        description: item.description || '',
+        quantity: parseFloat(item.quantity) || 1,
+        unitPrice: parseFloat(item.unitPrice) || 0,
+      }));
       
       // Prepare form values
       const formValues = {
@@ -296,14 +315,7 @@ export default function CreateRepairInvoice() {
         invoiceNumber: existingInvoice.invoiceNumber || '',
         notes: existingInvoice.notes || '',
         dueDate: existingInvoice.dueDate ? new Date(existingInvoice.dueDate) : undefined,
-        // Don't include currencyCode or taxRateId as they now use global settings
-        // Now use the filtered items that belong to this invoice
-        items: invoiceItems.map((item: any) => ({
-          id: item.id, // Store the original item ID
-          description: item.description,
-          quantity: parseFloat(item.quantity),
-          unitPrice: parseFloat(item.unitPrice),
-        })) || []
+        items: formattedItems
       };
       
       // Reset the form with the invoice data
@@ -319,8 +331,8 @@ export default function CreateRepairInvoice() {
   // Create invoice mutation
   const createInvoiceMutation = useMutation({
     mutationFn: async (data: z.infer<typeof invoiceSchema>) => {
-      // Extract item IDs from the form data for tracking which items belong to this invoice
-      const itemIds = form.getValues("items")?.map((item, index) => item.id || -index) || [];
+      // Store the actual items rather than just IDs
+      const itemsToStore = form.getValues("items") || [];
       
       return apiRequest("POST", "/api/invoices", {
         ...data,
@@ -331,8 +343,8 @@ export default function CreateRepairInvoice() {
         // Include the global currency and tax rate
         currencyCode: selectedCurrencyCode || defaultCurrency?.code,
         taxRateId: selectedTaxRateId || defaultTaxRate?.id,
-        // Store item IDs to associate with this invoice
-        itemIds: JSON.stringify(itemIds),
+        // Store the complete items data in JSON format
+        itemsData: JSON.stringify(itemsToStore),
       });
     },
     onSuccess: () => {
@@ -361,8 +373,8 @@ export default function CreateRepairInvoice() {
   // Update invoice mutation
   const updateInvoiceMutation = useMutation({
     mutationFn: async (data: z.infer<typeof invoiceSchema>) => {
-      // Extract item IDs from the form data for tracking which items belong to this invoice
-      const itemIds = form.getValues("items")?.map((item, index) => item.id || -index) || [];
+      // Store the actual items rather than just IDs
+      const itemsToStore = form.getValues("items") || [];
       
       return apiRequest("PUT", `/api/invoices/${invoiceId}`, {
         ...data,
@@ -373,8 +385,8 @@ export default function CreateRepairInvoice() {
         // Include the global currency and tax rate
         currencyCode: selectedCurrencyCode || defaultCurrency?.code,
         taxRateId: selectedTaxRateId || defaultTaxRate?.id,
-        // Store item IDs to associate with this invoice
-        itemIds: JSON.stringify(itemIds),
+        // Store the complete items data in JSON format
+        itemsData: JSON.stringify(itemsToStore),
       });
     },
     onSuccess: () => {
