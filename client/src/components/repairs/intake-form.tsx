@@ -489,7 +489,15 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
           
           <div className="flex items-center justify-between">
             <span className="text-xs sm:text-sm text-gray-500">or</span>
-            <Button onClick={handleNewCustomer} size="sm" className="text-xs sm:text-sm py-1 h-8 sm:h-9">
+            <Button 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleNewCustomer();
+              }} 
+              size="sm" 
+              className="text-xs sm:text-sm py-1 h-8 sm:h-9"
+            >
               <i className="fas fa-plus mr-1 sm:mr-2"></i> New Customer
             </Button>
           </div>
@@ -507,7 +515,11 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                     className={`p-2 sm:p-3 cursor-pointer hover:bg-gray-50 ${
                       selectedCustomerId === customer.id ? "bg-blue-50" : ""
                     }`}
-                    onClick={() => handleCustomerSelected(customer.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleCustomerSelected(customer.id);
+                    }}
                   >
                     <div className="flex flex-col sm:flex-row sm:justify-between">
                       <div>
@@ -597,7 +609,11 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                     className={`p-2 sm:p-3 cursor-pointer hover:bg-gray-50 ${
                       selectedDeviceId === device.id ? "bg-blue-50" : ""
                     }`}
-                    onClick={() => handleDeviceSelected(device.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDeviceSelected(device.id);
+                    }}
                   >
                     <div className="font-medium text-sm sm:text-base">{device.brand} {device.model}</div>
                     <div className="text-xs sm:text-sm text-gray-500">{device.type}</div>
@@ -612,7 +628,11 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
           
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
             <Button 
-              onClick={handleNewDevice}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleNewDevice();
+              }}
               variant="outline"
               size="sm"
               className="text-xs sm:text-sm py-1 h-8 sm:h-9"
@@ -621,7 +641,11 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
             </Button>
             
             <Button 
-              onClick={handleSkipDevice}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSkipDevice();
+              }}
               variant="secondary"
               size="sm"
               className="text-xs sm:text-sm py-1 h-8 sm:h-9"
