@@ -158,10 +158,19 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
       // Update the local state immediately for the UI
       setCurrentStatus(newStatus);
       
-      // Make the API request
-      await apiRequest("PUT", `/api/repairs/${repairId}`, {
+      // Prepare update data
+      const updateData: any = {
         status: newStatus
-      });
+      };
+      
+      // If the status is changing to 'completed', reset the priority level to normal (3)
+      if (newStatus === 'completed') {
+        updateData.priorityLevel = 3;
+        console.log('Resetting priority level to normal as repair is completed');
+      }
+      
+      // Make the API request
+      await apiRequest("PUT", `/api/repairs/${repairId}`, updateData);
 
       // Invalidate and immediately refetch the queries to ensure UI updates
       await queryClient.invalidateQueries({ 

@@ -260,7 +260,10 @@ export default function RepairList({
                   <TableCell className="px-4 py-3 whitespace-nowrap">
                     <div className="flex flex-col gap-1">
                       <StatusBadge status={repair.status} />
-                      {repair.priorityLevel && repair.priorityLevel <= 2 && (
+                      {repair.priorityLevel && 
+                       repair.priorityLevel <= 2 && 
+                       repair.status !== 'completed' && 
+                       repair.status !== 'cancelled' && (
                         <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
                           <span className="mr-1 text-red-500">●</span>
                           Urgent
