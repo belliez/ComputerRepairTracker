@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { RepairWithRelations } from "@/types";
-import { Pencil, Plus, Trash2, Printer, Mail, CreditCard, Check, Calculator, FileText } from "lucide-react";
-import { Link } from "wouter";
+import { Pencil, Plus, Trash2, Printer, Mail, CreditCard, Check, Calculator, FileText, Edit } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { printDocument, createQuoteDocument, createInvoiceDocument } from "@/lib/print-utils";
@@ -75,7 +75,6 @@ import StatusBadge from "./status-badge";
 import QuoteForm from "./quote-form";
 import InvoiceForm from "./invoice-form";
 import IntakeForm from "./mobile-intake-form";
-import { Edit } from "lucide-react";
 import RepairItemForm from "./repair-item-form";
 import PaymentForm from "../payments/payment-form";
 
