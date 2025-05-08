@@ -160,7 +160,8 @@ export const quotes = pgTable("quotes", {
   notes: text("notes"),
   currencyCode: text("currency_code").default("USD").references(() => currencies.code),
   taxRateId: integer("tax_rate_id").references(() => taxRates.id),
-  itemIds: json("item_ids").default('[]'), // JSON array to store the IDs of items associated with this quote
+  itemIds: json("item_ids").default('[]'), // JSON array to store the IDs of items associated with this quote (legacy)
+  itemsData: text("items_data"), // JSON string to store complete item data including custom items
 });
 
 // Create a base insert schema
@@ -190,7 +191,8 @@ export const invoices = pgTable("invoices", {
   stripePaymentIntentId: text("stripe_payment_intent_id"),
   currencyCode: text("currency_code").default("USD").references(() => currencies.code),
   taxRateId: integer("tax_rate_id").references(() => taxRates.id),
-  itemIds: json("item_ids").default('[]'), // JSON array to store the IDs of items associated with this invoice
+  itemIds: json("item_ids").default('[]'), // JSON array to store the IDs of items associated with this invoice (legacy)
+  itemsData: text("items_data"), // JSON string to store complete item data including custom items
 });
 
 // Create a base insert schema for invoices
