@@ -171,8 +171,6 @@ export default function CreateRepairInvoice() {
       invoiceNumber: generateInvoiceNumber(),
       notes: "",
       dueDate: new Date(new Date().setDate(new Date().getDate() + 30)),  // Default: 30 days from now
-      currencyCode: defaultCurrency?.code || 'USD',
-      taxRateId: defaultTaxRate?.id,
       items: repairItems && repairItems.length > 0 ? 
         // Map repair items to invoice items
         repairItems.map((item: any) => ({
@@ -247,14 +245,12 @@ export default function CreateRepairInvoice() {
   useEffect(() => {
     if (defaultCurrency && defaultCurrency.code) {
       setSelectedCurrencyCode(defaultCurrency.code);
-      form.setValue('currencyCode', defaultCurrency.code);
     }
     
     if (defaultTaxRate && defaultTaxRate.id) {
       setSelectedTaxRateId(defaultTaxRate.id);
-      form.setValue('taxRateId', defaultTaxRate.id);
     }
-  }, [defaultCurrency, defaultTaxRate, form.setValue, form]);
+  }, [defaultCurrency, defaultTaxRate]);
   
   // Load existing invoice data when editing
   useEffect(() => {
@@ -274,8 +270,7 @@ export default function CreateRepairInvoice() {
         invoiceNumber: existingInvoice.invoiceNumber || '',
         notes: existingInvoice.notes || '',
         dueDate: existingInvoice.dueDate ? new Date(existingInvoice.dueDate) : undefined,
-        currencyCode: existingInvoice.currencyCode || 'USD',
-        taxRateId: existingInvoice.taxRateId,
+        // Don't include currencyCode or taxRateId as they now use global settings
         // TODO: we don't have line items directly in the invoice,
         // so we'll use the repair items as a starting point
         items: repairItems?.map((item: any) => ({
@@ -304,6 +299,9 @@ export default function CreateRepairInvoice() {
         subtotal,
         taxAmount,
         total, // Using "total" instead of "totalAmount" to match backend
+        // Include the global currency and tax rate
+        currencyCode: selectedCurrencyCode || defaultCurrency?.code,
+        taxRateId: selectedTaxRateId || defaultTaxRate?.id,
       });
     },
     onSuccess: () => {
@@ -338,6 +336,9 @@ export default function CreateRepairInvoice() {
         subtotal,
         taxAmount,
         total, // Using "total" instead of "totalAmount" to match backend
+        // Include the global currency and tax rate
+        currencyCode: selectedCurrencyCode || defaultCurrency?.code,
+        taxRateId: selectedTaxRateId || defaultTaxRate?.id,
       });
     },
     onSuccess: () => {
