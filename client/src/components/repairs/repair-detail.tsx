@@ -970,7 +970,11 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                             
                             <div className="flex justify-end gap-2 pt-2">
                               <Button 
-                                onClick={() => handleEditRepairItem(item)} 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleEditRepairItem(item);
+                                }} 
                                 variant="ghost" 
                                 size="sm"
                               >
@@ -978,7 +982,11 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                                 Edit
                               </Button>
                               <Button 
-                                onClick={() => handleDeleteRepairItem(item.id)} 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleDeleteRepairItem(item.id);
+                                }} 
                                 variant="ghost" 
                                 size="sm" 
                                 className="text-red-500 hover:text-red-700"
