@@ -570,7 +570,8 @@ export default function ViewRepair() {
             
             {safeGet(repair, 'device', null) ? (
               <DeviceInformation 
-                device={repair.device} 
+                device={repair.device}
+                customerId={repair.customerId}
                 onDeviceUpdated={() => {
                   // Refresh repair details to reflect updated device info
                   queryClient.invalidateQueries({ 

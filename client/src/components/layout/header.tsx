@@ -2,11 +2,24 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 
+import { useQuery } from "@tanstack/react-query";
+
 interface HeaderProps {
   onSidebarToggle: () => void;
 }
 
 export default function Header({ onSidebarToggle }: HeaderProps) {
+  // Query to get urgent repairs (priority 1 or 2, not completed or cancelled)
+  const { data: urgentRepairs = [] } = useQuery<any[]>({
+    queryKey: ["/api/repairs", { priority: "1,2" }],
+  });
+
+  // Check if there are any urgent repairs
+  const hasUrgentRepairs = urgentRepairs.length > 0 && 
+    urgentRepairs.some((repair: any) => 
+      repair.status !== 'completed' && repair.status !== 'cancelled'
+    );
+  
   return (
     <header className="bg-white border-b flex items-center justify-between p-4">
       <div className="flex items-center">
@@ -35,7 +48,9 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
       <div className="flex items-center ml-4">
         <Button variant="ghost" size="icon" className="relative">
           <i className="fas fa-bell text-gray-600"></i>
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          {hasUrgentRepairs && (
+            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+          )}
         </Button>
         <Button variant="ghost" size="icon">
           <i className="fas fa-question-circle text-gray-600"></i>
