@@ -15,7 +15,7 @@ export default function Header({ onSidebarToggle }: HeaderProps) {
   });
 
   // Check if there are any urgent repairs
-  const hasUrgentRepairs = urgentRepairs.length > 0 && 
+  const hasUrgentRepairs = Array.isArray(urgentRepairs) && urgentRepairs.length > 0 && 
     urgentRepairs.some((repair: any) => 
       repair.status !== 'completed' && repair.status !== 'cancelled'
     );
