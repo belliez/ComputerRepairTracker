@@ -252,7 +252,7 @@ export function createQuoteDocument(quote: any, customer: any, repair: any, item
         </tr>
         <tr>
           <th>Tax</th>
-          <td class="text-right">${formatCurrency(quote.tax || quote.taxAmount || 0, currency)}</td>
+          <td class="text-right">${formatCurrency(quote.tax || quote.taxAmount || (quote.total - quote.subtotal) || 0, currency)}</td>
         </tr>
         <tr>
           <th>Total</th>
@@ -367,7 +367,7 @@ export function createInvoiceDocument(invoice: any, customer: any, repair: any, 
         </tr>
         <tr>
           <th>Tax</th>
-          <td class="text-right">${formatCurrency(invoice.tax || invoice.taxAmount || 0, currency)}</td>
+          <td class="text-right">${formatCurrency(invoice.tax || invoice.taxAmount || (invoice.total - invoice.subtotal) || 0, currency)}</td>
         </tr>
         <tr>
           <th>Total</th>
