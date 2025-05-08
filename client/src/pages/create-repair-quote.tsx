@@ -302,12 +302,17 @@ export default function CreateRepairQuote() {
   // Create quote mutation
   const createQuoteMutation = useMutation({
     mutationFn: async (data: z.infer<typeof quoteSchema>) => {
+      // Extract item IDs from the form data for tracking which items belong to this quote
+      const itemIds = form.getValues("items")?.map((item, index) => item.id || -index) || [];
+      
       return apiRequest("POST", "/api/quotes", {
         ...data,
         // Add calculated totals
         subtotal,
         taxAmount,
         total, // Using "total" instead of "totalAmount" to match backend
+        // Store item IDs to associate with this quote
+        itemIds: JSON.stringify(itemIds),
       });
     },
     onSuccess: () => {
