@@ -269,6 +269,27 @@ export default function CreateRepairInvoice() {
         setSelectedTaxRateId(existingInvoice.taxRateId);
       }
       
+      // Get the item IDs associated with this invoice
+      let invoiceItemIds: number[] = [];
+      if (existingInvoice.itemIds) {
+        try {
+          invoiceItemIds = JSON.parse(existingInvoice.itemIds);
+        } catch (error) {
+          console.error("Failed to parse invoice itemIds:", error);
+        }
+      }
+      
+      // Filter repair items to only include those associated with this invoice
+      // Or if no itemIds are stored (for backward compatibility), use all repair items
+      let invoiceItems = [];
+      if (invoiceItemIds.length > 0) {
+        invoiceItems = repairItems?.filter((item: any) => 
+          invoiceItemIds.includes(item.id)
+        ) || [];
+      } else {
+        invoiceItems = repairItems || [];
+      }
+      
       // Prepare form values
       const formValues = {
         repairId: repairId,
@@ -276,9 +297,9 @@ export default function CreateRepairInvoice() {
         notes: existingInvoice.notes || '',
         dueDate: existingInvoice.dueDate ? new Date(existingInvoice.dueDate) : undefined,
         // Don't include currencyCode or taxRateId as they now use global settings
-        // TODO: we don't have line items directly in the invoice,
-        // so we'll use the repair items as a starting point
-        items: repairItems?.map((item: any) => ({
+        // Now use the filtered items that belong to this invoice
+        items: invoiceItems.map((item: any) => ({
+          id: item.id, // Store the original item ID
           description: item.description,
           quantity: parseFloat(item.quantity),
           unitPrice: parseFloat(item.unitPrice),
@@ -298,6 +319,9 @@ export default function CreateRepairInvoice() {
   // Create invoice mutation
   const createInvoiceMutation = useMutation({
     mutationFn: async (data: z.infer<typeof invoiceSchema>) => {
+      // Extract item IDs from the form data for tracking which items belong to this invoice
+      const itemIds = form.getValues("items")?.map((item, index) => item.id || -index) || [];
+      
       return apiRequest("POST", "/api/invoices", {
         ...data,
         // Add calculated totals
@@ -307,6 +331,8 @@ export default function CreateRepairInvoice() {
         // Include the global currency and tax rate
         currencyCode: selectedCurrencyCode || defaultCurrency?.code,
         taxRateId: selectedTaxRateId || defaultTaxRate?.id,
+        // Store item IDs to associate with this invoice
+        itemIds: JSON.stringify(itemIds),
       });
     },
     onSuccess: () => {
@@ -335,6 +361,9 @@ export default function CreateRepairInvoice() {
   // Update invoice mutation
   const updateInvoiceMutation = useMutation({
     mutationFn: async (data: z.infer<typeof invoiceSchema>) => {
+      // Extract item IDs from the form data for tracking which items belong to this invoice
+      const itemIds = form.getValues("items")?.map((item, index) => item.id || -index) || [];
+      
       return apiRequest("PUT", `/api/invoices/${invoiceId}`, {
         ...data,
         // Add calculated totals
@@ -344,6 +373,8 @@ export default function CreateRepairInvoice() {
         // Include the global currency and tax rate
         currencyCode: selectedCurrencyCode || defaultCurrency?.code,
         taxRateId: selectedTaxRateId || defaultTaxRate?.id,
+        // Store item IDs to associate with this invoice
+        itemIds: JSON.stringify(itemIds),
       });
     },
     onSuccess: () => {

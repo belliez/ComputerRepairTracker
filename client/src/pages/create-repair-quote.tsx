@@ -272,7 +272,28 @@ export default function CreateRepairQuote() {
         setSelectedTaxRateId(existingQuote.taxRateId);
       }
       
-      // Prepare form values 
+      // Get the item IDs associated with this quote
+      let quoteItemIds: number[] = [];
+      if (existingQuote.itemIds) {
+        try {
+          quoteItemIds = JSON.parse(existingQuote.itemIds);
+        } catch (error) {
+          console.error("Failed to parse quote itemIds:", error);
+        }
+      }
+      
+      // Filter repair items to only include those associated with this quote
+      // Or if no itemIds are stored (for backward compatibility), use all repair items
+      let quoteItems = [];
+      if (quoteItemIds.length > 0) {
+        quoteItems = repairItems?.filter((item: any) => 
+          quoteItemIds.includes(item.id)
+        ) || [];
+      } else {
+        quoteItems = repairItems || [];
+      }
+      
+      // Prepare form values
       const formValues = {
         repairId: repairId,
         quoteNumber: existingQuote.quoteNumber || '',
@@ -280,9 +301,9 @@ export default function CreateRepairQuote() {
         validUntil: existingQuote.expirationDate ? new Date(existingQuote.expirationDate) : undefined,
         currencyCode: existingQuote.currencyCode || 'USD',
         taxRateId: existingQuote.taxRateId,
-        // TODO: we don't have line items directly in the quote,
-        // so we'll use the repair items as a starting point
-        items: repairItems?.map((item: any) => ({
+        // Now use the filtered items that belong to this quote
+        items: quoteItems.map((item: any) => ({
+          id: item.id, // Store the original item ID
           description: item.description,
           quantity: parseFloat(item.quantity),
           unitPrice: parseFloat(item.unitPrice),
@@ -341,12 +362,17 @@ export default function CreateRepairQuote() {
   // Update quote mutation
   const updateQuoteMutation = useMutation({
     mutationFn: async (data: z.infer<typeof quoteSchema>) => {
+      // Extract item IDs from the form data for tracking which items belong to this quote
+      const itemIds = form.getValues("items")?.map((item, index) => item.id || -index) || [];
+      
       return apiRequest("PUT", `/api/quotes/${quoteId}`, {
         ...data,
         // Add calculated totals
         subtotal,
         taxAmount,
         total, // Using "total" instead of "totalAmount" to match backend
+        // Store item IDs to associate with this quote
+        itemIds: JSON.stringify(itemIds),
       });
     },
     onSuccess: () => {
