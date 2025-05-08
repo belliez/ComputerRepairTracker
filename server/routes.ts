@@ -712,7 +712,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const validatedData = insertQuoteSchema.parse(req.body);
         console.log("Validated quote data:", JSON.stringify(validatedData));
+        
+        // Check for items data
+        if (validatedData.itemsData) {
+          console.log("Quote includes itemsData:", validatedData.itemsData);
+          try {
+            const parsedItems = JSON.parse(validatedData.itemsData);
+            console.log("Parsed itemsData successfully, contains", parsedItems.length, "items");
+          } catch (parseError) {
+            console.error("Failed to parse itemsData:", parseError);
+          }
+        }
+        
         const quote = await storage.createQuote(validatedData);
+        console.log("Quote created successfully with ID:", quote.id);
         res.status(201).json(quote);
       } catch (validationError) {
         console.error("Quote validation error:", validationError);
@@ -738,15 +751,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid ID format" });
       }
 
+      console.log("Updating quote with ID:", id);
+      console.log("Received update data:", JSON.stringify(req.body));
+      
       const validatedData = insertQuoteSchema.partial().parse(req.body);
+      console.log("Validated quote update data:", JSON.stringify(validatedData));
+      
+      // Check for items data
+      if (validatedData.itemsData) {
+        console.log("Quote update includes itemsData:", validatedData.itemsData);
+        try {
+          const parsedItems = JSON.parse(validatedData.itemsData);
+          console.log("Parsed update itemsData successfully, contains", parsedItems.length, "items");
+        } catch (parseError) {
+          console.error("Failed to parse update itemsData:", parseError);
+        }
+      }
+      
       const updatedQuote = await storage.updateQuote(id, validatedData);
       
       if (!updatedQuote) {
         return res.status(404).json({ error: "Quote not found" });
       }
 
+      console.log("Quote updated successfully:", updatedQuote.id);
       res.json(updatedQuote);
     } catch (error) {
+      console.error("Quote update error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid quote data", details: error.errors });
       }
@@ -809,10 +840,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/invoices", async (req: Request, res: Response) => {
     try {
+      console.log("Received invoice data:", JSON.stringify(req.body));
       const validatedData = insertInvoiceSchema.parse(req.body);
+      console.log("Validated invoice data:", JSON.stringify(validatedData));
+      
+      // Check for items data
+      if (validatedData.itemsData) {
+        console.log("Invoice includes itemsData:", validatedData.itemsData);
+        try {
+          const parsedItems = JSON.parse(validatedData.itemsData);
+          console.log("Parsed itemsData successfully, contains", parsedItems.length, "items");
+        } catch (parseError) {
+          console.error("Failed to parse itemsData:", parseError);
+        }
+      }
+      
       const invoice = await storage.createInvoice(validatedData);
+      console.log("Invoice created successfully with ID:", invoice.id);
       res.status(201).json(invoice);
     } catch (error) {
+      console.error("Invoice creation error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid invoice data", details: error.errors });
       }
@@ -827,15 +874,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid ID format" });
       }
 
+      console.log("Updating invoice with ID:", id);
+      console.log("Received update data:", JSON.stringify(req.body));
+      
       const validatedData = insertInvoiceSchema.partial().parse(req.body);
+      console.log("Validated invoice update data:", JSON.stringify(validatedData));
+      
+      // Check for items data
+      if (validatedData.itemsData) {
+        console.log("Invoice update includes itemsData:", validatedData.itemsData);
+        try {
+          const parsedItems = JSON.parse(validatedData.itemsData);
+          console.log("Parsed update itemsData successfully, contains", parsedItems.length, "items");
+        } catch (parseError) {
+          console.error("Failed to parse update itemsData:", parseError);
+        }
+      }
+      
       const updatedInvoice = await storage.updateInvoice(id, validatedData);
       
       if (!updatedInvoice) {
         return res.status(404).json({ error: "Invoice not found" });
       }
 
+      console.log("Invoice updated successfully:", updatedInvoice.id);
       res.json(updatedInvoice);
     } catch (error) {
+      console.error("Invoice update error:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid invoice data", details: error.errors });
       }
@@ -1001,8 +1066,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Customer not found" });
       }
 
-      // Get repair items
+      // Get repair items (these will be used as a fallback if itemsData is not available)
       const items = await storage.getRepairItems(repair.id);
+      
+      console.log(`Sending quote email for quote #${quote.quoteNumber}, repair #${repair.ticketNumber}`);
+      
+      // Check for itemsData
+      if (quote.itemsData) {
+        console.log("Quote email: Using itemsData for items");
+        try {
+          const parsedItems = JSON.parse(quote.itemsData);
+          console.log(`Quote email: Found ${parsedItems.length} items in itemsData`);
+        } catch (parseError) {
+          console.error("Quote email: Failed to parse itemsData:", parseError);
+        }
+      } else if (quote.itemIds) {
+        console.log("Quote email: Using legacy itemIds format");
+      } else {
+        console.log("Quote email: No item data found, using all repair items as fallback");
+      }
 
       // Generate email HTML
       const emailHtml = generateQuoteEmail(quote, customer, repair, items);
@@ -1027,6 +1109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: "Failed to send email" });
       }
 
+      console.log("Quote email sent successfully to:", customer.email);
       res.json({ success: true, message: "Quote email sent successfully" });
     } catch (error) {
       console.error("Error sending quote email:", error);
@@ -1059,8 +1142,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Customer not found" });
       }
 
-      // Get repair items
+      // Get repair items (these will be used as a fallback if itemsData is not available)
       const items = await storage.getRepairItems(repair.id);
+      
+      console.log(`Sending invoice email for invoice #${invoice.invoiceNumber}, repair #${repair.ticketNumber}`);
+      
+      // Check for itemsData
+      if (invoice.itemsData) {
+        console.log("Invoice email: Using itemsData for items");
+        try {
+          const parsedItems = JSON.parse(invoice.itemsData);
+          console.log(`Invoice email: Found ${parsedItems.length} items in itemsData`);
+        } catch (parseError) {
+          console.error("Invoice email: Failed to parse itemsData:", parseError);
+        }
+      } else if (invoice.itemIds) {
+        console.log("Invoice email: Using legacy itemIds format");
+      } else {
+        console.log("Invoice email: No item data found, using all repair items as fallback");
+      }
 
       // Generate email HTML
       const emailHtml = generateInvoiceEmail(invoice, customer, repair, items);
@@ -1085,6 +1185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ error: "Failed to send email" });
       }
 
+      console.log("Invoice email sent successfully to:", customer.email);
       res.json({ success: true, message: "Invoice email sent successfully" });
     } catch (error) {
       console.error("Error sending invoice email:", error);

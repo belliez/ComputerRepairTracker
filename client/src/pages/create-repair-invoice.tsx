@@ -158,9 +158,12 @@ export default function CreateRepairInvoice() {
     const year = now.getFullYear().toString().substring(2);
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const day = now.getDate().toString().padStart(2, '0');
-    const randomDigits = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+    const hours = now.getHours().toString().padStart(2, '0');
+    const minutes = now.getMinutes().toString().padStart(2, '0');
+    const seconds = now.getSeconds().toString().padStart(2, '0');
     
-    return `INV-${year}${month}${day}${randomDigits}`;
+    // Use timestamp components instead of random numbers to ensure uniqueness
+    return `INV-${year}${month}${day}-${hours}${minutes}${seconds}`;
   };
   
   // Set up form with react-hook-form
