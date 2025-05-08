@@ -34,10 +34,10 @@ export default function EditRepairItem() {
   const { toast } = useToast();
   const { formatCurrency } = useCurrency();
   
-  // Parse the repair ID and item ID from the URL
-  const urlParts = location.split('/');
-  const repairId = parseInt(urlParts[2]);
-  const itemId = parseInt(urlParts[4]);
+  // Parse the repair ID and item ID from the URL using named parameters
+  const match = /\/repairs\/(\d+)\/items\/(\d+)\/edit/.exec(location);
+  const repairId = match ? parseInt(match[1]) : 0;
+  const itemId = match ? parseInt(match[2]) : 0;
   
   // Form validation schema
   const formSchema = z.object({

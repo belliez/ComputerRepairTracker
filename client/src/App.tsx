@@ -26,7 +26,7 @@ function Router() {
       <Route path="/repairs/create" component={CreateRepair} />
       <Route path="/repairs/edit/:id" component={EditRepair} />
       <Route path="/repairs/:id/items/add" component={AddRepairItem} />
-      <Route path="/repairs/:id/items/:id/edit" component={EditRepairItem} />
+      <Route path="/repairs/:repairId/items/:itemId/edit" component={EditRepairItem} />
       <Route path="/repairs/:id/quotes/create" component={CreateRepairQuote} />
       <Route path="/repairs/:id/quotes/:quoteId/edit" component={CreateRepairQuote} />
       <Route path="/repairs/:id/invoices/create" component={CreateRepairInvoice} />

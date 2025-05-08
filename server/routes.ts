@@ -589,6 +589,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch repair items" });
     }
   });
+  
+  // Get single repair item
+  apiRouter.get("/repairs/:repairId/items/:id", async (req: Request, res: Response) => {
+    try {
+      const repairId = parseInt(req.params.repairId);
+      const itemId = parseInt(req.params.id);
+      
+      if (isNaN(repairId) || isNaN(itemId)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const item = await storage.getRepairItem(itemId);
+      
+      if (!item) {
+        return res.status(404).json({ error: "Repair item not found" });
+      }
+      
+      // Verify the item belongs to the specified repair
+      if (item.repairId !== repairId) {
+        return res.status(404).json({ error: "Repair item not found in this repair" });
+      }
+      
+      res.json(item);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch repair item" });
+    }
+  });
 
   apiRouter.post("/repairs/:repairId/items", async (req: Request, res: Response) => {
     try {
