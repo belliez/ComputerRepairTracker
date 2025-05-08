@@ -145,7 +145,11 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   // Calculate values from repair items
   const subtotal = repairItems?.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0) || 0;
   const taxRate = selectedTaxRate?.rate || 0;
-  const taxAmount = subtotal * taxRate;
+  
+  // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
+  const normalizedTaxRate = taxRate > 1 ? taxRate / 100 : taxRate;
+  
+  const taxAmount = subtotal * normalizedTaxRate;
   const total = subtotal + taxAmount;
 
   // Form validation schema - client side only
@@ -210,7 +214,11 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   useEffect(() => {
     if (repairItems) {
       const newSubtotal = repairItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-      const newTaxAmount = newSubtotal * taxRate;
+      
+      // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
+      const normalizedTaxRate = taxRate > 1 ? taxRate / 100 : taxRate;
+      
+      const newTaxAmount = newSubtotal * normalizedTaxRate;
       const newTotal = newSubtotal + newTaxAmount;
       
       form.setValue("subtotal", newSubtotal);
@@ -444,7 +452,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                           ) : taxRates && taxRates.length > 0 ? (
                             taxRates.map((taxRate) => (
                               <SelectItem key={taxRate.id} value={String(taxRate.id)}>
-                                {taxRate.name} ({(taxRate.rate * 100).toFixed(2)}%)
+                                {taxRate.name} ({taxRate.rate > 1 ? taxRate.rate.toFixed(2) : (taxRate.rate * 100).toFixed(2)}%)
                               </SelectItem>
                             ))
                           ) : (
@@ -475,7 +483,11 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                   onChange={(updatedItems) => {
                     // We'll use this to update the form subtotals
                     const newSubtotal = updatedItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-                    const newTaxAmount = newSubtotal * taxRate;
+                    
+                    // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
+                    const normalizedTaxRate = taxRate > 1 ? taxRate / 100 : taxRate;
+                    
+                    const newTaxAmount = newSubtotal * normalizedTaxRate;
                     const newTotal = newSubtotal + newTaxAmount;
                     
                     form.setValue("subtotal", newSubtotal);
@@ -535,7 +547,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                     name="tax"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Tax ({(taxRate * 100).toFixed(2)}%)</FormLabel>
+                        <FormLabel>Tax ({taxRate > 1 ? taxRate.toFixed(2) : (taxRate * 100).toFixed(2)}%)</FormLabel>
                         <FormControl>
                           <div className="flex items-center">
                             <span className="mr-1">{selectedCurrency?.symbol || '$'}</span>
