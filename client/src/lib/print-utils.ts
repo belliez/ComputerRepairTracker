@@ -176,7 +176,7 @@ export function printDocument(document: PrintableDocument): void {
 /**
  * Create a quote document for printing
  */
-export function createQuoteDocument(quote: any, customer: any, repair: any, items: any[]): PrintableDocument {
+export function createQuoteDocument(quote: any, customer: any, repair: any, itemsFromRepair: any[]): PrintableDocument {
   // Format the dates
   const dateCreated = new Date(quote.dateCreated).toLocaleDateString();
   const expirationDate = quote.expirationDate 
@@ -187,6 +187,32 @@ export function createQuoteDocument(quote: any, customer: any, repair: any, item
   const currency = quote.currencyCode 
     ? { code: quote.currencyCode, name: '', symbol: '', isDefault: false } 
     : null;
+  
+  // Use itemsData from quote if available, otherwise fall back to passed items
+  let itemsToDisplay = itemsFromRepair;
+  
+  // Check for itemsData field (new format)
+  if (quote.itemsData) {
+    try {
+      const parsedItems = JSON.parse(quote.itemsData);
+      if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+        itemsToDisplay = parsedItems;
+      }
+    } catch (error) {
+      console.error("Failed to parse quote itemsData:", error);
+    }
+  }
+  // If no itemsData, try legacy itemIds format
+  else if (quote.itemIds && itemsFromRepair.length > 0) {
+    try {
+      const itemIds = JSON.parse(quote.itemIds);
+      if (Array.isArray(itemIds) && itemIds.length > 0) {
+        itemsToDisplay = itemsFromRepair.filter(item => itemIds.includes(item.id));
+      }
+    } catch (error) {
+      console.error("Failed to parse quote itemIds:", error);
+    }
+  }
   
   // Generate items table
   const itemsTable = `
@@ -201,15 +227,15 @@ export function createQuoteDocument(quote: any, customer: any, repair: any, item
         </tr>
       </thead>
       <tbody>
-        ${items.map(item => `
+        ${itemsToDisplay.length > 0 ? itemsToDisplay.map(item => `
           <tr>
-            <td>${item.description}</td>
+            <td>${item.description || 'N/A'}</td>
             <td>${item.itemType === 'part' ? 'Part' : 'Service'}</td>
             <td class="text-right">${formatCurrency(item.unitPrice, currency)}</td>
-            <td class="text-right">${item.quantity}</td>
-            <td class="text-right">${formatCurrency(item.unitPrice * item.quantity, currency)}</td>
+            <td class="text-right">${item.quantity || 1}</td>
+            <td class="text-right">${formatCurrency((item.unitPrice || 0) * (item.quantity || 1), currency)}</td>
           </tr>
-        `).join('')}
+        `).join('') : '<tr><td colspan="5" class="text-center">No items</td></tr>'}
       </tbody>
     </table>
   `;
@@ -278,7 +304,7 @@ export function createQuoteDocument(quote: any, customer: any, repair: any, item
 /**
  * Create an invoice document for printing
  */
-export function createInvoiceDocument(invoice: any, customer: any, repair: any, items: any[]): PrintableDocument {
+export function createInvoiceDocument(invoice: any, customer: any, repair: any, itemsFromRepair: any[]): PrintableDocument {
   // Format the dates
   const dateIssued = new Date(invoice.dateIssued).toLocaleDateString();
   const datePaid = invoice.datePaid
@@ -289,6 +315,32 @@ export function createInvoiceDocument(invoice: any, customer: any, repair: any, 
   const currency = invoice.currencyCode 
     ? { code: invoice.currencyCode, name: '', symbol: '', isDefault: false } 
     : null;
+  
+  // Use itemsData from invoice if available, otherwise fall back to passed items
+  let itemsToDisplay = itemsFromRepair;
+  
+  // Check for itemsData field (new format)
+  if (invoice.itemsData) {
+    try {
+      const parsedItems = JSON.parse(invoice.itemsData);
+      if (Array.isArray(parsedItems) && parsedItems.length > 0) {
+        itemsToDisplay = parsedItems;
+      }
+    } catch (error) {
+      console.error("Failed to parse invoice itemsData:", error);
+    }
+  }
+  // If no itemsData, try legacy itemIds format
+  else if (invoice.itemIds && itemsFromRepair.length > 0) {
+    try {
+      const itemIds = JSON.parse(invoice.itemIds);
+      if (Array.isArray(itemIds) && itemIds.length > 0) {
+        itemsToDisplay = itemsFromRepair.filter(item => itemIds.includes(item.id));
+      }
+    } catch (error) {
+      console.error("Failed to parse invoice itemIds:", error);
+    }
+  }
   
   // Generate items table
   const itemsTable = `
@@ -303,15 +355,15 @@ export function createInvoiceDocument(invoice: any, customer: any, repair: any, 
         </tr>
       </thead>
       <tbody>
-        ${items.map(item => `
+        ${itemsToDisplay.length > 0 ? itemsToDisplay.map(item => `
           <tr>
-            <td>${item.description}</td>
+            <td>${item.description || 'N/A'}</td>
             <td>${item.itemType === 'part' ? 'Part' : 'Service'}</td>
             <td class="text-right">${formatCurrency(item.unitPrice, currency)}</td>
-            <td class="text-right">${item.quantity}</td>
-            <td class="text-right">${formatCurrency(item.unitPrice * item.quantity, currency)}</td>
+            <td class="text-right">${item.quantity || 1}</td>
+            <td class="text-right">${formatCurrency((item.unitPrice || 0) * (item.quantity || 1), currency)}</td>
           </tr>
-        `).join('')}
+        `).join('') : '<tr><td colspan="5" class="text-center">No items</td></tr>'}
       </tbody>
     </table>
   `;
