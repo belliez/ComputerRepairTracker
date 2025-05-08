@@ -57,6 +57,40 @@ export default function ViewRepair() {
   const { toast } = useToast();
   const { formatCurrency } = useCurrency();
   
+  // Quote approval mutation
+  const approveQuoteMutation = useMutation({
+    mutationFn: async (quoteId: number) => {
+      return apiRequest("PUT", `/api/quotes/${quoteId}`, {
+        status: "approved"
+      });
+    },
+    onSuccess: async () => {
+      toast({
+        title: "Quote approved",
+        description: "The quote has been approved successfully",
+      });
+      
+      // Refresh data
+      await queryClient.invalidateQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        refetchType: 'active'
+      });
+      
+      await queryClient.refetchQueries({ 
+        queryKey: [`/api/repairs/${repairId}/details`],
+        exact: true
+      });
+    },
+    onError: (error) => {
+      console.error("Failed to approve quote:", error);
+      toast({
+        title: "Error",
+        description: "Failed to approve the quote. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+  
   // Get the tab from the URL query parameters if available
   const urlParams = new URLSearchParams(window.location.search);
   const tabParam = urlParams.get('tab');
@@ -366,6 +400,10 @@ export default function ViewRepair() {
     }
   };
   
+  const handleApproveQuote = (quoteId: number) => {
+    approveQuoteMutation.mutate(quoteId);
+  };
+
   const handleEmailQuote = (quoteId: number) => {
     emailQuoteMutation.mutate(quoteId);
   };
@@ -671,11 +709,30 @@ export default function ViewRepair() {
                         </TableCell>
                         <TableCell>
                           <div className="flex justify-end gap-2">
+                            {/* Accept Quote Button */}
+                            {quote.status !== 'approved' && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="h-8 px-2 text-xs"
+                                onClick={(e) => {
+                                  e.preventDefault();  // Prevent navigation
+                                  handleApproveQuote(quote.id);
+                                }}
+                                disabled={approveQuoteMutation.isPending}
+                              >
+                                Accept
+                              </Button>
+                            )}
+                            
                             <Button 
                               variant="ghost" 
                               size="sm"
                               className="h-8 w-8 p-0"
-                              onClick={() => handlePrintQuote(quote)}
+                              onClick={(e) => {
+                                e.preventDefault();  // Prevent navigation
+                                handlePrintQuote(quote);
+                              }}
                             >
                               <Printer className="h-4 w-4" />
                             </Button>
@@ -683,13 +740,23 @@ export default function ViewRepair() {
                               variant="ghost" 
                               size="sm" 
                               className="h-8 w-8 p-0"
-                              onClick={() => handleEmailQuote(quote.id)}
+                              onClick={(e) => {
+                                e.preventDefault();  // Prevent navigation
+                                handleEmailQuote(quote.id);
+                              }}
                               disabled={emailQuoteMutation.isPending}
                             >
                               <Mail className="h-4 w-4" />
                             </Button>
                             <Link to={`/repairs/${repairId}/quotes/${quote.id}/edit`}>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();  // Allow navigation but prevent bubbling
+                                }}
+                              >
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             </Link>
@@ -697,7 +764,8 @@ export default function ViewRepair() {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.preventDefault(); // Prevent navigation
                                 setDeleteItemType('quote');
                                 setDeleteItemId(quote.id);
                                 setShowDeleteConfirm(true);
@@ -774,7 +842,10 @@ export default function ViewRepair() {
                               variant="ghost" 
                               size="sm"
                               className="h-8 w-8 p-0"
-                              onClick={() => handlePrintInvoice(invoice)}
+                              onClick={(e) => {
+                                e.preventDefault();  // Prevent navigation
+                                handlePrintInvoice(invoice);
+                              }}
                             >
                               <Printer className="h-4 w-4" />
                             </Button>
@@ -782,20 +853,37 @@ export default function ViewRepair() {
                               variant="ghost" 
                               size="sm" 
                               className="h-8 w-8 p-0"
-                              onClick={() => handleEmailInvoice(invoice.id)}
+                              onClick={(e) => {
+                                e.preventDefault();  // Prevent navigation
+                                handleEmailInvoice(invoice.id);
+                              }}
                               disabled={emailInvoiceMutation.isPending}
                             >
                               <Mail className="h-4 w-4" />
                             </Button>
                             {invoice.status !== 'paid' && (
                               <Link to={`/repairs/${repairId}/invoices/${invoice.id}/pay`}>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 w-8 p-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation(); // Allow navigation but prevent bubbling
+                                  }}
+                                >
                                   <CreditCard className="h-4 w-4" />
                                 </Button>
                               </Link>
                             )}
                             <Link to={`/repairs/${repairId}/invoices/${invoice.id}/edit`}>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation(); // Allow navigation but prevent bubbling
+                                }}
+                              >
                                 <Pencil className="h-4 w-4" />
                               </Button>
                             </Link>
@@ -803,7 +891,8 @@ export default function ViewRepair() {
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.preventDefault(); // Prevent navigation
                                 setDeleteItemType('invoice');
                                 setDeleteItemId(invoice.id);
                                 setShowDeleteConfirm(true);
