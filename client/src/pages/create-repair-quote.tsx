@@ -207,7 +207,12 @@ export default function CreateRepairQuote() {
       if (selectedTaxRateId && taxRates && taxRates.length > 0) {
         const selectedTaxRate = taxRates.find((rate: any) => rate.id === selectedTaxRateId);
         if (selectedTaxRate) {
-          const newTaxAmount = newSubtotal * (selectedTaxRate.rate / 100);
+          // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
+          const normalizedRate = selectedTaxRate.rate > 1 
+            ? selectedTaxRate.rate / 100 
+            : selectedTaxRate.rate;
+            
+          const newTaxAmount = newSubtotal * normalizedRate;
           setTaxAmount(newTaxAmount);
           setTotal(newSubtotal + newTaxAmount);
         } else {
@@ -527,85 +532,74 @@ export default function CreateRepairQuote() {
                 <FormField
                   control={form.control}
                   name="currencyCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Currency</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setSelectedCurrencyCode(value);
-                        }}
-                      >
+                  render={({ field }) => {
+                    // Get the current currency from the list
+                    const currentCurrency = currencies.find((c: any) => c.code === field.value);
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel>Currency</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select currency" />
-                          </SelectTrigger>
+                          <div className="flex h-10 px-3 py-2 text-sm border rounded-md border-input bg-background">
+                            {isLoadingCurrencies ? (
+                              <div className="flex justify-center w-full">
+                                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                              </div>
+                            ) : currentCurrency ? (
+                              <div>
+                                {currentCurrency.symbol} {currentCurrency.name} ({currentCurrency.code})
+                              </div>
+                            ) : (
+                              <div>$ US Dollar (USD)</div>
+                            )}
+                          </div>
                         </FormControl>
-                        <SelectContent>
-                          {isLoadingCurrencies ? (
-                            <div className="flex justify-center p-2">
-                              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                            </div>
-                          ) : currencies && currencies.length > 0 ? (
-                            currencies.map((currency: any) => (
-                              <SelectItem key={currency.code} value={currency.code}>
-                                {currency.symbol} {currency.name} ({currency.code})
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="USD">$ US Dollar (USD)</SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Select the currency for this quote
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                        <FormDescription>
+                          Using system default currency
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
 
                 <FormField
                   control={form.control}
                   name="taxRateId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tax Rate</FormLabel>
-                      <Select
-                        value={field.value?.toString() || ''}
-                        onValueChange={(value) => {
-                          const numericValue = parseInt(value);
-                          field.onChange(numericValue);
-                          setSelectedTaxRateId(numericValue);
-                        }}
-                      >
+                  render={({ field }) => {
+                    // Get the current tax rate from the list
+                    const currentTaxRate = taxRates.find((t: any) => t.id === field.value);
+                    
+                    // Normalize tax rate display
+                    const displayRate = currentTaxRate ? 
+                      (currentTaxRate.rate > 1 ? currentTaxRate.rate.toFixed(2) : (currentTaxRate.rate * 100).toFixed(2)) 
+                      : "0.00";
+                    
+                    return (
+                      <FormItem>
+                        <FormLabel>Tax Rate</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select tax rate" />
-                          </SelectTrigger>
+                          <div className="flex h-10 px-3 py-2 text-sm border rounded-md border-input bg-background">
+                            {isLoadingTaxRates ? (
+                              <div className="flex justify-center w-full">
+                                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                              </div>
+                            ) : currentTaxRate ? (
+                              <div>
+                                {currentTaxRate.name} ({displayRate}%)
+                              </div>
+                            ) : (
+                              <div>No Tax (0%)</div>
+                            )}
+                          </div>
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="0">No Tax</SelectItem>
-                          {isLoadingTaxRates ? (
-                            <div className="flex justify-center p-2">
-                              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                            </div>
-                          ) : taxRates && taxRates.length > 0 ? (
-                            taxRates.map((taxRate: any) => (
-                              <SelectItem key={taxRate.id} value={taxRate.id.toString()}>
-                                {taxRate.name} ({taxRate.rate}%)
-                              </SelectItem>
-                            ))
-                          ) : null}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Apply a tax rate to this quote
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                        <FormDescription>
+                          Using system default tax rate
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
               </div>
               
