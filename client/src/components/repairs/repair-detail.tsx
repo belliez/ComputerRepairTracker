@@ -1041,14 +1041,22 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                                 <TableCell className="text-right">
                                   <div className="flex justify-end gap-2">
                                     <Button 
-                                      onClick={() => handleEditRepairItem(item)} 
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleEditRepairItem(item);
+                                      }} 
                                       variant="ghost" 
                                       size="icon"
                                     >
                                       <Edit className="h-4 w-4" />
                                     </Button>
                                     <Button 
-                                      onClick={() => handleDeleteRepairItem(item.id)} 
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleDeleteRepairItem(item.id);
+                                      }} 
                                       variant="ghost" 
                                       size="icon" 
                                       className="text-red-500 hover:text-red-700"
