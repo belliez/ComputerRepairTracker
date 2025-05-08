@@ -1330,6 +1330,8 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
             setEditingQuoteId(undefined);
             // Refresh the repair data
             queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+            // Set the active tab to quotes
+            setActiveTab("quotes");
           }}
         />
       )}
@@ -1345,6 +1347,8 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
             setEditingInvoiceId(undefined);
             // Refresh the repair data
             queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+            // Set the active tab to invoice
+            setActiveTab("invoice");
           }}
         />
       )}
