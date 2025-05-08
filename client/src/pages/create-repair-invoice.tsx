@@ -59,8 +59,7 @@ const invoiceSchema = z.object({
   invoiceNumber: z.string(),
   notes: z.string().optional(),
   dueDate: z.date().optional(),
-  currencyCode: z.string().min(1, "Please select a currency"),
-  taxRateId: z.number().optional(),
+  // Removed currencyCode and taxRateId fields as they now use global settings
   items: z.array(
     z.object({
       description: z.string().min(1, "Description is required"),
@@ -525,91 +524,7 @@ export default function CreateRepairInvoice() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="currencyCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Currency</FormLabel>
-                      <Select
-                        value={field.value}
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setSelectedCurrencyCode(value);
-                        }}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select currency" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {isLoadingCurrencies ? (
-                            <div className="flex justify-center p-2">
-                              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                            </div>
-                          ) : currencies && currencies.length > 0 ? (
-                            currencies.map((currency: any) => (
-                              <SelectItem key={currency.code} value={currency.code}>
-                                {currency.symbol} {currency.name} ({currency.code})
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="USD">$ US Dollar (USD)</SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Select the currency for this invoice
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="taxRateId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tax Rate</FormLabel>
-                      <Select
-                        value={field.value?.toString() || ''}
-                        onValueChange={(value) => {
-                          const numericValue = parseInt(value);
-                          field.onChange(numericValue);
-                          setSelectedTaxRateId(numericValue);
-                        }}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select tax rate" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="0">No Tax</SelectItem>
-                          {isLoadingTaxRates ? (
-                            <div className="flex justify-center p-2">
-                              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                            </div>
-                          ) : taxRates && taxRates.length > 0 ? (
-                            taxRates.map((taxRate: any) => (
-                              <SelectItem key={taxRate.id} value={taxRate.id.toString()}>
-                                {taxRate.name} ({taxRate.rate}%)
-                              </SelectItem>
-                            ))
-                          ) : null}
-                        </SelectContent>
-                      </Select>
-                      <FormDescription>
-                        Apply a tax rate to this invoice
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              {/* Currency and tax rate fields have been removed as they now use global settings */}
               
               <FormField
                 control={form.control}
