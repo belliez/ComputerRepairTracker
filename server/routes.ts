@@ -121,8 +121,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ error: "Failed to delete customer" });
+    } catch (error: any) {
+      console.error("Error deleting customer:", error);
+      res.status(500).json({ error: "Failed to delete customer", details: error.message });
     }
   });
 
@@ -1518,52 +1519,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete All Data endpoint
   apiRouter.delete("/settings/delete-all-data", async (req: Request, res: Response) => {
     try {
-      // Get all quotes and delete them
-      const quotes = await storage.getQuotes();
-      for (const quote of quotes) {
-        await storage.deleteQuote(quote.id);
+      // With our cascading delete implementations, we can simplify this
+      // by just deleting customers first, which will handle all dependencies
+      
+      // Get all customers and delete them (this will cascade to devices, repairs, etc.)
+      const customers = await storage.getCustomers();
+      for (const customer of customers) {
+        await storage.deleteCustomer(customer.id);
       }
-
-      // Get all invoices and delete them
-      const invoices = await storage.getInvoices();
-      for (const invoice of invoices) {
-        await storage.deleteInvoice(invoice.id);
-      }
-
-      // Get all repairs and delete their items first
-      const repairs = await storage.getRepairs();
-      for (const repair of repairs) {
-        // Delete all repair items
-        const repairItems = await storage.getRepairItems(repair.id);
-        for (const item of repairItems) {
-          await storage.deleteRepairItem(item.id);
-        }
-        // Then delete the repair
-        await storage.deleteRepair(repair.id);
-      }
-
-      // Get all inventory items and delete them
-      const inventoryItems = await storage.getInventoryItems();
-      for (const item of inventoryItems) {
-        await storage.deleteInventoryItem(item.id);
-      }
-
-      // Get all devices and delete them
-      const devices = await storage.getDevices();
-      for (const device of devices) {
-        await storage.deleteDevice(device.id);
-      }
-
-      // Get all technicians and delete them
+      
+      // Delete any remaining technicians
       const technicians = await storage.getTechnicians();
       for (const technician of technicians) {
         await storage.deleteTechnician(technician.id);
       }
-
-      // Get all customers and delete them
-      const customers = await storage.getCustomers();
-      for (const customer of customers) {
-        await storage.deleteCustomer(customer.id);
+      
+      // Delete any remaining inventory items
+      const inventoryItems = await storage.getInventoryItems();
+      for (const item of inventoryItems) {
+        await storage.deleteInventoryItem(item.id);
       }
 
       res.status(200).json({ message: "All data has been deleted successfully" });

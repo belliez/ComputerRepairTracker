@@ -60,8 +60,77 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCustomer(id: number): Promise<boolean> {
-    const result = await db.delete(customers).where(eq(customers.id, id));
-    return !!result;
+    try {
+      // First, check if this customer has devices
+      const customerDevices = await this.getDevicesByCustomer(id);
+      
+      // For each device, check if it's used in any repairs and delete those repairs first
+      for (const device of customerDevices) {
+        const associatedRepairs = await db.select()
+          .from(repairs)
+          .where(eq(repairs.deviceId, device.id));
+          
+        // Delete associated repairs first (including their items)
+        for (const repair of associatedRepairs) {
+          // Delete repair items
+          const repairItems = await this.getRepairItems(repair.id);
+          for (const item of repairItems) {
+            await this.deleteRepairItem(item.id);
+          }
+          
+          // Delete any quotes or invoices related to this repair
+          const repairQuotes = await this.getQuotesByRepair(repair.id);
+          for (const quote of repairQuotes) {
+            await this.deleteQuote(quote.id);
+          }
+          
+          const repairInvoices = await this.getInvoicesByRepair(repair.id);
+          for (const invoice of repairInvoices) {
+            await this.deleteInvoice(invoice.id);
+          }
+          
+          // Now delete the repair
+          await this.deleteRepair(repair.id);
+        }
+        
+        // Now it's safe to delete the device
+        await this.deleteDevice(device.id);
+      }
+      
+      // Also find and delete any repairs directly associated with this customer (not via a device)
+      const customerRepairs = await db.select()
+        .from(repairs)
+        .where(eq(repairs.customerId, id));
+        
+      for (const repair of customerRepairs) {
+        // Delete repair items
+        const repairItems = await this.getRepairItems(repair.id);
+        for (const item of repairItems) {
+          await this.deleteRepairItem(item.id);
+        }
+        
+        // Delete any quotes or invoices related to this repair
+        const repairQuotes = await this.getQuotesByRepair(repair.id);
+        for (const quote of repairQuotes) {
+          await this.deleteQuote(quote.id);
+        }
+        
+        const repairInvoices = await this.getInvoicesByRepair(repair.id);
+        for (const invoice of repairInvoices) {
+          await this.deleteInvoice(invoice.id);
+        }
+        
+        // Now delete the repair
+        await this.deleteRepair(repair.id);
+      }
+      
+      // Finally, delete the customer
+      const result = await db.delete(customers).where(eq(customers.id, id));
+      return !!result;
+    } catch (error) {
+      console.error("Error in deleteCustomer:", error);
+      throw error;
+    }
   }
 
   // Device methods
@@ -93,8 +162,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteDevice(id: number): Promise<boolean> {
-    const result = await db.delete(devices).where(eq(devices.id, id));
-    return !!result;
+    try {
+      // Find repairs associated with this device
+      const associatedRepairs = await db.select()
+        .from(repairs)
+        .where(eq(repairs.deviceId, id));
+      
+      // For each repair, handle deletion of dependent entities first
+      for (const repair of associatedRepairs) {
+        await this.deleteRepair(repair.id);
+      }
+      
+      // Now it's safe to delete the device
+      const result = await db.delete(devices).where(eq(devices.id, id));
+      return !!result;
+    } catch (error) {
+      console.error("Error in deleteDevice:", error);
+      throw error;
+    }
   }
 
   // Technician methods
@@ -122,8 +207,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteTechnician(id: number): Promise<boolean> {
-    const result = await db.delete(technicians).where(eq(technicians.id, id));
-    return !!result;
+    try {
+      // Check if technician is assigned to any repairs
+      const technicianRepairs = await this.getRepairsByTechnician(id);
+      
+      // If there are repairs with this technician, set them to null
+      for (const repair of technicianRepairs) {
+        await this.updateRepair(repair.id, { technicianId: null });
+      }
+      
+      // Now safe to delete the technician
+      const result = await db.delete(technicians).where(eq(technicians.id, id));
+      return !!result;
+    } catch (error) {
+      console.error("Error in deleteTechnician:", error);
+      throw error;
+    }
   }
 
   // Inventory methods
@@ -151,8 +250,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteInventoryItem(id: number): Promise<boolean> {
-    const result = await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
-    return !!result;
+    try {
+      // Find any repair items using this inventory item
+      const affectedRepairItems = await db.select()
+        .from(repairItems)
+        .where(eq(repairItems.inventoryItemId, id));
+      
+      // For each repair item, unlink it from this inventory item
+      for (const item of affectedRepairItems) {
+        await this.updateRepairItem(item.id, { inventoryItemId: null });
+      }
+      
+      // Now it's safe to delete the inventory item
+      const result = await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
+      return !!result;
+    } catch (error) {
+      console.error("Error in deleteInventoryItem:", error);
+      throw error;
+    }
   }
 
   async adjustInventoryQuantity(id: number, quantity: number): Promise<InventoryItem | undefined> {
@@ -226,8 +341,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteRepair(id: number): Promise<boolean> {
-    const result = await db.delete(repairs).where(eq(repairs.id, id));
-    return !!result;
+    try {
+      // Delete all repair items associated with this repair
+      const repairItems = await this.getRepairItems(id);
+      for (const item of repairItems) {
+        await this.deleteRepairItem(item.id);
+      }
+      
+      // Delete any quotes related to this repair
+      const repairQuotes = await this.getQuotesByRepair(id);
+      for (const quote of repairQuotes) {
+        await this.deleteQuote(quote.id);
+      }
+      
+      // Delete any invoices related to this repair
+      const repairInvoices = await this.getInvoicesByRepair(id);
+      for (const invoice of repairInvoices) {
+        await this.deleteInvoice(invoice.id);
+      }
+      
+      // Now it's safe to delete the repair
+      const result = await db.delete(repairs).where(eq(repairs.id, id));
+      return !!result;
+    } catch (error) {
+      console.error("Error in deleteRepair:", error);
+      throw error;
+    }
   }
 
   // Repair Item methods
