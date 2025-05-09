@@ -65,6 +65,7 @@ const SettingsPage = () => {
   const [editingTaxRate, setEditingTaxRate] = useState<any>(null);
   const [deletingCurrencyCode, setDeletingCurrencyCode] = useState<string | null>(null);
   const [deletingTaxRateId, setDeletingTaxRateId] = useState<number | null>(null);
+  const [showDeleteAllDataConfirm, setShowDeleteAllDataConfirm] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -335,6 +336,7 @@ const SettingsPage = () => {
         <TabsList className="mb-6">
           <TabsTrigger value="currencies">Currencies</TabsTrigger>
           <TabsTrigger value="tax-rates">Tax Rates</TabsTrigger>
+          <TabsTrigger value="data-management">Data Management</TabsTrigger>
         </TabsList>
         
         {/* Currencies Tab */}

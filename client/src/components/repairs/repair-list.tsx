@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Repair, Customer, Device } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 import StatusBadge from "./status-badge";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -45,6 +47,7 @@ export default function RepairList({
   const pageSize = 5;
   const queryClient = useQueryClient();
   const [location, navigate] = useLocation();
+  const { toast } = useToast();
 
   // Get customer data for displaying names
   const { data: customers } = useQuery<Customer[]>({
