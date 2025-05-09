@@ -1518,34 +1518,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete All Data endpoint
   apiRouter.delete("/settings/delete-all-data", async (req: Request, res: Response) => {
     try {
-      // Delete all repair items first to maintain referential integrity
-      const repairItemsList = await db.select().from(repairItems);
-      for (const item of repairItemsList) {
-        await db.delete(repairItems).where(eq(repairItems.id, item.id));
+      // Get all quotes and delete them
+      const quotes = await storage.getQuotes();
+      for (const quote of quotes) {
+        await storage.deleteQuote(quote.id);
       }
 
-      // Delete all quotes and invoices
-      await db.delete(quotes);
-      await db.delete(invoices);
+      // Get all invoices and delete them
+      const invoices = await storage.getInvoices();
+      for (const invoice of invoices) {
+        await storage.deleteInvoice(invoice.id);
+      }
 
-      // Delete all repairs
-      await db.delete(repairs);
+      // Get all repairs and delete their items first
+      const repairs = await storage.getRepairs();
+      for (const repair of repairs) {
+        // Delete all repair items
+        const repairItems = await storage.getRepairItems(repair.id);
+        for (const item of repairItems) {
+          await storage.deleteRepairItem(item.id);
+        }
+        // Then delete the repair
+        await storage.deleteRepair(repair.id);
+      }
 
-      // Delete all inventory items
-      await db.delete(inventoryItems);
+      // Get all inventory items and delete them
+      const inventoryItems = await storage.getInventoryItems();
+      for (const item of inventoryItems) {
+        await storage.deleteInventoryItem(item.id);
+      }
 
-      // Delete all devices
-      await db.delete(devices);
+      // Get all devices and delete them
+      const devices = await storage.getDevices();
+      for (const device of devices) {
+        await storage.deleteDevice(device.id);
+      }
 
-      // Delete all technicians
-      await db.delete(technicians);
+      // Get all technicians and delete them
+      const technicians = await storage.getTechnicians();
+      for (const technician of technicians) {
+        await storage.deleteTechnician(technician.id);
+      }
 
-      // Delete all customers
-      await db.delete(customers);
-
-      // Delete all currencies and tax rates (except defaults)
-      await db.delete(currencies).where(eq(currencies.isDefault, false));
-      await db.delete(taxRates).where(eq(taxRates.isDefault, false));
+      // Get all customers and delete them
+      const customers = await storage.getCustomers();
+      for (const customer of customers) {
+        await storage.deleteCustomer(customer.id);
+      }
 
       res.status(200).json({ message: "All data has been deleted successfully" });
     } catch (error: any) {

@@ -820,6 +820,93 @@ const SettingsPage = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        
+        {/* Data Management Tab */}
+        <TabsContent value="data-management">
+          <Card>
+            <CardHeader>
+              <CardTitle>Data Management</CardTitle>
+              <CardDescription>
+                Delete data from your system
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="border rounded-lg p-6 bg-gray-50">
+                <h3 className="text-lg font-medium text-red-600 mb-2">
+                  Delete All Data
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  This will permanently delete all customers, repairs, inventory items, quotes, and invoices from your system.
+                  This action cannot be undone. Default tax rates and currencies will be preserved.
+                </p>
+                <AlertDialog open={showDeleteAllDataConfirm} onOpenChange={setShowDeleteAllDataConfirm}>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="destructive"
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete All Data
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                      <AlertDialogDescription className="space-y-2">
+                        <p>
+                          This action will permanently delete <strong>ALL</strong> of the following data:
+                        </p>
+                        <ul className="list-disc pl-5 space-y-1">
+                          <li>Customers</li>
+                          <li>Devices</li>
+                          <li>Technicians</li>
+                          <li>Repairs & all repair items</li>
+                          <li>Quotes</li>
+                          <li>Invoices</li>
+                          <li>Inventory</li>
+                        </ul>
+                        <p className="text-red-600 font-semibold mt-2">
+                          This action cannot be undone. This will permanently delete all your data.
+                        </p>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-red-600 hover:bg-red-700"
+                        onClick={() => {
+                          const deleteAllData = async () => {
+                            try {
+                              await apiRequest('DELETE', '/api/settings/delete-all-data');
+                              toast({
+                                title: "Success",
+                                description: "All data has been deleted successfully",
+                              });
+                              
+                              // Invalidate all queries to refresh the UI
+                              queryClient.invalidateQueries();
+                            } catch (error: any) {
+                              console.error('Error deleting all data:', error);
+                              toast({
+                                title: "Error",
+                                description: error.message || "Failed to delete all data",
+                                variant: "destructive",
+                              });
+                            }
+                          };
+                          
+                          deleteAllData();
+                        }}
+                      >
+                        I understand, delete everything
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
