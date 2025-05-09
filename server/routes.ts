@@ -543,13 +543,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Allow partial updates for repair
       const validatedData = insertRepairSchema.partial().parse(req.body);
-      const updatedRepair = await storage.updateRepair(id, validatedData);
       
-      if (!updatedRepair) {
-        return res.status(404).json({ error: "Repair not found" });
+      // Ensure the status is properly typed
+      if (validatedData.status) {
+        const repairData = {
+          ...validatedData,
+          status: validatedData.status as (typeof repairStatuses)[number]
+        };
+        const updatedRepair = await storage.updateRepair(id, repairData);
+        
+        if (!updatedRepair) {
+          return res.status(404).json({ error: "Repair not found" });
+        }
+        
+        res.json(updatedRepair);
+      } else {
+        const updatedRepair = await storage.updateRepair(id, validatedData);
+        
+        if (!updatedRepair) {
+          return res.status(404).json({ error: "Repair not found" });
+        }
+        
+        res.json(updatedRepair);
       }
-
-      res.json(updatedRepair);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid repair data", details: error.errors });

@@ -229,11 +229,16 @@ export class DatabaseStorage implements IStorage {
 
   // Technician methods
   async getTechnicians(): Promise<Technician[]> {
-    return db.select().from(technicians);
+    return db.select().from(technicians).where(eq(technicians.deleted, false));
   }
 
   async getTechnician(id: number): Promise<Technician | undefined> {
-    const [technician] = await db.select().from(technicians).where(eq(technicians.id, id));
+    const [technician] = await db.select()
+      .from(technicians)
+      .where(and(
+        eq(technicians.id, id),
+        eq(technicians.deleted, false)
+      ));
     return technician;
   }
 
@@ -261,9 +266,17 @@ export class DatabaseStorage implements IStorage {
         await this.updateRepair(repair.id, { technicianId: null });
       }
       
-      // Now safe to delete the technician
-      const result = await db.delete(technicians).where(eq(technicians.id, id));
-      return !!result;
+      // Now soft delete the technician by setting deleted flag
+      const [updatedTechnician] = await db
+        .update(technicians)
+        .set({
+          deleted: true,
+          deletedAt: new Date()
+        })
+        .where(eq(technicians.id, id))
+        .returning();
+        
+      return !!updatedTechnician;
     } catch (error) {
       console.error("Error in deleteTechnician:", error);
       throw error;
@@ -272,11 +285,16 @@ export class DatabaseStorage implements IStorage {
 
   // Inventory methods
   async getInventoryItems(): Promise<InventoryItem[]> {
-    return db.select().from(inventoryItems);
+    return db.select().from(inventoryItems).where(eq(inventoryItems.deleted, false));
   }
 
   async getInventoryItem(id: number): Promise<InventoryItem | undefined> {
-    const [item] = await db.select().from(inventoryItems).where(eq(inventoryItems.id, id));
+    const [item] = await db.select()
+      .from(inventoryItems)
+      .where(and(
+        eq(inventoryItems.id, id),
+        eq(inventoryItems.deleted, false)
+      ));
     return item;
   }
 
@@ -299,16 +317,27 @@ export class DatabaseStorage implements IStorage {
       // Find any repair items using this inventory item
       const affectedRepairItems = await db.select()
         .from(repairItems)
-        .where(eq(repairItems.inventoryItemId, id));
+        .where(and(
+          eq(repairItems.inventoryItemId, id),
+          eq(repairItems.deleted, false)
+        ));
       
       // For each repair item, unlink it from this inventory item
       for (const item of affectedRepairItems) {
         await this.updateRepairItem(item.id, { inventoryItemId: null });
       }
       
-      // Now it's safe to delete the inventory item
-      const result = await db.delete(inventoryItems).where(eq(inventoryItems.id, id));
-      return !!result;
+      // Now soft delete the inventory item
+      const [updatedItem] = await db
+        .update(inventoryItems)
+        .set({
+          deleted: true,
+          deletedAt: new Date()
+        })
+        .where(eq(inventoryItems.id, id))
+        .returning();
+        
+      return !!updatedItem;
     } catch (error) {
       console.error("Error in deleteInventoryItem:", error);
       throw error;
@@ -329,39 +358,74 @@ export class DatabaseStorage implements IStorage {
 
   // Repair methods
   async getRepairs(): Promise<Repair[]> {
-    return db.select().from(repairs);
+    return db.select().from(repairs).where(eq(repairs.deleted, false));
   }
 
   async getRepair(id: number): Promise<Repair | undefined> {
-    const [repair] = await db.select().from(repairs).where(eq(repairs.id, id));
+    const [repair] = await db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.id, id),
+        eq(repairs.deleted, false)
+      ));
     return repair;
   }
 
   async getRepairByTicketNumber(ticketNumber: string): Promise<Repair | undefined> {
-    const [repair] = await db.select().from(repairs).where(eq(repairs.ticketNumber, ticketNumber));
+    const [repair] = await db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.ticketNumber, ticketNumber),
+        eq(repairs.deleted, false)
+      ));
     return repair;
   }
 
   async getRepairsByCustomer(customerId: number): Promise<Repair[]> {
-    return db.select().from(repairs).where(eq(repairs.customerId, customerId));
+    return db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.customerId, customerId),
+        eq(repairs.deleted, false)
+      ));
   }
 
   async getRepairsByTechnician(technicianId: number): Promise<Repair[]> {
-    return db.select().from(repairs).where(eq(repairs.technicianId, technicianId));
+    return db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.technicianId, technicianId),
+        eq(repairs.deleted, false)
+      ));
   }
 
   async getRepairsByStatus(status: typeof repairStatuses[number]): Promise<Repair[]> {
-    return db.select().from(repairs).where(eq(repairs.status, status));
+    return db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.status, status),
+        eq(repairs.deleted, false)
+      ));
   }
 
   async getRepairsByPriority(priority: number | number[]): Promise<Repair[]> {
     if (Array.isArray(priority)) {
       // If it's an array of priorities, use SQL IN clause
       const priorityNumbers = priority.map(p => Number(p));
-      return db.select().from(repairs).where(inArray(repairs.priorityLevel, priorityNumbers));
+      return db.select()
+        .from(repairs)
+        .where(and(
+          inArray(repairs.priorityLevel, priorityNumbers),
+          eq(repairs.deleted, false)
+        ));
     } else {
       // If it's a single priority level
-      return db.select().from(repairs).where(eq(repairs.priorityLevel, Number(priority)));
+      return db.select()
+        .from(repairs)
+        .where(and(
+          eq(repairs.priorityLevel, Number(priority)),
+          eq(repairs.deleted, false)
+        ));
     }
   }
 
@@ -387,27 +451,35 @@ export class DatabaseStorage implements IStorage {
 
   async deleteRepair(id: number): Promise<boolean> {
     try {
-      // Delete all repair items associated with this repair
+      // Soft delete all repair items associated with this repair
       const repairItems = await this.getRepairItems(id);
       for (const item of repairItems) {
         await this.deleteRepairItem(item.id);
       }
       
-      // Delete any quotes related to this repair
+      // Soft delete any quotes related to this repair
       const repairQuotes = await this.getQuotesByRepair(id);
       for (const quote of repairQuotes) {
         await this.deleteQuote(quote.id);
       }
       
-      // Delete any invoices related to this repair
+      // Soft delete any invoices related to this repair
       const repairInvoices = await this.getInvoicesByRepair(id);
       for (const invoice of repairInvoices) {
         await this.deleteInvoice(invoice.id);
       }
       
-      // Now it's safe to delete the repair
-      const result = await db.delete(repairs).where(eq(repairs.id, id));
-      return !!result;
+      // Now soft delete the repair by setting deleted flag
+      const [updatedRepair] = await db
+        .update(repairs)
+        .set({
+          deleted: true,
+          deletedAt: new Date()
+        })
+        .where(eq(repairs.id, id))
+        .returning();
+        
+      return !!updatedRepair;
     } catch (error) {
       console.error("Error in deleteRepair:", error);
       throw error;
@@ -416,11 +488,21 @@ export class DatabaseStorage implements IStorage {
 
   // Repair Item methods
   async getRepairItems(repairId: number): Promise<RepairItem[]> {
-    return db.select().from(repairItems).where(eq(repairItems.repairId, repairId));
+    return db.select()
+      .from(repairItems)
+      .where(and(
+        eq(repairItems.repairId, repairId),
+        eq(repairItems.deleted, false)
+      ));
   }
 
   async getRepairItem(id: number): Promise<RepairItem | undefined> {
-    const [item] = await db.select().from(repairItems).where(eq(repairItems.id, id));
+    const [item] = await db.select()
+      .from(repairItems)
+      .where(and(
+        eq(repairItems.id, id),
+        eq(repairItems.deleted, false)
+      ));
     return item;
   }
 
@@ -439,21 +521,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteRepairItem(id: number): Promise<boolean> {
-    const result = await db.delete(repairItems).where(eq(repairItems.id, id));
-    return !!result;
+    // Soft delete the repair item by setting deleted flag
+    const [updatedItem] = await db
+      .update(repairItems)
+      .set({
+        deleted: true,
+        deletedAt: new Date()
+      })
+      .where(eq(repairItems.id, id))
+      .returning();
+      
+    return !!updatedItem;
   }
 
   // Quote methods
   async getQuotes(): Promise<Quote[]> {
-    return db.select().from(quotes);
+    return db.select().from(quotes).where(eq(quotes.deleted, false));
   }
 
   async getQuotesByRepair(repairId: number): Promise<Quote[]> {
-    return db.select().from(quotes).where(eq(quotes.repairId, repairId));
+    return db.select()
+      .from(quotes)
+      .where(and(
+        eq(quotes.repairId, repairId),
+        eq(quotes.deleted, false)
+      ));
   }
 
   async getQuote(id: number): Promise<Quote | undefined> {
-    const [quote] = await db.select().from(quotes).where(eq(quotes.id, id));
+    const [quote] = await db.select()
+      .from(quotes)
+      .where(and(
+        eq(quotes.id, id),
+        eq(quotes.deleted, false)
+      ));
     return quote;
   }
 
@@ -472,21 +573,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteQuote(id: number): Promise<boolean> {
-    const result = await db.delete(quotes).where(eq(quotes.id, id));
-    return !!result;
+    // Soft delete the quote by setting deleted flag
+    const [updatedQuote] = await db
+      .update(quotes)
+      .set({
+        deleted: true,
+        deletedAt: new Date()
+      })
+      .where(eq(quotes.id, id))
+      .returning();
+      
+    return !!updatedQuote;
   }
 
   // Invoice methods
   async getInvoices(): Promise<Invoice[]> {
-    return db.select().from(invoices);
+    return db.select().from(invoices).where(eq(invoices.deleted, false));
   }
 
   async getInvoicesByRepair(repairId: number): Promise<Invoice[]> {
-    return db.select().from(invoices).where(eq(invoices.repairId, repairId));
+    return db.select()
+      .from(invoices)
+      .where(and(
+        eq(invoices.repairId, repairId),
+        eq(invoices.deleted, false)
+      ));
   }
 
   async getInvoice(id: number): Promise<Invoice | undefined> {
-    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id));
+    const [invoice] = await db.select()
+      .from(invoices)
+      .where(and(
+        eq(invoices.id, id),
+        eq(invoices.deleted, false)
+      ));
     return invoice;
   }
 
@@ -505,8 +625,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteInvoice(id: number): Promise<boolean> {
-    const result = await db.delete(invoices).where(eq(invoices.id, id));
-    return !!result;
+    // Soft delete the invoice by setting deleted flag
+    const [updatedInvoice] = await db
+      .update(invoices)
+      .set({
+        deleted: true,
+        deletedAt: new Date()
+      })
+      .where(eq(invoices.id, id))
+      .returning();
+      
+    return !!updatedInvoice;
   }
 
   // Extended functions
