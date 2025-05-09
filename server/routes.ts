@@ -1515,6 +1515,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete All Data endpoint
+  apiRouter.delete("/settings/delete-all-data", async (req: Request, res: Response) => {
+    try {
+      // Delete all repair items first to maintain referential integrity
+      const repairItemsList = await db.select().from(repairItems);
+      for (const item of repairItemsList) {
+        await db.delete(repairItems).where(eq(repairItems.id, item.id));
+      }
+
+      // Delete all quotes and invoices
+      await db.delete(quotes);
+      await db.delete(invoices);
+
+      // Delete all repairs
+      await db.delete(repairs);
+
+      // Delete all inventory items
+      await db.delete(inventoryItems);
+
+      // Delete all devices
+      await db.delete(devices);
+
+      // Delete all technicians
+      await db.delete(technicians);
+
+      // Delete all customers
+      await db.delete(customers);
+
+      // Delete all currencies and tax rates (except defaults)
+      await db.delete(currencies).where(eq(currencies.isDefault, false));
+      await db.delete(taxRates).where(eq(taxRates.isDefault, false));
+
+      res.status(200).json({ message: "All data has been deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting all data:", error);
+      res.status(500).json({ error: error.message || "Failed to delete all data" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
