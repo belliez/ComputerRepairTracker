@@ -66,6 +66,7 @@ const SettingsPage = () => {
   const [deletingCurrencyCode, setDeletingCurrencyCode] = useState<string | null>(null);
   const [deletingTaxRateId, setDeletingTaxRateId] = useState<number | null>(null);
   const [showDeleteAllDataConfirm, setShowDeleteAllDataConfirm] = useState(false);
+  const [activeTrashTab, setActiveTrashTab] = useState('customers');
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -86,6 +87,120 @@ const SettingsPage = () => {
     rate: number;
     isDefault: boolean;
   }
+  
+  // Define interfaces for deleted records
+  interface Customer {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    address: string | null;
+    city: string | null;
+    state: string | null;
+    postalCode: string | null;
+    notes: string | null;
+    deleted: boolean;
+    deletedAt: string | null;
+  }
+  
+  interface Device {
+    id: number;
+    customerId: number;
+    type: string;
+    brand: string;
+    model: string;
+    serialNumber: string | null;
+    password: string | null;
+    condition: string | null;
+    accessories: string | null;
+    deleted: boolean;
+    deletedAt: string | null;
+  }
+  
+  interface Repair {
+    id: number;
+    ticketNumber: string;
+    customerId: number;
+    deviceId: number | null;
+    technicianId: number | null;
+    status: string;
+    issue: string;
+    notes: string | null;
+    intakeDate: string;
+    estimatedCompletionDate: string | null;
+    actualCompletionDate: string | null;
+    priorityLevel: number | null;
+    isUnderWarranty: boolean | null;
+    diagnosticNotes: string | null;
+    customerApproval: boolean | null;
+    totalCost: number | null;
+    deleted: boolean;
+    deletedAt: string | null;
+  }
+  
+  interface Technician {
+    id: number;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string | null;
+    role: string;
+    specialty: string | null;
+    isActive: boolean | null;
+    deleted: boolean;
+    deletedAt: string | null;
+  }
+  
+  interface InventoryItem {
+    id: number;
+    name: string;
+    description: string | null;
+    category: string;
+    sku: string | null;
+    price: number;
+    cost: number | null;
+    quantity: number | null;
+    location: string | null;
+    supplier: string | null;
+    minLevel: number | null;
+    isActive: boolean | null;
+    deleted: boolean;
+    deletedAt: string | null;
+  }
+  
+  interface Quote {
+    id: number;
+    repairId: number;
+    quoteNumber: string;
+    subtotal: number;
+    tax: number | null;
+    total: number;
+    status: string | null;
+    customerNotes: string | null;
+    internalNotes: string | null;
+    validUntil: string | null;
+    termsAndConditions: string | null;
+    itemsData: string | null; 
+    deleted: boolean;
+    deletedAt: string | null;
+  }
+  
+  interface Invoice {
+    id: number;
+    repairId: number;
+    invoiceNumber: string;
+    subtotal: number;
+    tax: number | null;
+    total: number;
+    status: string | null;
+    customerNotes: string | null;
+    internalNotes: string | null;
+    dueDate: string | null;
+    itemsData: string | null;
+    deleted: boolean;
+    deletedAt: string | null;
+  }
 
   // Queries
   const {
@@ -100,6 +215,63 @@ const SettingsPage = () => {
     isLoading: isLoadingTaxRates,
   } = useQuery<TaxRate[]>({
     queryKey: ['/api/settings/tax-rates'],
+  });
+  
+  // Trash management queries
+  const {
+    data: deletedCustomers = [],
+    isLoading: isLoadingDeletedCustomers,
+  } = useQuery<Customer[]>({
+    queryKey: ['/api/trash/customers'],
+    enabled: activeTab === 'data-management' && activeTrashTab === 'customers',
+  });
+  
+  const {
+    data: deletedDevices = [],
+    isLoading: isLoadingDeletedDevices,
+  } = useQuery<Device[]>({
+    queryKey: ['/api/trash/devices'],
+    enabled: activeTab === 'data-management' && activeTrashTab === 'devices',
+  });
+  
+  const {
+    data: deletedRepairs = [],
+    isLoading: isLoadingDeletedRepairs,
+  } = useQuery<Repair[]>({
+    queryKey: ['/api/trash/repairs'],
+    enabled: activeTab === 'data-management' && activeTrashTab === 'repairs',
+  });
+  
+  const {
+    data: deletedTechnicians = [],
+    isLoading: isLoadingDeletedTechnicians,
+  } = useQuery<Technician[]>({
+    queryKey: ['/api/trash/technicians'],
+    enabled: activeTab === 'data-management' && activeTrashTab === 'technicians',
+  });
+  
+  const {
+    data: deletedInventoryItems = [],
+    isLoading: isLoadingDeletedInventoryItems,
+  } = useQuery<InventoryItem[]>({
+    queryKey: ['/api/trash/inventory'],
+    enabled: activeTab === 'data-management' && activeTrashTab === 'inventory',
+  });
+  
+  const {
+    data: deletedQuotes = [],
+    isLoading: isLoadingDeletedQuotes,
+  } = useQuery<Quote[]>({
+    queryKey: ['/api/trash/quotes'],
+    enabled: activeTab === 'data-management' && activeTrashTab === 'quotes',
+  });
+  
+  const {
+    data: deletedInvoices = [],
+    isLoading: isLoadingDeletedInvoices,
+  } = useQuery<Invoice[]>({
+    queryKey: ['/api/trash/invoices'],
+    enabled: activeTab === 'data-management' && activeTrashTab === 'invoices',
   });
   
   // Currency form
@@ -262,6 +434,147 @@ const SettingsPage = () => {
     }
   });
   
+  // Restore mutations for deleted records
+  const restoreCustomerMutation = useMutation({
+    mutationFn: (id: number) => 
+      apiRequest('POST', `/api/trash/customers/${id}/restore`),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trash/customers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      toast({
+        title: "Customer restored",
+        description: `${data.firstName} ${data.lastName} has been successfully restored`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error restoring customer",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const restoreDeviceMutation = useMutation({
+    mutationFn: (id: number) => 
+      apiRequest('POST', `/api/trash/devices/${id}/restore`),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trash/devices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/devices'] });
+      toast({
+        title: "Device restored",
+        description: `${data.brand} ${data.model} has been successfully restored`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error restoring device",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const restoreRepairMutation = useMutation({
+    mutationFn: (id: number) => 
+      apiRequest('POST', `/api/trash/repairs/${id}/restore`),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trash/repairs'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/repairs'] });
+      toast({
+        title: "Repair restored",
+        description: `Repair ticket ${data.ticketNumber} has been successfully restored`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error restoring repair",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const restoreTechnicianMutation = useMutation({
+    mutationFn: (id: number) => 
+      apiRequest('POST', `/api/trash/technicians/${id}/restore`),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trash/technicians'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/technicians'] });
+      toast({
+        title: "Technician restored",
+        description: `${data.firstName} ${data.lastName} has been successfully restored`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error restoring technician",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const restoreInventoryItemMutation = useMutation({
+    mutationFn: (id: number) => 
+      apiRequest('POST', `/api/trash/inventory/${id}/restore`),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trash/inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/inventory'] });
+      toast({
+        title: "Inventory item restored",
+        description: `${data.name} has been successfully restored`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error restoring inventory item",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const restoreQuoteMutation = useMutation({
+    mutationFn: (id: number) => 
+      apiRequest('POST', `/api/trash/quotes/${id}/restore`),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trash/quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/quotes'] });
+      toast({
+        title: "Quote restored",
+        description: `Quote ${data.quoteNumber} has been successfully restored`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error restoring quote",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const restoreInvoiceMutation = useMutation({
+    mutationFn: (id: number) => 
+      apiRequest('POST', `/api/trash/invoices/${id}/restore`),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trash/invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
+      toast({
+        title: "Invoice restored",
+        description: `Invoice ${data.invoiceNumber} has been successfully restored`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error restoring invoice",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
   // Event handlers
   const handleAddCurrency = (data: z.infer<typeof currencySchema>) => {
     if (editingCurrency) {
@@ -323,6 +636,35 @@ const SettingsPage = () => {
     setShowTaxRateDialog(false);
     setEditingTaxRate(null);
     taxRateForm.reset();
+  };
+  
+  // Restore handlers for deleted records
+  const handleRestoreCustomer = (id: number) => {
+    restoreCustomerMutation.mutate(id);
+  };
+  
+  const handleRestoreDevice = (id: number) => {
+    restoreDeviceMutation.mutate(id);
+  };
+  
+  const handleRestoreRepair = (id: number) => {
+    restoreRepairMutation.mutate(id);
+  };
+  
+  const handleRestoreTechnician = (id: number) => {
+    restoreTechnicianMutation.mutate(id);
+  };
+  
+  const handleRestoreInventoryItem = (id: number) => {
+    restoreInventoryItemMutation.mutate(id);
+  };
+  
+  const handleRestoreQuote = (id: number) => {
+    restoreQuoteMutation.mutate(id);
+  };
+  
+  const handleRestoreInvoice = (id: number) => {
+    restoreInvoiceMutation.mutate(id);
   };
   
   return (
