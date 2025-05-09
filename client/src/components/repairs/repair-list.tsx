@@ -302,6 +302,34 @@ export default function RepairList({
                           <i className="fas fa-eye"></i>
                         </Button>
                       </Link>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-600 hover:text-red-900 hover:bg-red-50"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("Are you sure you want to delete this repair? This action cannot be undone.")) {
+                            apiRequest("DELETE", `/api/repairs/${repair.id}`)
+                              .then(() => {
+                                queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
+                                toast({
+                                  title: "Repair deleted",
+                                  description: "The repair has been deleted successfully",
+                                });
+                              })
+                              .catch((error) => {
+                                console.error("Error deleting repair:", error);
+                                toast({
+                                  title: "Error",
+                                  description: "Failed to delete repair",
+                                  variant: "destructive",
+                                });
+                              });
+                          }
+                        }}
+                      >
+                        <i className="fas fa-trash"></i>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
