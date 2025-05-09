@@ -14,10 +14,14 @@ export const customers = pgTable("customers", {
   state: text("state"),
   postalCode: text("postal_code"),
   notes: text("notes"),
+  deleted: boolean("deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const insertCustomerSchema = createInsertSchema(customers).omit({
   id: true,
+  deleted: true,
+  deletedAt: true,
 });
 
 // Devices
@@ -31,6 +35,8 @@ export const devices = pgTable("devices", {
   password: text("password"),
   condition: text("condition"),
   accessories: text("accessories"),
+  deleted: boolean("deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const insertDeviceSchema = createInsertSchema(devices).omit({
@@ -47,6 +53,8 @@ export const technicians = pgTable("technicians", {
   role: text("role").notNull(), // senior technician, hardware specialist, etc.
   specialty: text("specialty"),
   isActive: boolean("is_active").default(true),
+  deleted: boolean("deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const insertTechnicianSchema = createInsertSchema(technicians).omit({
@@ -67,6 +75,8 @@ export const inventoryItems = pgTable("inventory_items", {
   supplier: text("supplier"),
   minLevel: integer("min_level").default(1),
   isActive: boolean("is_active").default(true),
+  deleted: boolean("deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit({
@@ -103,6 +113,8 @@ export const repairs = pgTable("repairs", {
   diagnosticNotes: text("diagnostic_notes"),
   customerApproval: boolean("customer_approval"),
   totalCost: doublePrecision("total_cost"),
+  deleted: boolean("deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 // First create the base schema
@@ -140,6 +152,8 @@ export const repairItems = pgTable("repair_items", {
   unitPrice: doublePrecision("unit_price").notNull(),
   itemType: text("item_type").notNull(), // 'part' or 'service'
   isCompleted: boolean("is_completed").default(false),
+  deleted: boolean("deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const insertRepairItemSchema = createInsertSchema(repairItems).omit({
@@ -162,6 +176,8 @@ export const quotes = pgTable("quotes", {
   taxRateId: integer("tax_rate_id").references(() => taxRates.id),
   itemIds: json("item_ids").default('[]'), // JSON array to store the IDs of items associated with this quote (legacy)
   itemsData: text("items_data"), // JSON string to store complete item data including custom items
+  deleted: boolean("deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 // Create a base insert schema
@@ -193,6 +209,8 @@ export const invoices = pgTable("invoices", {
   taxRateId: integer("tax_rate_id").references(() => taxRates.id),
   itemIds: json("item_ids").default('[]'), // JSON array to store the IDs of items associated with this invoice (legacy)
   itemsData: text("items_data"), // JSON string to store complete item data including custom items
+  deleted: boolean("deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at"),
 });
 
 // Create a base insert schema for invoices
