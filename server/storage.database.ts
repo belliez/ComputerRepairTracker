@@ -30,6 +30,119 @@ import { IStorage } from "./storage";
 import { db } from "./db";
 
 export class DatabaseStorage implements IStorage {
+  // Methods for deleted records management
+  async getDeletedCustomers(): Promise<Customer[]> {
+    return db.select().from(customers).where(eq(customers.deleted, true));
+  }
+  
+  async getDeletedDevices(): Promise<Device[]> {
+    return db.select().from(devices).where(eq(devices.deleted, true));
+  }
+  
+  async getDeletedRepairs(): Promise<Repair[]> {
+    return db.select().from(repairs).where(eq(repairs.deleted, true));
+  }
+  
+  async getDeletedTechnicians(): Promise<Technician[]> {
+    return db.select().from(technicians).where(eq(technicians.deleted, true));
+  }
+  
+  async getDeletedInventoryItems(): Promise<InventoryItem[]> {
+    return db.select().from(inventoryItems).where(eq(inventoryItems.deleted, true));
+  }
+  
+  async getDeletedQuotes(): Promise<Quote[]> {
+    return db.select().from(quotes).where(eq(quotes.deleted, true));
+  }
+  
+  async getDeletedInvoices(): Promise<Invoice[]> {
+    return db.select().from(invoices).where(eq(invoices.deleted, true));
+  }
+  
+  async restoreCustomer(id: number): Promise<Customer | undefined> {
+    const [restoredCustomer] = await db
+      .update(customers)
+      .set({
+        deleted: false,
+        deletedAt: null
+      })
+      .where(eq(customers.id, id))
+      .returning();
+    return restoredCustomer;
+  }
+  
+  async restoreDevice(id: number): Promise<Device | undefined> {
+    const [restoredDevice] = await db
+      .update(devices)
+      .set({
+        deleted: false,
+        deletedAt: null
+      })
+      .where(eq(devices.id, id))
+      .returning();
+    return restoredDevice;
+  }
+  
+  async restoreRepair(id: number): Promise<Repair | undefined> {
+    const [restoredRepair] = await db
+      .update(repairs)
+      .set({
+        deleted: false,
+        deletedAt: null
+      })
+      .where(eq(repairs.id, id))
+      .returning();
+    return restoredRepair;
+  }
+  
+  async restoreTechnician(id: number): Promise<Technician | undefined> {
+    const [restoredTechnician] = await db
+      .update(technicians)
+      .set({
+        deleted: false,
+        deletedAt: null
+      })
+      .where(eq(technicians.id, id))
+      .returning();
+    return restoredTechnician;
+  }
+  
+  async restoreInventoryItem(id: number): Promise<InventoryItem | undefined> {
+    const [restoredItem] = await db
+      .update(inventoryItems)
+      .set({
+        deleted: false,
+        deletedAt: null
+      })
+      .where(eq(inventoryItems.id, id))
+      .returning();
+    return restoredItem;
+  }
+  
+  async restoreQuote(id: number): Promise<Quote | undefined> {
+    const [restoredQuote] = await db
+      .update(quotes)
+      .set({
+        deleted: false,
+        deletedAt: null
+      })
+      .where(eq(quotes.id, id))
+      .returning();
+    return restoredQuote;
+  }
+  
+  async restoreInvoice(id: number): Promise<Invoice | undefined> {
+    const [restoredInvoice] = await db
+      .update(invoices)
+      .set({
+        deleted: false,
+        deletedAt: null
+      })
+      .where(eq(invoices.id, id))
+      .returning();
+    return restoredInvoice;
+  }
+  
   // Customer methods
   async getCustomers(): Promise<Customer[]> {
     return db.select().from(customers).where(eq(customers.deleted, false));

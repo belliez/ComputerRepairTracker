@@ -21,6 +21,23 @@ import {
 // Modify the interface with any CRUD methods
 // you might need
 export interface IStorage {
+  // Deleted records management
+  getDeletedCustomers(): Promise<Customer[]>;
+  getDeletedDevices(): Promise<Device[]>;
+  getDeletedRepairs(): Promise<Repair[]>;
+  getDeletedTechnicians(): Promise<Technician[]>;
+  getDeletedInventoryItems(): Promise<InventoryItem[]>;
+  getDeletedQuotes(): Promise<Quote[]>;
+  getDeletedInvoices(): Promise<Invoice[]>;
+  
+  restoreCustomer(id: number): Promise<Customer | undefined>;
+  restoreDevice(id: number): Promise<Device | undefined>;
+  restoreRepair(id: number): Promise<Repair | undefined>;
+  restoreTechnician(id: number): Promise<Technician | undefined>;
+  restoreInventoryItem(id: number): Promise<InventoryItem | undefined>;
+  restoreQuote(id: number): Promise<Quote | undefined>;
+  restoreInvoice(id: number): Promise<Invoice | undefined>;
+  
   // Customers
   getCustomers(): Promise<Customer[]>;
   getCustomer(id: number): Promise<Customer | undefined>;
@@ -92,6 +109,23 @@ export interface IStorage {
 }
 
 export class MemStorage implements IStorage {
+  // Implement deleted records management stubs (for interface compatibility)
+  getDeletedCustomers(): Promise<Customer[]> { return Promise.resolve([]); }
+  getDeletedDevices(): Promise<Device[]> { return Promise.resolve([]); }
+  getDeletedRepairs(): Promise<Repair[]> { return Promise.resolve([]); }
+  getDeletedTechnicians(): Promise<Technician[]> { return Promise.resolve([]); }
+  getDeletedInventoryItems(): Promise<InventoryItem[]> { return Promise.resolve([]); }
+  getDeletedQuotes(): Promise<Quote[]> { return Promise.resolve([]); }
+  getDeletedInvoices(): Promise<Invoice[]> { return Promise.resolve([]); }
+  
+  restoreCustomer(id: number): Promise<Customer | undefined> { return Promise.resolve(undefined); }
+  restoreDevice(id: number): Promise<Device | undefined> { return Promise.resolve(undefined); }
+  restoreRepair(id: number): Promise<Repair | undefined> { return Promise.resolve(undefined); }
+  restoreTechnician(id: number): Promise<Technician | undefined> { return Promise.resolve(undefined); }
+  restoreInventoryItem(id: number): Promise<InventoryItem | undefined> { return Promise.resolve(undefined); }
+  restoreQuote(id: number): Promise<Quote | undefined> { return Promise.resolve(undefined); }
+  restoreInvoice(id: number): Promise<Invoice | undefined> { return Promise.resolve(undefined); }
+  
   private customers: Map<number, Customer>;
   private devices: Map<number, Device>;
   private technicians: Map<number, Technician>;
