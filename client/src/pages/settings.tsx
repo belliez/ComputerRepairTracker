@@ -1167,87 +1167,445 @@ const SettingsPage = () => {
         <TabsContent value="data-management">
           <Card>
             <CardHeader>
-              <CardTitle>Data Management</CardTitle>
+              <CardTitle>Trash Management</CardTitle>
               <CardDescription>
-                Delete data from your system
+                View and restore deleted records
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="border rounded-lg p-6 bg-gray-50">
-                <h3 className="text-lg font-medium text-red-600 mb-2">
-                  Delete All Data
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  This will permanently delete all customers, repairs, inventory items, quotes, and invoices from your system.
-                  This action cannot be undone. Default tax rates and currencies will be preserved.
-                </p>
-                <AlertDialog open={showDeleteAllDataConfirm} onOpenChange={setShowDeleteAllDataConfirm}>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="destructive"
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete All Data
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                      <AlertDialogDescription className="space-y-2">
-                        <p>
-                          This action will permanently delete <strong>ALL</strong> of the following data:
-                        </p>
-                        <ul className="list-disc pl-5 space-y-1">
-                          <li>Customers</li>
-                          <li>Devices</li>
-                          <li>Technicians</li>
-                          <li>Repairs & all repair items</li>
-                          <li>Quotes</li>
-                          <li>Invoices</li>
-                          <li>Inventory</li>
-                        </ul>
-                        <p className="text-red-600 font-semibold mt-2">
-                          This action cannot be undone. This will permanently delete all your data.
-                        </p>
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        className="bg-red-600 hover:bg-red-700"
-                        onClick={() => {
-                          const deleteAllData = async () => {
-                            try {
-                              await apiRequest('DELETE', '/api/settings/delete-all-data');
-                              toast({
-                                title: "Success",
-                                description: "All data has been deleted successfully",
-                              });
-                              
-                              // Invalidate all queries to refresh the UI
-                              queryClient.invalidateQueries();
-                            } catch (error: any) {
-                              console.error('Error deleting all data:', error);
-                              toast({
-                                title: "Error",
-                                description: error.message || "Failed to delete all data",
-                                variant: "destructive",
-                              });
-                            }
-                          };
-                          
-                          deleteAllData();
-                        }}
-                      >
-                        I understand, delete everything
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
+            <CardContent>
+              <Tabs defaultValue="customers" onValueChange={setActiveTrashTab} value={activeTrashTab}>
+                <TabsList className="mb-6">
+                  <TabsTrigger value="customers">Customers</TabsTrigger>
+                  <TabsTrigger value="devices">Devices</TabsTrigger>
+                  <TabsTrigger value="repairs">Repair Tickets</TabsTrigger>
+                  <TabsTrigger value="technicians">Technicians</TabsTrigger>
+                  <TabsTrigger value="inventory">Inventory</TabsTrigger>
+                  <TabsTrigger value="quotes">Quotes</TabsTrigger>
+                  <TabsTrigger value="invoices">Invoices</TabsTrigger>
+                </TabsList>
+                
+                {/* Customers Trash */}
+                <TabsContent value="customers">
+                  {isLoadingDeletedCustomers ? (
+                    <div className="flex justify-center py-8">
+                      <Loader className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : deletedCustomers && deletedCustomers.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Phone</TableHead>
+                          <TableHead>Deleted At</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {deletedCustomers.map((customer) => (
+                          <TableRow key={customer.id}>
+                            <TableCell className="font-medium">{customer.firstName} {customer.lastName}</TableCell>
+                            <TableCell>{customer.email}</TableCell>
+                            <TableCell>{customer.phone}</TableCell>
+                            <TableCell>{new Date(customer.deletedAt as string).toLocaleString()}</TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleRestoreCustomer(customer.id)}
+                                className="flex items-center"
+                              >
+                                <RotateCw className="h-4 w-4 mr-2" />
+                                Restore
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No deleted customers found.
+                    </div>
+                  )}
+                </TabsContent>
+                
+                {/* Devices Trash */}
+                <TabsContent value="devices">
+                  {isLoadingDeletedDevices ? (
+                    <div className="flex justify-center py-8">
+                      <Loader className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : deletedDevices && deletedDevices.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Brand</TableHead>
+                          <TableHead>Model</TableHead>
+                          <TableHead>Serial Number</TableHead>
+                          <TableHead>Deleted At</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {deletedDevices.map((device) => (
+                          <TableRow key={device.id}>
+                            <TableCell>{device.type}</TableCell>
+                            <TableCell>{device.brand}</TableCell>
+                            <TableCell>{device.model}</TableCell>
+                            <TableCell>{device.serialNumber}</TableCell>
+                            <TableCell>{new Date(device.deletedAt as string).toLocaleString()}</TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleRestoreDevice(device.id)}
+                                className="flex items-center"
+                              >
+                                <RotateCw className="h-4 w-4 mr-2" />
+                                Restore
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No deleted devices found.
+                    </div>
+                  )}
+                </TabsContent>
+                
+                {/* Repairs Trash */}
+                <TabsContent value="repairs">
+                  {isLoadingDeletedRepairs ? (
+                    <div className="flex justify-center py-8">
+                      <Loader className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : deletedRepairs && deletedRepairs.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Ticket #</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Issue</TableHead>
+                          <TableHead>Intake Date</TableHead>
+                          <TableHead>Deleted At</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {deletedRepairs.map((repair) => (
+                          <TableRow key={repair.id}>
+                            <TableCell className="font-medium">{repair.ticketNumber}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">
+                                {repair.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{repair.issue.length > 30 ? `${repair.issue.substring(0, 30)}...` : repair.issue}</TableCell>
+                            <TableCell>{new Date(repair.intakeDate).toLocaleDateString()}</TableCell>
+                            <TableCell>{new Date(repair.deletedAt as string).toLocaleString()}</TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleRestoreRepair(repair.id)}
+                                className="flex items-center"
+                              >
+                                <RotateCw className="h-4 w-4 mr-2" />
+                                Restore
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No deleted repair tickets found.
+                    </div>
+                  )}
+                </TabsContent>
+                
+                {/* Technicians Trash */}
+                <TabsContent value="technicians">
+                  {isLoadingDeletedTechnicians ? (
+                    <div className="flex justify-center py-8">
+                      <Loader className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : deletedTechnicians && deletedTechnicians.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Specialty</TableHead>
+                          <TableHead>Deleted At</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {deletedTechnicians.map((technician) => (
+                          <TableRow key={technician.id}>
+                            <TableCell className="font-medium">{technician.firstName} {technician.lastName}</TableCell>
+                            <TableCell>{technician.email}</TableCell>
+                            <TableCell>{technician.role}</TableCell>
+                            <TableCell>{technician.specialty}</TableCell>
+                            <TableCell>{new Date(technician.deletedAt as string).toLocaleString()}</TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleRestoreTechnician(technician.id)}
+                                className="flex items-center"
+                              >
+                                <RotateCw className="h-4 w-4 mr-2" />
+                                Restore
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No deleted technicians found.
+                    </div>
+                  )}
+                </TabsContent>
+                
+                {/* Inventory Trash */}
+                <TabsContent value="inventory">
+                  {isLoadingDeletedInventoryItems ? (
+                    <div className="flex justify-center py-8">
+                      <Loader className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : deletedInventoryItems && deletedInventoryItems.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Price</TableHead>
+                          <TableHead>Quantity</TableHead>
+                          <TableHead>Deleted At</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {deletedInventoryItems.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-medium">{item.name}</TableCell>
+                            <TableCell>{item.category}</TableCell>
+                            <TableCell>${item.price.toFixed(2)}</TableCell>
+                            <TableCell>{item.quantity}</TableCell>
+                            <TableCell>{new Date(item.deletedAt as string).toLocaleString()}</TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleRestoreInventoryItem(item.id)}
+                                className="flex items-center"
+                              >
+                                <RotateCw className="h-4 w-4 mr-2" />
+                                Restore
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No deleted inventory items found.
+                    </div>
+                  )}
+                </TabsContent>
+                
+                {/* Quotes Trash */}
+                <TabsContent value="quotes">
+                  {isLoadingDeletedQuotes ? (
+                    <div className="flex justify-center py-8">
+                      <Loader className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : deletedQuotes && deletedQuotes.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Quote #</TableHead>
+                          <TableHead>Total</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Deleted At</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {deletedQuotes.map((quote) => (
+                          <TableRow key={quote.id}>
+                            <TableCell className="font-medium">{quote.quoteNumber}</TableCell>
+                            <TableCell>${quote.total.toFixed(2)}</TableCell>
+                            <TableCell>{quote.status}</TableCell>
+                            <TableCell>{new Date(quote.deletedAt as string).toLocaleString()}</TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleRestoreQuote(quote.id)}
+                                className="flex items-center"
+                              >
+                                <RotateCw className="h-4 w-4 mr-2" />
+                                Restore
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No deleted quotes found.
+                    </div>
+                  )}
+                </TabsContent>
+                
+                {/* Invoices Trash */}
+                <TabsContent value="invoices">
+                  {isLoadingDeletedInvoices ? (
+                    <div className="flex justify-center py-8">
+                      <Loader className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : deletedInvoices && deletedInvoices.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Invoice #</TableHead>
+                          <TableHead>Total</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Deleted At</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {deletedInvoices.map((invoice) => (
+                          <TableRow key={invoice.id}>
+                            <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                            <TableCell>${invoice.total.toFixed(2)}</TableCell>
+                            <TableCell>{invoice.status}</TableCell>
+                            <TableCell>{new Date(invoice.deletedAt as string).toLocaleString()}</TableCell>
+                            <TableCell className="text-right">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => handleRestoreInvoice(invoice.id)}
+                                className="flex items-center"
+                              >
+                                <RotateCw className="h-4 w-4 mr-2" />
+                                Restore
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No deleted invoices found.
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
             </CardContent>
           </Card>
+          
+          <div className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Data Management</CardTitle>
+                <CardDescription>
+                  Delete data from your system
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="border rounded-lg p-6 bg-gray-50">
+                  <h3 className="text-lg font-medium text-red-600 mb-2">
+                    Delete All Data
+                  </h3>
+                  <p className="text-sm text-gray-600 mb-4">
+                    This will permanently delete all customers, repairs, inventory items, quotes, and invoices from your system.
+                    This action cannot be undone. Default tax rates and currencies will be preserved.
+                  </p>
+                  <AlertDialog open={showDeleteAllDataConfirm} onOpenChange={setShowDeleteAllDataConfirm}>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="destructive"
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete All Data
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-2">
+                          <p>
+                            This action will permanently delete <strong>ALL</strong> of the following data:
+                          </p>
+                          <ul className="list-disc pl-5 space-y-1">
+                            <li>Customers</li>
+                            <li>Devices</li>
+                            <li>Technicians</li>
+                            <li>Repairs & all repair items</li>
+                            <li>Quotes</li>
+                            <li>Invoices</li>
+                            <li>Inventory</li>
+                          </ul>
+                          <p className="text-red-600 font-semibold mt-2">
+                            This action cannot be undone. This will permanently delete all your data.
+                          </p>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-red-600 hover:bg-red-700"
+                          onClick={() => {
+                            const deleteAllData = async () => {
+                              try {
+                                await apiRequest('DELETE', '/api/settings/delete-all-data');
+                                toast({
+                                  title: "Success",
+                                  description: "All data has been deleted successfully",
+                                });
+                                
+                                // Invalidate all queries to refresh the UI
+                                queryClient.invalidateQueries();
+                              } catch (error: any) {
+                                console.error('Error deleting all data:', error);
+                                toast({
+                                  title: "Error",
+                                  description: error.message || "Failed to delete all data",
+                                  variant: "destructive",
+                                });
+                              }
+                            };
+                            
+                            deleteAllData();
+                          }}
+                        >
+                          I understand, delete everything
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
