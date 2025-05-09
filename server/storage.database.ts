@@ -32,16 +32,26 @@ import { db } from "./db";
 export class DatabaseStorage implements IStorage {
   // Customer methods
   async getCustomers(): Promise<Customer[]> {
-    return db.select().from(customers);
+    return db.select().from(customers).where(eq(customers.deleted, false));
   }
 
   async getCustomer(id: number): Promise<Customer | undefined> {
-    const [customer] = await db.select().from(customers).where(eq(customers.id, id));
+    const [customer] = await db.select()
+      .from(customers)
+      .where(and(
+        eq(customers.id, id),
+        eq(customers.deleted, false)
+      ));
     return customer;
   }
 
   async getCustomerByEmail(email: string): Promise<Customer | undefined> {
-    const [customer] = await db.select().from(customers).where(eq(customers.email, email));
+    const [customer] = await db.select()
+      .from(customers)
+      .where(and(
+        eq(customers.email, email),
+        eq(customers.deleted, false)
+      ));
     return customer;
   }
 
@@ -64,21 +74,24 @@ export class DatabaseStorage implements IStorage {
       // First, check if this customer has devices
       const customerDevices = await this.getDevicesByCustomer(id);
       
-      // For each device, check if it's used in any repairs and delete those repairs first
+      // For each device, soft delete them
       for (const device of customerDevices) {
+        // Soft delete any repairs associated with this device
         const associatedRepairs = await db.select()
           .from(repairs)
-          .where(eq(repairs.deviceId, device.id));
+          .where(and(
+            eq(repairs.deviceId, device.id),
+            eq(repairs.deleted, false)
+          ));
           
-        // Delete associated repairs first (including their items)
         for (const repair of associatedRepairs) {
-          // Delete repair items
+          // Soft delete repair items
           const repairItems = await this.getRepairItems(repair.id);
           for (const item of repairItems) {
             await this.deleteRepairItem(item.id);
           }
           
-          // Delete any quotes or invoices related to this repair
+          // Soft delete any quotes or invoices related to this repair
           const repairQuotes = await this.getQuotesByRepair(repair.id);
           for (const quote of repairQuotes) {
             await this.deleteQuote(quote.id);
@@ -89,27 +102,30 @@ export class DatabaseStorage implements IStorage {
             await this.deleteInvoice(invoice.id);
           }
           
-          // Now delete the repair
+          // Now soft delete the repair
           await this.deleteRepair(repair.id);
         }
         
-        // Now it's safe to delete the device
+        // Now soft delete the device
         await this.deleteDevice(device.id);
       }
       
-      // Also find and delete any repairs directly associated with this customer (not via a device)
+      // Also find and soft delete any repairs directly associated with this customer (not via a device)
       const customerRepairs = await db.select()
         .from(repairs)
-        .where(eq(repairs.customerId, id));
+        .where(and(
+          eq(repairs.customerId, id),
+          eq(repairs.deleted, false)
+        ));
         
       for (const repair of customerRepairs) {
-        // Delete repair items
+        // Soft delete repair items
         const repairItems = await this.getRepairItems(repair.id);
         for (const item of repairItems) {
           await this.deleteRepairItem(item.id);
         }
         
-        // Delete any quotes or invoices related to this repair
+        // Soft delete any quotes or invoices related to this repair
         const repairQuotes = await this.getQuotesByRepair(repair.id);
         for (const quote of repairQuotes) {
           await this.deleteQuote(quote.id);
@@ -120,13 +136,21 @@ export class DatabaseStorage implements IStorage {
           await this.deleteInvoice(invoice.id);
         }
         
-        // Now delete the repair
+        // Now soft delete the repair
         await this.deleteRepair(repair.id);
       }
       
-      // Finally, delete the customer
-      const result = await db.delete(customers).where(eq(customers.id, id));
-      return !!result;
+      // Finally, soft delete the customer by setting deleted flag
+      const [updatedCustomer] = await db
+        .update(customers)
+        .set({ 
+          deleted: true, 
+          deletedAt: new Date() 
+        })
+        .where(eq(customers.id, id))
+        .returning();
+        
+      return !!updatedCustomer;
     } catch (error) {
       console.error("Error in deleteCustomer:", error);
       throw error;
@@ -135,15 +159,25 @@ export class DatabaseStorage implements IStorage {
 
   // Device methods
   async getDevices(): Promise<Device[]> {
-    return db.select().from(devices);
+    return db.select().from(devices).where(eq(devices.deleted, false));
   }
 
   async getDevicesByCustomer(customerId: number): Promise<Device[]> {
-    return db.select().from(devices).where(eq(devices.customerId, customerId));
+    return db.select()
+      .from(devices)
+      .where(and(
+        eq(devices.customerId, customerId),
+        eq(devices.deleted, false)
+      ));
   }
 
   async getDevice(id: number): Promise<Device | undefined> {
-    const [device] = await db.select().from(devices).where(eq(devices.id, id));
+    const [device] = await db.select()
+      .from(devices)
+      .where(and(
+        eq(devices.id, id),
+        eq(devices.deleted, false)
+      ));
     return device;
   }
 
@@ -166,16 +200,27 @@ export class DatabaseStorage implements IStorage {
       // Find repairs associated with this device
       const associatedRepairs = await db.select()
         .from(repairs)
-        .where(eq(repairs.deviceId, id));
+        .where(and(
+          eq(repairs.deviceId, id),
+          eq(repairs.deleted, false)
+        ));
       
-      // For each repair, handle deletion of dependent entities first
+      // For each repair, soft delete dependent entities first
       for (const repair of associatedRepairs) {
         await this.deleteRepair(repair.id);
       }
       
-      // Now it's safe to delete the device
-      const result = await db.delete(devices).where(eq(devices.id, id));
-      return !!result;
+      // Now soft delete the device by setting deleted flag
+      const [updatedDevice] = await db
+        .update(devices)
+        .set({
+          deleted: true,
+          deletedAt: new Date()
+        })
+        .where(eq(devices.id, id))
+        .returning();
+        
+      return !!updatedDevice;
     } catch (error) {
       console.error("Error in deleteDevice:", error);
       throw error;
