@@ -1533,6 +1533,211 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete All Data endpoint
+  // Trash management - view and restore deleted records
+  apiRouter.get("/trash/customers", async (req: Request, res: Response) => {
+    try {
+      const deletedCustomers = await storage.getDeletedCustomers();
+      res.json(deletedCustomers);
+    } catch (error) {
+      console.error("Error fetching deleted customers:", error);
+      res.status(500).json({ error: "Failed to fetch deleted customers" });
+    }
+  });
+
+  apiRouter.get("/trash/devices", async (req: Request, res: Response) => {
+    try {
+      const deletedDevices = await storage.getDeletedDevices();
+      res.json(deletedDevices);
+    } catch (error) {
+      console.error("Error fetching deleted devices:", error);
+      res.status(500).json({ error: "Failed to fetch deleted devices" });
+    }
+  });
+
+  apiRouter.get("/trash/repairs", async (req: Request, res: Response) => {
+    try {
+      const deletedRepairs = await storage.getDeletedRepairs();
+      res.json(deletedRepairs);
+    } catch (error) {
+      console.error("Error fetching deleted repairs:", error);
+      res.status(500).json({ error: "Failed to fetch deleted repairs" });
+    }
+  });
+
+  apiRouter.get("/trash/technicians", async (req: Request, res: Response) => {
+    try {
+      const deletedTechnicians = await storage.getDeletedTechnicians();
+      res.json(deletedTechnicians);
+    } catch (error) {
+      console.error("Error fetching deleted technicians:", error);
+      res.status(500).json({ error: "Failed to fetch deleted technicians" });
+    }
+  });
+
+  apiRouter.get("/trash/inventory", async (req: Request, res: Response) => {
+    try {
+      const deletedInventoryItems = await storage.getDeletedInventoryItems();
+      res.json(deletedInventoryItems);
+    } catch (error) {
+      console.error("Error fetching deleted inventory items:", error);
+      res.status(500).json({ error: "Failed to fetch deleted inventory items" });
+    }
+  });
+
+  apiRouter.get("/trash/quotes", async (req: Request, res: Response) => {
+    try {
+      const deletedQuotes = await storage.getDeletedQuotes();
+      res.json(deletedQuotes);
+    } catch (error) {
+      console.error("Error fetching deleted quotes:", error);
+      res.status(500).json({ error: "Failed to fetch deleted quotes" });
+    }
+  });
+
+  apiRouter.get("/trash/invoices", async (req: Request, res: Response) => {
+    try {
+      const deletedInvoices = await storage.getDeletedInvoices();
+      res.json(deletedInvoices);
+    } catch (error) {
+      console.error("Error fetching deleted invoices:", error);
+      res.status(500).json({ error: "Failed to fetch deleted invoices" });
+    }
+  });
+
+  // Restore endpoints
+  apiRouter.post("/trash/customers/:id/restore", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const restoredCustomer = await storage.restoreCustomer(id);
+      if (!restoredCustomer) {
+        return res.status(404).json({ error: "Customer not found or could not be restored" });
+      }
+
+      res.json(restoredCustomer);
+    } catch (error) {
+      console.error("Error restoring customer:", error);
+      res.status(500).json({ error: "Failed to restore customer" });
+    }
+  });
+
+  apiRouter.post("/trash/devices/:id/restore", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const restoredDevice = await storage.restoreDevice(id);
+      if (!restoredDevice) {
+        return res.status(404).json({ error: "Device not found or could not be restored" });
+      }
+
+      res.json(restoredDevice);
+    } catch (error) {
+      console.error("Error restoring device:", error);
+      res.status(500).json({ error: "Failed to restore device" });
+    }
+  });
+
+  apiRouter.post("/trash/repairs/:id/restore", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const restoredRepair = await storage.restoreRepair(id);
+      if (!restoredRepair) {
+        return res.status(404).json({ error: "Repair not found or could not be restored" });
+      }
+
+      res.json(restoredRepair);
+    } catch (error) {
+      console.error("Error restoring repair:", error);
+      res.status(500).json({ error: "Failed to restore repair" });
+    }
+  });
+
+  apiRouter.post("/trash/technicians/:id/restore", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const restoredTechnician = await storage.restoreTechnician(id);
+      if (!restoredTechnician) {
+        return res.status(404).json({ error: "Technician not found or could not be restored" });
+      }
+
+      res.json(restoredTechnician);
+    } catch (error) {
+      console.error("Error restoring technician:", error);
+      res.status(500).json({ error: "Failed to restore technician" });
+    }
+  });
+
+  apiRouter.post("/trash/inventory/:id/restore", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const restoredItem = await storage.restoreInventoryItem(id);
+      if (!restoredItem) {
+        return res.status(404).json({ error: "Inventory item not found or could not be restored" });
+      }
+
+      res.json(restoredItem);
+    } catch (error) {
+      console.error("Error restoring inventory item:", error);
+      res.status(500).json({ error: "Failed to restore inventory item" });
+    }
+  });
+
+  apiRouter.post("/trash/quotes/:id/restore", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const restoredQuote = await storage.restoreQuote(id);
+      if (!restoredQuote) {
+        return res.status(404).json({ error: "Quote not found or could not be restored" });
+      }
+
+      res.json(restoredQuote);
+    } catch (error) {
+      console.error("Error restoring quote:", error);
+      res.status(500).json({ error: "Failed to restore quote" });
+    }
+  });
+
+  apiRouter.post("/trash/invoices/:id/restore", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid ID format" });
+      }
+
+      const restoredInvoice = await storage.restoreInvoice(id);
+      if (!restoredInvoice) {
+        return res.status(404).json({ error: "Invoice not found or could not be restored" });
+      }
+
+      res.json(restoredInvoice);
+    } catch (error) {
+      console.error("Error restoring invoice:", error);
+      res.status(500).json({ error: "Failed to restore invoice" });
+    }
+  });
+
   apiRouter.delete("/settings/delete-all-data", async (req: Request, res: Response) => {
     try {
       // With our cascading delete implementations, we can simplify this
