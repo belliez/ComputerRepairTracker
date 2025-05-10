@@ -469,6 +469,78 @@ const SettingsPage = () => {
     }
   });
   
+  // Technician mutations
+  const createTechnicianMutation = useMutation({
+    mutationFn: (data: z.infer<typeof technicianSchema>) => 
+      apiRequest('POST', '/api/technicians', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/technicians'] });
+      setShowTechnicianDialog(false);
+      technicianForm.reset();
+      toast({
+        title: "Technician added",
+        description: "The technician has been successfully added",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error adding technician",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const updateTechnicianMutation = useMutation({
+    mutationFn: (data: any) => 
+      apiRequest('PUT', `/api/technicians/${data.id}`, {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        phone: data.phone,
+        role: data.role,
+        specialty: data.specialty,
+        isActive: data.isActive,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/technicians'] });
+      setShowTechnicianDialog(false);
+      setEditingTechnician(null);
+      technicianForm.reset();
+      toast({
+        title: "Technician updated",
+        description: "The technician has been successfully updated",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating technician",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  const deleteTechnicianMutation = useMutation({
+    mutationFn: (id: number) => 
+      apiRequest('DELETE', `/api/technicians/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/technicians'] });
+      setDeletingTechnicianId(null);
+      toast({
+        title: "Technician deleted",
+        description: "The technician has been successfully deleted",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error deleting technician",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
   // Restore mutations for deleted records
   const restoreCustomerMutation = useMutation({
     mutationFn: (id: number) => 
@@ -713,6 +785,7 @@ const SettingsPage = () => {
         <TabsList className="mb-6">
           <TabsTrigger value="currencies">Currencies</TabsTrigger>
           <TabsTrigger value="tax-rates">Tax Rates</TabsTrigger>
+          <TabsTrigger value="technicians">Technicians</TabsTrigger>
           <TabsTrigger value="data-management">Data Management</TabsTrigger>
         </TabsList>
         
