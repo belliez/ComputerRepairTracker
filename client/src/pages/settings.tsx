@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { Loader, PlusCircle, Trash2, X, RefreshCw, RotateCw } from 'lucide-react';
+import { Loader, Loader2, PlusCircle, Trash2, X, RefreshCw, RotateCw, UserRound, Pencil, Edit } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 // Schemas for form validation
@@ -1265,6 +1266,286 @@ const SettingsPage = () => {
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   No tax rates found. Add one to get started.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Technicians Tab */}
+        <TabsContent value="technicians">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Technicians</CardTitle>
+                <CardDescription>
+                  Manage technicians and repair specialists
+                </CardDescription>
+              </div>
+              <Dialog open={showTechnicianDialog} onOpenChange={setShowTechnicianDialog}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => {
+                    setEditingTechnician(null);
+                    technicianForm.reset({
+                      firstName: '',
+                      lastName: '',
+                      email: '',
+                      phone: '',
+                      role: '',
+                      specialty: '',
+                      isActive: true,
+                    });
+                  }}>
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add Technician
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingTechnician ? 'Edit Technician' : 'Add New Technician'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingTechnician 
+                        ? 'Edit technician details below'
+                        : 'Enter the details of the new technician'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <Form {...technicianForm}>
+                    <form onSubmit={technicianForm.handleSubmit((data) => {
+                      if (editingTechnician) {
+                        updateTechnicianMutation.mutate({
+                          id: editingTechnician.id,
+                          ...data
+                        });
+                      } else {
+                        createTechnicianMutation.mutate(data);
+                      }
+                    })} className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={technicianForm.control}
+                          name="firstName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>First Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={technicianForm.control}
+                          name="lastName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Last Name</FormLabel>
+                              <FormControl>
+                                <Input {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <FormField
+                        control={technicianForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="email" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={technicianForm.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Phone (optional)</FormLabel>
+                            <FormControl>
+                              <Input {...field} type="tel" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={technicianForm.control}
+                        name="role"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Role</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g. Senior Technician" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={technicianForm.control}
+                        name="specialty"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Specialty (optional)</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g. Hardware Repairs" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={technicianForm.control}
+                        name="isActive"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Active</FormLabel>
+                              <FormDescription>
+                                Inactive technicians won't appear in assignment lists
+                              </FormDescription>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <DialogFooter>
+                        <Button type="submit">
+                          {editingTechnician ? 'Update Technician' : 'Add Technician'}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {isLoadingTechnicians ? (
+                <div className="flex justify-center p-6">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-500" />
+                </div>
+              ) : technicians.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <UserRound className="h-12 w-12 text-gray-300 mb-3" />
+                  <h3 className="text-lg font-medium">No technicians added yet</h3>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">
+                    Add technicians to assign them to repair tickets
+                  </p>
+                  <Button onClick={() => setShowTechnicianDialog(true)} variant="outline">
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Add Your First Technician
+                  </Button>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Specialty</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {technicians.map((technician) => (
+                        <TableRow key={technician.id}>
+                          <TableCell>
+                            <div className="font-medium">{technician.firstName} {technician.lastName}</div>
+                          </TableCell>
+                          <TableCell>{technician.role}</TableCell>
+                          <TableCell>{technician.email}</TableCell>
+                          <TableCell>{technician.specialty || '-'}</TableCell>
+                          <TableCell>
+                            {technician.isActive !== false ? (
+                              <Badge>Active</Badge>
+                            ) : (
+                              <Badge variant="outline">Inactive</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingTechnician(technician);
+                                  technicianForm.reset({
+                                    firstName: technician.firstName,
+                                    lastName: technician.lastName,
+                                    email: technician.email,
+                                    phone: technician.phone || '',
+                                    role: technician.role,
+                                    specialty: technician.specialty || '',
+                                    isActive: technician.isActive !== false,
+                                  });
+                                  setShowTechnicianDialog(true);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
+                              <AlertDialog open={deletingTechnicianId === technician.id} onOpenChange={(open) => !open && setDeletingTechnicianId(null)}>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-red-500 hover:text-red-700"
+                                    onClick={() => setDeletingTechnicianId(technician.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-1" />
+                                    Delete
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Technician</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete this technician? This will remove them from any assigned repairs.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-red-500 hover:bg-red-600"
+                                      onClick={() => deleteTechnicianMutation.mutate(technician.id)}
+                                    >
+                                      {deleteTechnicianMutation.isPending && (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      )}
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>
