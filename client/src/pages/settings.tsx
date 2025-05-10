@@ -57,14 +57,27 @@ const taxRateSchema = z.object({
   isDefault: z.boolean().optional(),
 });
 
+const technicianSchema = z.object({
+  firstName: z.string().min(1, { message: "First name is required" }),
+  lastName: z.string().min(1, { message: "Last name is required" }),
+  email: z.string().email({ message: "Invalid email address" }),
+  phone: z.string().optional(),
+  role: z.string().min(1, { message: "Role is required" }),
+  specialty: z.string().optional(),
+  isActive: z.boolean().optional().default(true),
+});
+
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('currencies');
   const [showCurrencyDialog, setShowCurrencyDialog] = useState(false);
   const [showTaxRateDialog, setShowTaxRateDialog] = useState(false);
+  const [showTechnicianDialog, setShowTechnicianDialog] = useState(false);
   const [editingCurrency, setEditingCurrency] = useState<any>(null);
   const [editingTaxRate, setEditingTaxRate] = useState<any>(null);
+  const [editingTechnician, setEditingTechnician] = useState<any>(null);
   const [deletingCurrencyCode, setDeletingCurrencyCode] = useState<string | null>(null);
   const [deletingTaxRateId, setDeletingTaxRateId] = useState<number | null>(null);
+  const [deletingTechnicianId, setDeletingTechnicianId] = useState<number | null>(null);
   const [showDeleteAllDataConfirm, setShowDeleteAllDataConfirm] = useState(false);
   const [activeTrashTab, setActiveTrashTab] = useState('customers');
   
@@ -217,6 +230,14 @@ const SettingsPage = () => {
     queryKey: ['/api/settings/tax-rates'],
   });
   
+  const {
+    data: technicians = [],
+    isLoading: isLoadingTechnicians,
+  } = useQuery<Technician[]>({
+    queryKey: ['/api/technicians'],
+    enabled: activeTab === 'technicians',
+  });
+  
   // Trash management queries
   const {
     data: deletedCustomers = [],
@@ -294,6 +315,20 @@ const SettingsPage = () => {
       name: '',
       rate: 0,
       isDefault: false,
+    }
+  });
+  
+  // Technician form
+  const technicianForm = useForm<z.infer<typeof technicianSchema>>({
+    resolver: zodResolver(technicianSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      phone: '',
+      role: '',
+      specialty: '',
+      isActive: true,
     }
   });
   
