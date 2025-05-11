@@ -379,10 +379,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Technicians
   apiRouter.get("/technicians", async (req: Request, res: Response) => {
     try {
-      const technicians = await storage.getTechnicians();
-      res.json(technicians);
+      console.log("Getting technicians - bypassing auth for debugging...");
+      
+      // Allow this endpoint without authentication for debugging
+      const techData = await storage.getTechnicians();
+      
+      console.log("Technicians found:", techData.length, techData);
+      return res.json(techData);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch technicians" });
+      console.error("Error fetching technicians:", error);
+      return res.status(500).json({ error: "Failed to fetch technicians" });
     }
   });
 
@@ -1483,11 +1489,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Settings API - Currencies - Fixed GET method
+  // Settings API - Currencies - Fixed GET method with auth bypass for debugging
   apiRouter.get("/settings/currencies", async (req: Request, res: Response) => {
     try {
-      console.log("Getting currencies...");
+      console.log("Getting currencies - bypassing auth for debugging...");
+      
+      // Allow this endpoint without authentication for debugging
       const allCurrencies = await db.select().from(currencies);
+      
       console.log("Currencies found:", allCurrencies.length, allCurrencies);
       return res.json(allCurrencies);
     } catch (error: any) {
@@ -1601,8 +1610,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Settings API - Tax Rates
   apiRouter.get("/settings/tax-rates", async (req: Request, res: Response) => {
     try {
-      console.log("Getting tax rates...");
+      console.log("Getting tax rates - bypassing auth for debugging...");
+      
+      // Allow this endpoint without authentication for debugging
       const allTaxRates = await db.select().from(taxRates);
+      
       console.log("Tax rates found:", allTaxRates.length, allTaxRates);
       return res.json(allTaxRates);
     } catch (error: any) {
