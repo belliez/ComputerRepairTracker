@@ -87,18 +87,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Extract data from request
       const { email, name } = req.body;
       
-      // Generate a mock user for development
+      // Generate a comprehensive mock user for development
       const mockUser = {
         id: 'dev-user-123',
         email: email || 'dev@example.com',
-        name: name || 'Development User',
+        displayName: name || 'Development User',
+        photoURL: null,
+        lastLoginAt: new Date().toISOString()
+      };
+      
+      // Create a mock organization with complete properties
+      const mockOrg = {
+        id: 1,
+        name: 'Development Organization',
+        slug: 'dev-org',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        ownerId: 'dev-user-123',
+        logo: null,
+        stripeSubscriptionId: 'mock_sub_123',
+        subscriptionStatus: 'active',
+        trialEndsAt: null,
+        planId: 'free',
+        billingEmail: email || 'dev@example.com',
+        billingName: name || 'Development User',
+        billingAddress: null,
+        deleted: false,
+        deletedAt: null,
         role: 'owner'
       };
       
-      // Return success with the mock user
+      // Generate a token that will be recognized by our dev auth middleware
+      const mockToken = 'dev-token-' + Date.now();
+      
+      // Return success with the complete mock data
       res.status(200).json({ 
         message: 'Development login successful',
-        user: mockUser,
+        user: {
+          ...mockUser,
+          organization: mockOrg
+        },
+        token: mockToken,
         devMode: true
       });
     });

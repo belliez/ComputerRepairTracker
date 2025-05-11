@@ -24,6 +24,7 @@ interface MockDecodedIdToken {
   uid: string;
   email: string;
   name: string;
+  displayName?: string; // Add displayName to match Firebase user structure
   iat: number;
   exp: number;
   aud: string;
@@ -47,13 +48,14 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
     if (authHeader && authHeader.startsWith('Bearer dev-token-')) {
       console.log('Development token detected, using mock user');
       
-      // Create a mock user for development purposes only
+      // Create a comprehensive mock user for development purposes
       const mockUser: MockDecodedIdToken = {
         uid: 'dev-user-123',
         email: 'dev@example.com',
         name: 'Development User',
+        displayName: 'Development User',
         iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 3600,
+        exp: Math.floor(Date.now() / 1000) + 3600, // Token valid for 1 hour
         aud: 'dev-audience',
         iss: 'dev-issuer',
         sub: 'dev-subject',
@@ -72,13 +74,14 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
     // If Firebase isn't initialized in development, allow the request with a mock user
     if (!firebaseInitialized) {
       console.warn('Firebase Admin SDK not initialized, bypassing authentication in development');
-      // Create a mock user for development purposes only
+      // Create a comprehensive mock user for development purposes
       const mockUser: MockDecodedIdToken = {
         uid: 'dev-user-123',
         email: 'dev@example.com',
         name: 'Development User',
+        displayName: 'Development User',
         iat: Math.floor(Date.now() / 1000),
-        exp: Math.floor(Date.now() / 1000) + 3600,
+        exp: Math.floor(Date.now() / 1000) + 3600, // Token valid for 1 hour
         aud: 'dev-audience',
         iss: 'dev-issuer',
         sub: 'dev-subject',

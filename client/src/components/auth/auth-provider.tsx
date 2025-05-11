@@ -59,48 +59,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Listen for Firebase auth state changes and also check for development mode
   useEffect(() => {
+    console.log('AuthProvider initialization - checking for development mode');
     // Special handling for development mode
     const devMode = localStorage.getItem('dev_mode') === 'true';
     const devUser = localStorage.getItem('dev_user');
     
     if (devMode && devUser) {
       console.log('Development mode detected, using mock user');
-      const mockUser = JSON.parse(devUser);
-      setIsLoading(false);
       
-      // Create a fully mock user with organization for development
-      const user = {
-        id: mockUser.id,
-        email: mockUser.email,
-        displayName: mockUser.displayName,
-        photoURL: null,
-        lastLoginAt: new Date(),
-      };
-      
-      const mockOrg = {
-        id: 1,
-        name: 'Development Organization',
-        slug: 'dev-org',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        ownerId: mockUser.id,
-        logo: null,
-        stripeSubscriptionId: null,
-        subscriptionStatus: null,
-        trialEndsAt: null,
-        planId: null,
-        billingEmail: mockUser.email,
-        billingName: mockUser.displayName,
-        billingAddress: null,
-        deleted: false,
-        deletedAt: null,
-        role: 'owner' as const
-      };
-      
-      setUser(user as any);
-      setOrganizations([mockOrg as any]);
-      setCurrentOrganization(mockOrg as any);
-      localStorage.setItem('currentOrganizationId', '1');
+      try {
+        const mockUser = JSON.parse(devUser);
+        setIsLoading(false);
+        
+        // Create a fully mock user with organization for development
+        const user = {
+          id: mockUser.id || 'dev-user-123',
+          email: mockUser.email || 'dev@example.com',
+          displayName: mockUser.displayName || 'Development User',
+          photoURL: null,
+          lastLoginAt: new Date(),
+        };
+        
+        const mockOrg = {
+          id: 1,
+          name: 'Development Organization',
+          slug: 'dev-org',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          ownerId: mockUser.id || 'dev-user-123',
+          logo: null,
+          stripeSubscriptionId: 'mock_sub_123',
+          subscriptionStatus: 'active',
+          trialEndsAt: null,
+          planId: 'free',
+          billingEmail: mockUser.email || 'dev@example.com',
+          billingName: mockUser.displayName || 'Development User',
+          billingAddress: null,
+          deleted: false,
+          deletedAt: null,
+          role: 'owner' as const
+        };
+        
+        setUser(user as any);
+        setOrganizations([mockOrg as any]);
+        setCurrentOrganization(mockOrg as any);
+        localStorage.setItem('currentOrganizationId', '1');
+        
+        console.log('Successfully set up development auth');
+        
+        // This solves the issue where the user is not redirected to the app after login
+        if (window.location.pathname.includes('/auth')) {
+          window.location.href = '/';
+        }
+      } catch (error) {
+        console.error('Error processing dev user:', error);
+      }
       
       return () => {};  // No cleanup for dev mode
     }
