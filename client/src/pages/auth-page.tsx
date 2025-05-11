@@ -87,7 +87,12 @@ const AuthPage: React.FC = () => {
           email: 'dev@example.com',
           name: 'Development User'
         }),
-      }).then(() => {
+      }).then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to call development login endpoint');
+        }
+        return response.json();
+      }).then((data) => {
         // Create direct implementation of dev auth flow in the client
         
         // Create a mock development user directly in localStorage
@@ -98,6 +103,11 @@ const AuthPage: React.FC = () => {
           displayName: 'Development User',
         }));
         
+        // Create a mock Firebase token for development authentication
+        // This will be a fake token but the server will allow it in development mode
+        const mockToken = 'dev-token-' + Date.now();
+        localStorage.setItem('firebase_token', mockToken);
+        
         toast({
           title: 'Development Mode',
           description: 'Using development authentication',
@@ -105,6 +115,8 @@ const AuthPage: React.FC = () => {
         
         // Redirect to home page
         setLocation('/');
+      }).catch(error => {
+        throw error;
       });
     } catch (error) {
       console.error('Development login error:', error);

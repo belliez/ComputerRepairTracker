@@ -49,26 +49,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error("Error initializing database:", error);
   }
   
-  // Development-only endpoints
+  // Create API router
+  const apiRouter = express.Router();
+  
+  // Public routes (no auth required)
   if (process.env.NODE_ENV === 'development') {
+    // Development-only endpoints with no auth
     app.post('/api/dev-login', (req: Request, res: Response) => {
       console.log('Using development login endpoint');
-      // This is only for development, and just returns a 200 response
-      // The actual login bypass happens on the client side
-      res.status(200).json({ message: 'Development login successful' });
+      
+      // Extract data from request
+      const { email, name } = req.body;
+      
+      // Generate a mock user for development
+      const mockUser = {
+        id: 'dev-user-123',
+        email: email || 'dev@example.com',
+        name: name || 'Development User',
+        role: 'owner'
+      };
+      
+      // Return success with the mock user
+      res.status(200).json({ 
+        message: 'Development login successful',
+        user: mockUser,
+        devMode: true
+      });
     });
   }
   
-  // Apply organization context middleware after dev login route
-  app.use(addOrganizationContext);
+  // Apply authentication middleware to protected API routes
+  apiRouter.use(authenticateJWT);
+  
+  // Apply organization context middleware for authenticated users
+  apiRouter.use(addOrganizationContext);
   
   // Auth and organization API routes
-  app.get('/api/me', getCurrentUser);
-  app.get('/api/organizations', getUserOrganizations);
-  app.post('/api/organizations', createOrganization);
-  app.post('/api/organizations/invite', addUserToOrganization);
-  app.post('/api/organizations/accept-invite', acceptOrganizationInvite);
-  app.post('/api/set-organization', (req: Request, res: Response) => {
+  apiRouter.get('/me', getCurrentUser);
+  apiRouter.get('/organizations', getUserOrganizations);
+  apiRouter.post('/organizations', createOrganization);
+  apiRouter.post('/organizations/invite', addUserToOrganization);
+  apiRouter.post('/organizations/accept-invite', acceptOrganizationInvite);
+  apiRouter.post('/set-organization', (req: Request, res: Response) => {
     const { organizationId } = req.body;
     if (!organizationId) {
       return res.status(400).json({ message: 'Organization ID is required' });
@@ -77,10 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ message: 'Organization context set', organizationId });
   });
   
-  // API routes prefix
-  const apiRouter = express.Router();
-  // Apply authentication middleware to all API routes
-  apiRouter.use(authenticateJWT);
+  // Mount API router
   app.use("/api", apiRouter);
 
   // Customers

@@ -39,33 +39,62 @@ interface MockDecodedIdToken {
 
 // Middleware to authenticate JWT tokens from Firebase
 export const authenticateJWT = async (req: Request, res: Response, next: NextFunction) => {
-  // If Firebase isn't initialized, allow the request through in development
-  // In production, this would return an error
-  if (!firebaseInitialized) {
-    console.warn('Firebase Admin SDK not initialized, bypassing authentication in development');
-    // Create a mock user for development purposes only
-    const mockUser: MockDecodedIdToken = {
-      uid: 'dev-user-123',
-      email: 'dev@example.com',
-      name: 'Development User',
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + 3600,
-      aud: 'dev-audience',
-      iss: 'dev-issuer',
-      sub: 'dev-subject',
-      auth_time: Math.floor(Date.now() / 1000),
-      firebase: { 
-        sign_in_provider: 'development',
-        identities: {}
-      }
-    };
-    // Cast to any to avoid type issues since we're in development mode only
-    req.user = mockUser as any;
-    return next();
-  }
-
   const authHeader = req.headers.authorization;
   
+  // Check for dev token in development mode
+  if (process.env.NODE_ENV === 'development') {
+    // Check if the token is a development token
+    if (authHeader && authHeader.startsWith('Bearer dev-token-')) {
+      console.log('Development token detected, using mock user');
+      
+      // Create a mock user for development purposes only
+      const mockUser: MockDecodedIdToken = {
+        uid: 'dev-user-123',
+        email: 'dev@example.com',
+        name: 'Development User',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        aud: 'dev-audience',
+        iss: 'dev-issuer',
+        sub: 'dev-subject',
+        auth_time: Math.floor(Date.now() / 1000),
+        firebase: { 
+          sign_in_provider: 'development',
+          identities: {}
+        }
+      };
+      
+      // Cast to any to avoid type issues since we're in development mode only
+      req.user = mockUser as any;
+      return next();
+    }
+    
+    // If Firebase isn't initialized in development, allow the request with a mock user
+    if (!firebaseInitialized) {
+      console.warn('Firebase Admin SDK not initialized, bypassing authentication in development');
+      // Create a mock user for development purposes only
+      const mockUser: MockDecodedIdToken = {
+        uid: 'dev-user-123',
+        email: 'dev@example.com',
+        name: 'Development User',
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        aud: 'dev-audience',
+        iss: 'dev-issuer',
+        sub: 'dev-subject',
+        auth_time: Math.floor(Date.now() / 1000),
+        firebase: { 
+          sign_in_provider: 'development',
+          identities: {}
+        }
+      };
+      // Cast to any to avoid type issues since we're in development mode only
+      req.user = mockUser as any;
+      return next();
+    }
+  }
+
+  // For production or non-dev tokens, require proper authorization
   if (!authHeader) {
     return res.status(401).json({ message: 'Authorization header required' });
   }
