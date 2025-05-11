@@ -296,50 +296,84 @@ export class DatabaseStorage implements IStorage {
 
   // Device methods
   async getDevices(): Promise<Device[]> {
-    return db.select().from(devices).where(eq(devices.deleted, false));
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching all devices for organization: ${orgId}`);
+    
+    return db.select()
+      .from(devices)
+      .where(and(
+        eq(devices.deleted, false),
+        eq(devices.organizationId, orgId)
+      ));
   }
 
   async getDevicesByCustomer(customerId: number): Promise<Device[]> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching devices for customer ${customerId} in organization: ${orgId}`);
+    
     return db.select()
       .from(devices)
       .where(and(
         eq(devices.customerId, customerId),
-        eq(devices.deleted, false)
+        eq(devices.deleted, false),
+        eq(devices.organizationId, orgId)
       ));
   }
 
   async getDevice(id: number): Promise<Device | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching device ${id} for organization: ${orgId}`);
+    
     const [device] = await db.select()
       .from(devices)
       .where(and(
         eq(devices.id, id),
-        eq(devices.deleted, false)
+        eq(devices.deleted, false),
+        eq(devices.organizationId, orgId)
       ));
     return device;
   }
 
   async createDevice(device: InsertDevice): Promise<Device> {
-    const [newDevice] = await db.insert(devices).values(device).returning();
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Creating device in organization: ${orgId}`);
+    
+    const [newDevice] = await db.insert(devices)
+      .values({
+        ...device,
+        organizationId: orgId
+      })
+      .returning();
     return newDevice;
   }
 
   async updateDevice(id: number, deviceData: Partial<Device>): Promise<Device | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Updating device ${id} in organization: ${orgId}`);
+    
     const [updatedDevice] = await db
       .update(devices)
       .set(deviceData)
-      .where(eq(devices.id, id))
+      .where(and(
+        eq(devices.id, id),
+        eq(devices.organizationId, orgId)
+      ))
       .returning();
     return updatedDevice;
   }
 
   async deleteDevice(id: number): Promise<boolean> {
     try {
+      const orgId = (global as any).currentOrganizationId || 1;
+      console.log(`Deleting device ${id} in organization: ${orgId}`);
+      
       // Find repairs associated with this device
       const associatedRepairs = await db.select()
         .from(repairs)
         .where(and(
           eq(repairs.deviceId, id),
-          eq(repairs.deleted, false)
+          eq(repairs.deleted, false),
+          eq(repairs.organizationId, orgId)
         ));
       
       // For each repair, soft delete dependent entities first
@@ -354,7 +388,10 @@ export class DatabaseStorage implements IStorage {
           deleted: true,
           deletedAt: new Date()
         })
-        .where(eq(devices.id, id))
+        .where(and(
+          eq(devices.id, id),
+          eq(devices.organizationId, orgId)
+        ))
         .returning();
         
       return !!updatedDevice;
