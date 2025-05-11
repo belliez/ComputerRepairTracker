@@ -369,6 +369,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      // Check if we're in development mode first
+      const devMode = localStorage.getItem('dev_mode') === 'true';
+      
+      if (devMode) {
+        // Development mode cleanup
+        console.log('Development mode detected, cleaning up dev auth');
+        localStorage.removeItem('dev_mode');
+        localStorage.removeItem('dev_user');
+        localStorage.removeItem('currentOrganizationId');
+        
+        // Reset auth state
+        setUser(null);
+        setFirebaseUser(null);
+        setCurrentOrganization(null);
+        setOrganizations([]);
+        
+        toast({
+          title: 'Signed Out',
+          description: 'You have been signed out of development mode',
+        });
+        
+        return;
+      }
+      
+      // Normal Firebase signout
       await firebaseSignOut(auth);
       localStorage.removeItem('firebase_token');
       localStorage.removeItem('currentOrganizationId');
