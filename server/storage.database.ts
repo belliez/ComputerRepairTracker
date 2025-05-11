@@ -64,15 +64,39 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getDeletedInventoryItems(): Promise<InventoryItem[]> {
-    return db.select().from(inventoryItems).where(eq(inventoryItems.deleted, true));
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching deleted inventory items for organization: ${orgId}`);
+    
+    return db.select()
+      .from(inventoryItems)
+      .where(and(
+        eq(inventoryItems.deleted, true),
+        eq((inventoryItems as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
   }
   
   async getDeletedQuotes(): Promise<Quote[]> {
-    return db.select().from(quotes).where(eq(quotes.deleted, true));
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching deleted quotes for organization: ${orgId}`);
+    
+    return db.select()
+      .from(quotes)
+      .where(and(
+        eq(quotes.deleted, true),
+        eq((quotes as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
   }
   
   async getDeletedInvoices(): Promise<Invoice[]> {
-    return db.select().from(invoices).where(eq(invoices.deleted, true));
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching deleted invoices for organization: ${orgId}`);
+    
+    return db.select()
+      .from(invoices)
+      .where(and(
+        eq(invoices.deleted, true),
+        eq((invoices as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
   }
   
   async restoreCustomer(id: number): Promise<Customer | undefined> {
@@ -160,14 +184,36 @@ export class DatabaseStorage implements IStorage {
   }
   
   async restoreInvoice(id: number): Promise<Invoice | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Restoring invoice ${id} for organization: ${orgId}`);
+    
+    // Verify the invoice belongs to the current organization before restoring
+    const [invoice] = await db.select()
+      .from(invoices)
+      .where(and(
+        eq(invoices.id, id),
+        eq(invoices.deleted, true),
+        eq((invoices as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
+      
+    if (!invoice) {
+      console.log(`Cannot restore invoice ${id}: Invoice not found in organization ${orgId}`);
+      return undefined;
+    }
+    
+    // Restore the invoice with organization context
     const [restoredInvoice] = await db
       .update(invoices)
       .set({
         deleted: false,
         deletedAt: null
       })
-      .where(eq(invoices.id, id))
+      .where(and(
+        eq(invoices.id, id),
+        eq((invoices as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
+      
     return restoredInvoice;
   }
   
