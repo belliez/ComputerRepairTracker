@@ -3,6 +3,7 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
+    console.error(`API Error: ${res.status} - ${text}`);
     throw new Error(`${res.status}: ${text}`);
   }
 }
@@ -24,18 +25,23 @@ export async function apiRequest(
     headers["Content-Type"] = "application/json";
   }
   
+  // Add special header for organization debugging
+  headers["X-Debug-Client"] = "RepairTrackerClient";
+  
   // Add Authorization header with appropriate token
   if (firebaseToken) {
-    console.log('Adding auth header with token for API request');
+    console.log('Adding auth header with token for API request to', url);
     headers["Authorization"] = `Bearer ${firebaseToken}`;
-  } else if (devMode) {
+  } else if (devMode || import.meta.env.MODE === 'development') {
     // Create a new dev token if needed for dev mode
-    console.log('Creating new dev token for API request');
+    console.log('Creating new dev token for API request to', url);
     const newDevToken = 'dev-token-' + Date.now();
     localStorage.setItem('firebase_token', newDevToken);
+    localStorage.setItem('dev_mode', 'true'); // Ensure dev mode is set
     headers["Authorization"] = `Bearer ${newDevToken}`;
+    headers["X-Debug-Mode"] = "true";
   } else {
-    console.log('No auth token available for API request');
+    console.log('No auth token available for API request to', url);
   }
   
   const res = await fetch(url, {
@@ -62,16 +68,21 @@ export const getQueryFn: <T>(options: {
     // Setup headers
     const headers: Record<string, string> = {};
     
+    // Add special header for debugging
+    headers["X-Debug-Client"] = "RepairTrackerClient";
+    
     // Add Authorization header with appropriate token
     if (firebaseToken) {
       console.log('Adding auth header with token for query');
       headers["Authorization"] = `Bearer ${firebaseToken}`;
-    } else if (devMode) {
+    } else if (devMode || import.meta.env.MODE === 'development') {
       // Create a new dev token if needed for dev mode
       console.log('Creating new dev token for query');
       const newDevToken = 'dev-token-' + Date.now();
       localStorage.setItem('firebase_token', newDevToken);
+      localStorage.setItem('dev_mode', 'true'); // Ensure dev mode is set
       headers["Authorization"] = `Bearer ${newDevToken}`;
+      headers["X-Debug-Mode"] = "true";
     } else {
       console.log('No auth token available for query');
     }

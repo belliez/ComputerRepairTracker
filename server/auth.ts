@@ -43,10 +43,23 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
   // Log the full URL and path for debugging
   console.log(`AUTH DEBUG: Request URL: ${req.url}, Path: ${req.path}, BaseURL: ${req.baseUrl}, OriginalURL: ${req.originalUrl}`);
   
+  // Check for debug headers
+  const debugClient = req.headers['x-debug-client'];
+  const debugMode = req.headers['x-debug-mode'] === 'true';
+  
+  if (debugClient) {
+    console.log(`DEBUG: Client debug header detected: ${debugClient}`);
+  }
+  
+  if (debugMode) {
+    console.log(`DEBUG: Debug mode header detected, will use enhanced error handling`);
+  }
+  
   // DEBUGGING: Check if we're accessing settings endpoints and bypass auth
   if (req.originalUrl.includes('/settings/currencies') || 
       req.originalUrl.includes('/settings/tax-rates') || 
-      req.originalUrl.includes('/technicians')) {
+      req.originalUrl.includes('/technicians') ||
+      req.originalUrl.includes('/public-settings')) {
     console.log(`DEBUG: Bypassing authentication for settings endpoint: ${req.originalUrl}`);
     
     // Create a mock user for debugging settings
@@ -67,8 +80,11 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
       }
     };
     
-    // Set the debug user
+    // Set the debug user and add organization ID for multi-tenant filtering
     req.user = debugUser as any;
+    req.organizationId = 1;
+    (global as any).currentOrganizationId = 1;
+    console.log('Setting global organization context to 1 for settings request');
     return next();
   }
   

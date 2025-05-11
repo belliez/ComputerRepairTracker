@@ -60,9 +60,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Listen for Firebase auth state changes and also check for development mode
   useEffect(() => {
     console.log('AuthProvider initialization - checking for development mode');
+    console.log('Environment mode:', import.meta.env.MODE);
     // Special handling for development mode
     const devMode = localStorage.getItem('dev_mode') === 'true';
     const devUser = localStorage.getItem('dev_user');
+    console.log('Development mode:', devMode ? 'enabled' : 'disabled');
     
     if (devMode && devUser) {
       console.log('Development mode detected, using mock user');
