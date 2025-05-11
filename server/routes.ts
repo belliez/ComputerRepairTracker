@@ -1758,26 +1758,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
             })
             .where(eq(organizations.id, organizationId));
             
-          // Update the company contact details in the settings JSON
-          await db.execute(sql`
-            UPDATE organizations 
-            SET settings = jsonb_set(
-              COALESCE(settings, '{}'::jsonb),
-              '{email}', 
-              ${data.email ? sql`${data.email}::jsonb` : sql`null::jsonb`}
-            ),
-            settings = jsonb_set(
-              settings,
-              '{phone}', 
-              ${data.phone ? sql`${data.phone}::jsonb` : sql`null::jsonb`}
-            ),
-            settings = jsonb_set(
-              settings,
-              '{address}', 
-              ${data.address ? sql`${data.address}::jsonb` : sql`null::jsonb`}
-            )
-            WHERE id = ${organizationId}
-          `);
+          // Update the company contact details in the settings JSON - one SQL statement at a time
+          // First get the current settings
+          const orgResult = await db.select({ settings: organizations.settings })
+            .from(organizations)
+            .where(eq(organizations.id, organizationId));
+            
+          const currentSettings = orgResult[0]?.settings || {};
+          
+          // Create an updated settings object
+          const updatedSettings = {
+            ...currentSettings,
+            email: data.email || null,
+            phone: data.phone || null,
+            address: data.address || null
+          };
+          
+          // Update with the new settings object
+          await db.update(organizations)
+            .set({
+              settings: updatedSettings,
+              updatedAt: new Date()
+            })
+            .where(eq(organizations.id, organizationId));
           break;
           
         case 'tax':
