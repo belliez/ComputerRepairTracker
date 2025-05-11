@@ -1,10 +1,12 @@
-import React, { useState, useEffect, createContext, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/auth-provider';
-import { OnboardingModal } from './onboarding-modal';
+import OnboardingModal from './onboarding-modal';
 
 interface OnboardingContextType {
   isOnboardingComplete: boolean;
+  isShowingOnboarding: boolean;
   showOnboarding: () => void;
+  hideOnboarding: () => void;
 }
 
 const OnboardingContext = createContext<OnboardingContextType | null>(null);
@@ -18,35 +20,52 @@ export const useOnboarding = () => {
 };
 
 export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentOrganization } = useAuth();
-  const [showModal, setShowModal] = useState(false);
-  const [isOnboardingComplete, setIsOnboardingComplete] = useState(true);
-
-  useEffect(() => {
-    // Check if onboarding is completed from organization settings
-    if (currentOrganization) {
-      const settings = currentOrganization.settings as any;
-      const completed = settings?.onboardingCompleted || false;
-      setIsOnboardingComplete(completed);
-      
-      // Show onboarding modal for new organizations that haven't completed onboarding
-      if (!completed) {
-        setShowModal(true);
-      }
-    }
+  const { currentOrganization, user } = useAuth();
+  const [isShowingOnboarding, setIsShowingOnboarding] = useState<boolean>(false);
+  
+  // Detect if onboarding is complete from the organization settings
+  const isOnboardingComplete = React.useMemo(() => {
+    if (!currentOrganization) return false;
+    
+    return currentOrganization.settings?.onboardingCompleted === true;
   }, [currentOrganization]);
-
+  
+  // Show onboarding automatically if user is logged in but onboarding is not complete
+  useEffect(() => {
+    if (user && currentOrganization && !isOnboardingComplete) {
+      // Give a small delay to ensure everything is loaded
+      const timer = setTimeout(() => {
+        setIsShowingOnboarding(true);
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [user, currentOrganization, isOnboardingComplete]);
+  
   const showOnboarding = () => {
-    setShowModal(true);
+    setIsShowingOnboarding(true);
   };
-
+  
+  const hideOnboarding = () => {
+    setIsShowingOnboarding(false);
+  };
+  
   return (
-    <OnboardingContext.Provider value={{ isOnboardingComplete, showOnboarding }}>
+    <OnboardingContext.Provider
+      value={{
+        isOnboardingComplete,
+        isShowingOnboarding,
+        showOnboarding,
+        hideOnboarding,
+      }}
+    >
       {children}
-      <OnboardingModal 
-        open={showModal} 
-        onClose={() => setShowModal(false)} 
-      />
+      {user && currentOrganization && (
+        <OnboardingModal
+          isOpen={isShowingOnboarding}
+          onClose={hideOnboarding}
+        />
+      )}
     </OnboardingContext.Provider>
   );
 };

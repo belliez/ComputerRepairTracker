@@ -377,13 +377,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       // Check if we're in development mode first
-      const devMode = localStorage.getItem('dev_mode') === 'true';
+      const devMode = localStorage.getItem('useDevelopmentAuth') === 'true';
       
       if (devMode) {
         // Development mode cleanup
         console.log('Development mode detected, cleaning up dev auth');
-        localStorage.removeItem('dev_mode');
-        localStorage.removeItem('dev_user');
+        localStorage.removeItem('useDevelopmentAuth');
         localStorage.removeItem('currentOrganizationId');
         
         // Reset auth state

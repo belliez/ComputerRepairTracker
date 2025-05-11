@@ -21,6 +21,7 @@ import SubscribePage from "@/pages/subscribe";
 import SubscriptionSuccessPage from "@/pages/subscription-success";
 import MainLayout from "@/components/layout/main-layout";
 import { AuthProvider } from "@/components/auth/auth-provider";
+import { OnboardingProvider } from "@/components/onboarding/onboarding-provider";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -72,12 +73,14 @@ function AppWithProviders() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <MainLayout>
-            <Router />
-          </MainLayout>
-          <Toaster />
-        </TooltipProvider>
+        <OnboardingProvider>
+          <TooltipProvider>
+            <MainLayout>
+              <Router />
+            </MainLayout>
+            <Toaster />
+          </TooltipProvider>
+        </OnboardingProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
