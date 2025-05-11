@@ -1628,20 +1628,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/settings/currencies", async (req: Request, res: Response) => {
     try {
       const { code, name, symbol, isDefault } = req.body;
+      const organizationId = (global as any).currentOrganizationId;
       
-      // If setting as default, unset any existing default
+      console.log(`Creating currency for organization ID: ${organizationId}`);
+      
+      // If setting as default, unset any existing defaults for this organization
       if (isDefault) {
         await db.update(currencies)
           .set({ isDefault: false })
-          .where(eq(currencies.isDefault, true));
+          .where(
+            and(
+              eq(currencies.isDefault, true),
+              eq(currencies.organizationId, organizationId)
+            )
+          );
       }
       
       const [currency] = await db.insert(currencies)
-        .values({ code, name, symbol, isDefault })
+        .values({ 
+          code, 
+          name, 
+          symbol, 
+          isDefault,
+          organizationId 
+        })
         .returning();
         
       res.status(201).json(currency);
     } catch (error: any) {
+      console.error("Error creating currency:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1650,25 +1665,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { code } = req.params;
       const { name, symbol, isDefault } = req.body;
+      const organizationId = (global as any).currentOrganizationId;
       
-      // If setting as default, unset any existing default
+      console.log(`Updating currency for organization ID: ${organizationId}`);
+      
+      // If setting as default, unset any existing defaults for this organization
       if (isDefault) {
         await db.update(currencies)
           .set({ isDefault: false })
-          .where(eq(currencies.isDefault, true));
+          .where(
+            and(
+              eq(currencies.isDefault, true),
+              eq(currencies.organizationId, organizationId)
+            )
+          );
       }
       
       const [updatedCurrency] = await db.update(currencies)
         .set({ name, symbol, isDefault })
-        .where(eq(currencies.code, code))
+        .where(
+          and(
+            eq(currencies.code, code),
+            eq(currencies.organizationId, organizationId)
+          )
+        )
         .returning();
         
       if (!updatedCurrency) {
-        return res.status(404).json({ error: "Currency not found" });
+        return res.status(404).json({ error: "Currency not found for this organization" });
       }
       
       res.json(updatedCurrency);
     } catch (error: any) {
+      console.error("Error updating currency:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1713,10 +1742,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Settings API - Tax Rates
   apiRouter.get("/settings/tax-rates", async (req: Request, res: Response) => {
     try {
-      console.log("Getting tax rates - bypassing auth for debugging...");
+      console.log("Getting tax rates for organization ID:", (global as any).currentOrganizationId);
       
-      // Allow this endpoint without authentication for debugging
-      const allTaxRates = await db.select().from(taxRates);
+      // Get organization-specific tax rates or global ones
+      const allTaxRates = await db.select().from(taxRates)
+        .where(
+          // Get either organization-specific tax rates or global ones
+          sql`(${taxRates.organizationId} = ${(global as any).currentOrganizationId} OR ${taxRates.organizationId} IS NULL)`
+        );
       
       console.log("Tax rates found:", allTaxRates.length, allTaxRates);
       return res.json(allTaxRates);
@@ -1728,18 +1761,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   apiRouter.get("/settings/tax-rates/default", async (req: Request, res: Response) => {
     try {
-      const allTaxRates = await db.select().from(taxRates);
-      // Find the default tax rate
-      const defaultTaxRate = allTaxRates.find(rate => rate.isDefault === true);
+      console.log("Getting default tax rate for organization ID:", (global as any).currentOrganizationId);
       
+      // Get organization-specific tax rates or global ones
+      const orgTaxRates = await db.select().from(taxRates)
+        .where(
+          sql`(${taxRates.organizationId} = ${(global as any).currentOrganizationId} OR ${taxRates.organizationId} IS NULL)`
+        );
+      
+      // First try to find a default tax rate specific to this organization
+      let defaultTaxRate = orgTaxRates.find(rate => 
+        rate.isDefault === true && 
+        rate.organizationId === (global as any).currentOrganizationId
+      );
+      
+      // If no org-specific default, try to find a global default
       if (!defaultTaxRate) {
-        // Fall back to first tax rate if no default
-        const firstTaxRate = allTaxRates[0];
+        defaultTaxRate = orgTaxRates.find(rate => 
+          rate.isDefault === true && 
+          (rate.organizationId === null || rate.organizationId === undefined)
+        );
+      }
+      
+      // If no default at all, fall back to first tax rate or provide a default
+      if (!defaultTaxRate) {
+        const firstTaxRate = orgTaxRates[0];
         return res.json(firstTaxRate || { rate: 0, name: "No Tax" });
       }
-      res.json(defaultTaxRate);
+      
+      return res.json(defaultTaxRate);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error("Error fetching default tax rate:", error);
+      return res.status(500).json({ error: error.message });
     }
   });
   
