@@ -98,6 +98,24 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
   }
 
   // For production or non-dev tokens, require proper authorization
+  // Special handling for the main app route in development
+  if (process.env.NODE_ENV === 'development' && (
+      req.path === '/' || 
+      req.path.startsWith('/assets') || 
+      req.path.startsWith('/src') || 
+      req.path.startsWith('/@') || 
+      req.path.startsWith('/@vite') || 
+      req.path.startsWith('/@fs') ||
+      req.path.endsWith('.js') ||
+      req.path.endsWith('.css') ||
+      req.path.endsWith('.svg') ||
+      req.path.endsWith('.png')
+    )) {
+    // In development, allow access to these paths without authentication
+    console.log('Bypassing auth for development frontend paths:', req.path);
+    return next();
+  }
+  
   if (!authHeader) {
     return res.status(401).json({ message: 'Authorization header required' });
   }
@@ -181,6 +199,42 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
 
 // API endpoint to get current user
 export const getCurrentUser = async (req: Request, res: Response) => {
+  // Special handling for development mode
+  const authHeader = req.headers.authorization;
+  if (process.env.NODE_ENV === 'development' && authHeader && authHeader.startsWith('Bearer dev-token-')) {
+    console.log('Development token detected in /api/me, returning mock user');
+    
+    // Return a complete mock user for development
+    const mockUser = {
+      id: 'dev-user-123',
+      email: 'dev@example.com',
+      displayName: 'Development User',
+      photoURL: null,
+      lastLoginAt: new Date().toISOString(),
+      organization: {
+        id: 1,
+        name: 'Development Organization',
+        slug: 'dev-org',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        ownerId: 'dev-user-123',
+        logo: null,
+        stripeSubscriptionId: 'mock_sub_123',
+        subscriptionStatus: 'active',
+        trialEndsAt: null,
+        planId: 'free',
+        billingEmail: 'dev@example.com',
+        billingName: 'Development User',
+        billingAddress: null,
+        deleted: false,
+        deletedAt: null,
+        role: 'owner'
+      }
+    };
+    
+    return res.status(200).json(mockUser);
+  }
+  
   if (!req.user) {
     return res.status(401).json({ 
       message: 'Not authenticated',
