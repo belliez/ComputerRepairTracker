@@ -1689,10 +1689,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/settings/organization", authenticateJWT, async (req: Request, res: Response) => {
     try {
       const { type, ...data } = req.body;
-      const organizationId = req.organizationId;
+      
+      // Special handling for development mode
+      const authHeader = req.headers.authorization;
+      const isDevelopmentMode = process.env.NODE_ENV === 'development' && 
+        authHeader && authHeader.startsWith('Bearer dev-token-');
+      
+      // Use organizationId from request or use 1 for development mode
+      const organizationId = isDevelopmentMode ? 1 : req.organizationId;
+      
+      console.log(`Processing settings for organization: ${organizationId}, type: ${type}, isDevelopmentMode: ${isDevelopmentMode}`);
       
       if (!organizationId) {
         return res.status(403).json({ message: "No organization selected" });
+      }
+      
+      // For development mode, make sure the organization exists with defaults
+      if (isDevelopmentMode) {
+        const existingOrgs = await db.select().from(organizations).where(eq(organizations.id, 1));
+        if (existingOrgs.length === 0) {
+          // Create default organization for development
+          await db.insert(organizations).values({
+            id: 1,
+            name: 'Development Organization',
+            slug: 'dev-org',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            ownerId: 'dev-user-123',
+            settings: {}
+          });
+          console.log('Created default development organization');
+        }
       }
       
       // Handle different types of settings
@@ -1701,36 +1728,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await db.update(organizations)
             .set({
               name: data.name,
-              contactEmail: data.email,
-              phone: data.phone,
-              address: data.address,
               updatedAt: new Date()
             })
             .where(eq(organizations.id, organizationId));
           break;
           
         case 'tax':
-          // Delete existing tax rates
-          await db.delete(taxRates)
-            .where(eq(taxRates.organizationId, organizationId));
+          // Delete existing tax rates for this organization 
+          await db.execute(
+            `DELETE FROM tax_rates WHERE organization_id = $1`,
+            [organizationId]
+          );
             
           // Add new tax rates
           if (data.taxRates && Array.isArray(data.taxRates)) {
             for (const tax of data.taxRates) {
-              await db.insert(taxRates).values({
-                name: tax.name,
-                rate: tax.rate,
-                isDefault: tax.isDefault,
-                organizationId
-              });
+              await db.execute(
+                `INSERT INTO tax_rates (name, rate, is_default, organization_id) 
+                 VALUES ($1, $2, $3, $4)`,
+                [tax.name, tax.rate, tax.isDefault, organizationId]
+              );
             }
           }
           break;
           
         case 'currency':
-          // Delete existing currencies
-          await db.delete(currencies)
-            .where(eq(currencies.organizationId, organizationId));
+          // Delete existing currencies for this organization
+          await db.execute(
+            `DELETE FROM currencies WHERE organization_id = $1`,
+            [organizationId]
+          );
             
           // Add new currency
           if (data.currency) {
