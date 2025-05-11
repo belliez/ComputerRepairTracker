@@ -598,7 +598,15 @@ export class DatabaseStorage implements IStorage {
 
   // Repair methods
   async getRepairs(): Promise<Repair[]> {
-    return db.select().from(repairs).where(eq(repairs.deleted, false));
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching all repairs for organization: ${orgId}`);
+    
+    return db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.deleted, false),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
   }
 
   async getRepair(id: number): Promise<Repair | undefined> {
@@ -769,6 +777,26 @@ export class DatabaseStorage implements IStorage {
 
   // Repair Item methods
   async getRepairItems(repairId: number): Promise<RepairItem[]> {
+    // We don't need to directly filter repair items by organization_id since we're fetching by repairId,
+    // but we should check that the repair belongs to the current organization
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching repair items for repair ${repairId} in organization: ${orgId}`);
+    
+    // First check that the repair belongs to the current organization
+    const repair = await db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.id, repairId),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
+      .limit(1);
+      
+    if (repair.length === 0) {
+      console.log(`Repair ${repairId} not found in organization ${orgId}`);
+      return []; // Return empty array if repair doesn't belong to this organization
+    }
+    
+    // Now get the repair items
     return db.select()
       .from(repairItems)
       .where(and(
