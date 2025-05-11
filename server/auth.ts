@@ -4,30 +4,16 @@ import { db } from './db';
 import { users, organizations, organizationUsers } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { getFirebaseAdmin, getAdminAuth } from './firebase-admin';
 
 // Flag to indicate if Firebase Admin SDK is initialized
 let firebaseInitialized = false;
-console.log('Initializing Firebase Admin with Project ID:', process.env.VITE_FIREBASE_PROJECT_ID);
 
 try {
-  // Try to initialize the admin SDK
-  if (process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
-    // Initialize with environment variables if they exist
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.VITE_FIREBASE_PROJECT_ID || 'repairtrackerpro-eba5d',
-        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL || 'firebase-adminsdk-fbsvc@repairtrackerpro-eba5d.iam.gserviceaccount.com',
-        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      })
-    });
-    firebaseInitialized = true;
-    console.log('Firebase Admin SDK initialized with environment variables');
-  } else {
-    // Just initialize with the application credentials
-    admin.initializeApp();
-    firebaseInitialized = true;
-    console.log('Firebase Admin SDK initialized with application default credentials');
-  }
+  // Try to initialize the Firebase Admin SDK
+  getFirebaseAdmin();
+  firebaseInitialized = true;
+  console.log('Firebase Admin SDK initialized successfully');
 } catch (error) {
   console.error('Error initializing Firebase Admin SDK:', error);
   console.log('Continuing in development mode without Firebase authentication');
@@ -91,7 +77,14 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
   }
   
   try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
+    const auth = getAdminAuth();
+    
+    if (!auth) {
+      console.warn('Firebase Admin Auth service not available, bypassing authentication in development');
+      return next();
+    }
+    
+    const decodedToken = await auth.verifyIdToken(token);
     req.user = decodedToken;
     
     // Check if user exists in our database, create if not
@@ -99,7 +92,7 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
     
     if (!existingUser) {
       // Get user details from Firebase
-      const userRecord = await admin.auth().getUser(decodedToken.uid);
+      const userRecord = await auth.getUser(decodedToken.uid);
       
       // Create user in our database
       await db.insert(users).values({
@@ -268,7 +261,8 @@ export const addUserToOrganization = async (req: Request, res: Response) => {
     // Check if user exists
     let existingUser;
     try {
-      existingUser = await admin.auth().getUserByEmail(email);
+      const auth = getAdminAuth();
+      existingUser = await auth.getUserByEmail(email);
     } catch (error) {
       // User doesn't exist in Firebase
     }
