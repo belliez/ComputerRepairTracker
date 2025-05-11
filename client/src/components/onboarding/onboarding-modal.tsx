@@ -681,11 +681,14 @@ export function OnboardingModal({
     setCompleted(prev => ({ ...prev, technicians: true }));
     setProgress(100);
     
-    // Mark onboarding as complete
-    saveSettingsMutation.mutate({
-      onboardingCompleted: true,
-      type: 'onboarding'
-    });
+    // Mark onboarding as complete - add a short delay to ensure other mutations complete first
+    setTimeout(() => {
+      console.log('Marking onboarding as complete');
+      saveSettingsMutation.mutate({
+        onboardingCompleted: true,
+        type: 'onboarding'
+      });
+    }, 500);
     
     toast({
       title: 'Setup complete!',

@@ -1976,17 +1976,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
           
         case 'onboarding':
+          console.log(`Setting onboarding complete for organization ${organizationId}`);
+          
+          // First get current settings
+          const orgData = await db.select({ settings: organizations.settings })
+            .from(organizations)
+            .where(eq(organizations.id, organizationId));
+            
+          const currentOrgSettings = orgData[0]?.settings || {};
+          console.log('Current org settings before onboarding update:', currentOrgSettings);
+          
+          // Create updated settings object with onboardingCompleted=true
+          const updatedOrgSettings = {
+            ...currentOrgSettings,
+            onboardingCompleted: true
+          };
+          
+          console.log('Updated org settings for onboarding:', updatedOrgSettings);
+          
           // Using raw SQL for maximum compatibility in development mode
-          await db.execute(sql`
+          const result = await db.execute(sql`
             UPDATE organizations 
-            SET settings = jsonb_set(
-              COALESCE(settings, '{}'::jsonb), 
-              '{onboardingCompleted}', 
-              'true'::jsonb
-            ),
-            updated_at = ${new Date()}
+            SET settings = ${JSON.stringify(updatedOrgSettings)}::jsonb,
+                updated_at = ${new Date()}
             WHERE id = ${organizationId}
+            RETURNING id, name, settings
           `);
+          
+          console.log('Update onboarding result:', result.rows[0]);
           break;
           
         default:
