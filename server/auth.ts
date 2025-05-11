@@ -565,6 +565,9 @@ function generateInviteToken() {
 // Middleware to add organization context
 export const addOrganizationContext = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    // Debug logging to see what kind of request we're processing
+    console.log(`Processing request to ${req.path}, auth header: ${req.headers.authorization ? 'present' : 'absent'}, user: ${req.user ? 'authenticated' : 'unauthenticated'}`);
+    
     // Special handling for development mode
     const authHeader = req.headers.authorization;
     if (process.env.NODE_ENV === 'development') {
@@ -577,14 +580,32 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
       
       // Also handle case where there's a dev user but no authorization header
       // This ensures onboarding still works in development mode
-      if (req.path.includes('/api/settings/') && (!authHeader || !req.user)) {
-        console.log('Development settings API detected, using default organization');
+      if ((req.path.includes('/api/settings/') || req.path.includes('/api/organizations')) && (!authHeader || !req.user)) {
+        console.log('Development mode API detected, using default organization');
         req.organizationId = 1;
+        req.user = {
+          uid: 'dev-user-123',
+          email: 'dev@example.com',
+          name: 'Dev User',
+        } as any;
+        return next();
+      }
+
+      // Additional checks for specific API paths in development mode
+      if (req.path.includes('/api/') && !req.user) {
+        console.log('Development mode API detected without user, setting default user and organization');
+        req.organizationId = 1;
+        req.user = {
+          uid: 'dev-user-123',
+          email: 'dev@example.com',
+          name: 'Dev User',
+        } as any;
         return next();
       }
     }
     
     if (!req.user) {
+      console.log(`No user found for request to ${req.path}, skipping organization context`);
       return next();
     }
   } catch (error) {
