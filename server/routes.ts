@@ -1767,12 +1767,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const currentSettings = orgResult[0]?.settings || {};
           
           // Create an updated settings object
+          console.log('Company data received:', data);
           const updatedSettings = {
             ...currentSettings,
             email: data.email || null,
             phone: data.phone || null,
             address: data.address || null
           };
+          console.log('Updated settings object:', updatedSettings);
           
           // Update with the new settings object
           await db.update(organizations)

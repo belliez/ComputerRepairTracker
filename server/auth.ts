@@ -378,6 +378,14 @@ export const getUserOrganizations = async (req: Request, res: Response) => {
       .filter(org => orgIds.includes(org.id))
       .map((org) => {
         const membership = orgUsers.find((ou) => ou.organizationId === org.id);
+        
+        // Log organization data for debugging
+        console.log('Organization data being sent to client:', JSON.stringify({
+          id: org.id,
+          name: org.name,
+          settings: org.settings
+        }, null, 2));
+        
         return {
           ...org,
           role: membership ? membership.role : 'member',
