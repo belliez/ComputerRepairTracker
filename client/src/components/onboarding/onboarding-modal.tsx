@@ -35,12 +35,12 @@ import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
 
 // Company information form
-function CompanyInfoForm({ onComplete }: { onComplete: (data: any) => void }) {
+function CompanyInfoForm({ onComplete, initialData }: { onComplete: (data: any) => void, initialData?: any }) {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
+    name: initialData?.name || '',
+    email: initialData?.email || '',
+    phone: initialData?.phone || '',
+    address: initialData?.address || '',
   });
   const { toast } = useToast();
   
@@ -125,10 +125,12 @@ function CompanyInfoForm({ onComplete }: { onComplete: (data: any) => void }) {
 }
 
 // Tax settings form
-function TaxSettingsForm({ onComplete }: { onComplete: (taxRates: any) => void }) {
-  const [taxRates, setTaxRates] = useState([
-    { name: 'Sales Tax', rate: 7.5, isDefault: true }
-  ]);
+function TaxSettingsForm({ onComplete, initialData }: { onComplete: (taxRates: any) => void, initialData?: any }) {
+  const [taxRates, setTaxRates] = useState(
+    initialData?.taxRates || [
+      { name: 'Sales Tax', rate: 7.5, isDefault: true }
+    ]
+  );
   const [newTaxName, setNewTaxName] = useState('');
   const [newTaxRate, setNewTaxRate] = useState('');
   const { toast } = useToast();
@@ -295,8 +297,8 @@ function TaxSettingsForm({ onComplete }: { onComplete: (taxRates: any) => void }
 }
 
 // Currency settings form
-function CurrencySettingsForm({ onComplete }: { onComplete: (currency: any) => void }) {
-  const [currency, setCurrency] = useState({
+function CurrencySettingsForm({ onComplete, initialData }: { onComplete: (currency: any) => void, initialData?: any }) {
+  const [currency, setCurrency] = useState(initialData || {
     code: 'USD',
     symbol: '$',
     name: 'US Dollar',
@@ -366,10 +368,12 @@ function CurrencySettingsForm({ onComplete }: { onComplete: (currency: any) => v
 }
 
 // Technician setup form
-function TechnicianSetupForm({ onComplete }: { onComplete: (technicians: any) => void }) {
-  const [technicians, setTechnicians] = useState([
-    { name: '', email: '', phone: '', role: '', isActive: true }
-  ]);
+function TechnicianSetupForm({ onComplete, initialData }: { onComplete: (technicians: any) => void, initialData?: any }) {
+  const [technicians, setTechnicians] = useState(
+    initialData || [
+      { name: '', email: '', phone: '', role: '', isActive: true }
+    ]
+  );
   
   const handleChange = (index: number, field: string, value: string) => {
     const updatedTechnicians = [...technicians];
