@@ -806,30 +806,133 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRepairItem(id: number): Promise<RepairItem | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching repair item ${id} in organization: ${orgId}`);
+    
+    // First get the repair item
     const [item] = await db.select()
       .from(repairItems)
       .where(and(
         eq(repairItems.id, id),
         eq(repairItems.deleted, false)
       ));
+      
+    if (!item) {
+      return undefined;
+    }
+    
+    // Then verify that the repair belongs to the current organization
+    const repair = await db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.id, item.repairId),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
+      .limit(1);
+      
+    if (repair.length === 0) {
+      console.log(`Repair item ${id} belongs to repair ${item.repairId} which is not in organization ${orgId}`);
+      return undefined; // Return undefined if repair doesn't belong to this organization
+    }
+    
     return item;
   }
 
   async createRepairItem(item: InsertRepairItem): Promise<RepairItem> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Creating repair item for repair ${item.repairId} in organization: ${orgId}`);
+    
+    // Verify that the repair belongs to the current organization before creating the item
+    const repair = await db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.id, item.repairId),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
+      .limit(1);
+      
+    if (repair.length === 0) {
+      console.log(`Cannot create repair item: Repair ${item.repairId} not found in organization ${orgId}`);
+      throw new Error(`Repair ${item.repairId} not found in current organization`);
+    }
+    
+    // If validation passes, create the repair item
     const [newItem] = await db.insert(repairItems).values(item).returning();
     return newItem;
   }
 
   async updateRepairItem(id: number, itemData: Partial<RepairItem>): Promise<RepairItem | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Updating repair item ${id} in organization: ${orgId}`);
+    
+    // First get the repair item to check if it exists
+    const [item] = await db.select()
+      .from(repairItems)
+      .where(and(
+        eq(repairItems.id, id),
+        eq(repairItems.deleted, false)
+      ));
+      
+    if (!item) {
+      console.log(`Cannot update: Repair item ${id} not found`);
+      return undefined;
+    }
+    
+    // Verify the associated repair belongs to the current organization
+    const repair = await db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.id, item.repairId),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
+      .limit(1);
+      
+    if (repair.length === 0) {
+      console.log(`Cannot update: Repair item ${id} belongs to repair ${item.repairId} which is not in organization ${orgId}`);
+      return undefined;
+    }
+    
+    // If validation passes, update the repair item
     const [updatedItem] = await db
       .update(repairItems)
       .set(itemData)
       .where(eq(repairItems.id, id))
       .returning();
+      
     return updatedItem;
   }
 
   async deleteRepairItem(id: number): Promise<boolean> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Deleting repair item ${id} in organization: ${orgId}`);
+    
+    // First get the repair item to check if it exists
+    const [item] = await db.select()
+      .from(repairItems)
+      .where(and(
+        eq(repairItems.id, id),
+        eq(repairItems.deleted, false)
+      ));
+      
+    if (!item) {
+      console.log(`Cannot delete: Repair item ${id} not found`);
+      return false;
+    }
+    
+    // Verify the associated repair belongs to the current organization
+    const repair = await db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.id, item.repairId),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
+      .limit(1);
+      
+    if (repair.length === 0) {
+      console.log(`Cannot delete: Repair item ${id} belongs to repair ${item.repairId} which is not in organization ${orgId}`);
+      return false;
+    }
+    
     // Soft delete the repair item by setting deleted flag
     const [updatedItem] = await db
       .update(repairItems)
@@ -845,15 +948,42 @@ export class DatabaseStorage implements IStorage {
 
   // Quote methods
   async getQuotes(): Promise<Quote[]> {
-    return db.select().from(quotes).where(eq(quotes.deleted, false));
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching all quotes for organization: ${orgId}`);
+    
+    return db.select()
+      .from(quotes)
+      .where(and(
+        eq(quotes.deleted, false),
+        eq((quotes as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
   }
 
   async getQuotesByRepair(repairId: number): Promise<Quote[]> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching quotes for repair ${repairId} in organization: ${orgId}`);
+    
+    // First check that the repair belongs to the current organization
+    const repair = await db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.id, repairId),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
+      .limit(1);
+      
+    if (repair.length === 0) {
+      console.log(`Repair ${repairId} not found in organization ${orgId}`);
+      return []; // Return empty array if repair doesn't belong to this organization
+    }
+    
+    // Now get the quotes for this repair
     return db.select()
       .from(quotes)
       .where(and(
         eq(quotes.repairId, repairId),
-        eq(quotes.deleted, false)
+        eq(quotes.deleted, false),
+        eq((quotes as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
       ));
   }
 
