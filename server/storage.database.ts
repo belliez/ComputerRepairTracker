@@ -100,14 +100,36 @@ export class DatabaseStorage implements IStorage {
   }
   
   async restoreCustomer(id: number): Promise<Customer | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Restoring customer ${id} in organization: ${orgId}`);
+    
+    // Verify the customer belongs to the current organization before restoring
+    const [customer] = await db.select()
+      .from(customers)
+      .where(and(
+        eq(customers.id, id),
+        eq(customers.deleted, true),
+        eq((customers as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
+      
+    if (!customer) {
+      console.log(`Cannot restore customer ${id}: Customer not found in organization ${orgId}`);
+      return undefined;
+    }
+    
+    // Restore the customer with organization context
     const [restoredCustomer] = await db
       .update(customers)
       .set({
         deleted: false,
         deletedAt: null
       })
-      .where(eq(customers.id, id))
+      .where(and(
+        eq(customers.id, id),
+        eq((customers as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
+      
     return restoredCustomer;
   }
   
@@ -160,26 +182,70 @@ export class DatabaseStorage implements IStorage {
   }
   
   async restoreInventoryItem(id: number): Promise<InventoryItem | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Restoring inventory item ${id} in organization: ${orgId}`);
+    
+    // Verify the inventory item belongs to the current organization before restoring
+    const [item] = await db.select()
+      .from(inventoryItems)
+      .where(and(
+        eq(inventoryItems.id, id),
+        eq(inventoryItems.deleted, true),
+        eq((inventoryItems as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
+      
+    if (!item) {
+      console.log(`Cannot restore inventory item ${id}: Item not found in organization ${orgId}`);
+      return undefined;
+    }
+    
+    // Restore the inventory item with organization context
     const [restoredItem] = await db
       .update(inventoryItems)
       .set({
         deleted: false,
         deletedAt: null
       })
-      .where(eq(inventoryItems.id, id))
+      .where(and(
+        eq(inventoryItems.id, id),
+        eq((inventoryItems as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
+      
     return restoredItem;
   }
   
   async restoreQuote(id: number): Promise<Quote | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Restoring quote ${id} for organization: ${orgId}`);
+    
+    // Verify the quote belongs to the current organization before restoring
+    const [quote] = await db.select()
+      .from(quotes)
+      .where(and(
+        eq(quotes.id, id),
+        eq(quotes.deleted, true),
+        eq((quotes as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
+      
+    if (!quote) {
+      console.log(`Cannot restore quote ${id}: Quote not found in organization ${orgId}`);
+      return undefined;
+    }
+    
+    // Restore the quote with organization context
     const [restoredQuote] = await db
       .update(quotes)
       .set({
         deleted: false,
         deletedAt: null
       })
-      .where(eq(quotes.id, id))
+      .where(and(
+        eq(quotes.id, id),
+        eq((quotes as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
+      
     return restoredQuote;
   }
   
