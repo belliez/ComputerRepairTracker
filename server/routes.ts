@@ -1761,13 +1761,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
           // Add new currency
           if (data.currency) {
-            await db.insert(currencies).values({
-              code: data.currency.code,
-              symbol: data.currency.symbol,
-              name: data.currency.name,
-              isDefault: data.currency.isDefault,
-              organizationId
-            });
+            await db.execute(
+              `INSERT INTO currencies (code, symbol, name, is_default, organization_id) 
+               VALUES ($1, $2, $3, $4, $5)`,
+              [
+                data.currency.code, 
+                data.currency.symbol, 
+                data.currency.name, 
+                data.currency.isDefault, 
+                organizationId
+              ]
+            );
           }
           break;
           
@@ -1776,38 +1780,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (data.technicians && Array.isArray(data.technicians)) {
             for (const tech of data.technicians) {
               if (tech.name) {
-                await db.insert(technicians).values({
-                  name: tech.name,
-                  email: tech.email || null,
-                  phone: tech.phone || null,
-                  role: tech.role || null,
-                  isActive: tech.isActive !== false,
-                  organizationId
-                });
+                await db.execute(
+                  `INSERT INTO technicians (name, email, phone, role, is_active, organization_id) 
+                   VALUES ($1, $2, $3, $4, $5, $6)`,
+                  [
+                    tech.name,
+                    tech.email || null,
+                    tech.phone || null,
+                    tech.role || null,
+                    tech.isActive !== false,
+                    organizationId
+                  ]
+                );
               }
             }
           }
           break;
           
         case 'onboarding':
-          // Update organization settings
-          const org = await db.select().from(organizations)
-            .where(eq(organizations.id, organizationId))
-            .limit(1);
-            
-          if (org.length > 0) {
-            const currentSettings = org[0].settings || {};
-            
-            await db.update(organizations)
-              .set({ 
-                settings: { 
-                  ...currentSettings, 
-                  onboardingCompleted: true 
-                },
-                updatedAt: new Date()
-              })
-              .where(eq(organizations.id, organizationId));
-          }
+          // Using raw SQL for maximum compatibility in development mode
+          await db.execute(
+            `UPDATE organizations 
+             SET settings = jsonb_set(
+               COALESCE(settings, '{}'::jsonb), 
+               '{onboardingCompleted}', 
+               'true'::jsonb
+             ),
+             updated_at = $1
+             WHERE id = $2`,
+            [new Date(), organizationId]
+          );
           break;
           
         default:
