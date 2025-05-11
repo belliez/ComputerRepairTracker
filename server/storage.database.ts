@@ -403,29 +403,57 @@ export class DatabaseStorage implements IStorage {
 
   // Technician methods
   async getTechnicians(): Promise<Technician[]> {
-    return db.select().from(technicians).where(eq(technicians.deleted, false));
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching all technicians for organization: ${orgId}`);
+    
+    return db.select()
+      .from(technicians)
+      .where(and(
+        eq(technicians.deleted, false),
+        eq(technicians.organizationId, orgId)
+      ));
   }
 
   async getTechnician(id: number): Promise<Technician | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching technician ${id} for organization: ${orgId}`);
+    
     const [technician] = await db.select()
       .from(technicians)
       .where(and(
         eq(technicians.id, id),
-        eq(technicians.deleted, false)
+        eq(technicians.deleted, false),
+        eq(technicians.organizationId, orgId)
       ));
     return technician;
   }
 
   async createTechnician(technician: InsertTechnician): Promise<Technician> {
-    const [newTechnician] = await db.insert(technicians).values(technician).returning();
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Creating technician in organization: ${orgId}`);
+    
+    // Cast to any to bypass TypeScript type checking since the schema definition 
+    // doesn't yet include organizationId in the type but the DB column exists
+    const technicianWithOrg = {
+      ...technician,
+      organizationId: orgId
+    } as any;
+    
+    const [newTechnician] = await db.insert(technicians).values(technicianWithOrg).returning();
     return newTechnician;
   }
 
   async updateTechnician(id: number, technicianData: Partial<Technician>): Promise<Technician | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Updating technician ${id} in organization: ${orgId}`);
+    
     const [updatedTechnician] = await db
       .update(technicians)
       .set(technicianData)
-      .where(eq(technicians.id, id))
+      .where(and(
+        eq(technicians.id, id),
+        eq((technicians as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
     return updatedTechnician;
   }
