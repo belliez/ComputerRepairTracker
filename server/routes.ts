@@ -75,6 +75,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  // Add a simple endpoint to check auth status
+  app.get('/api/auth-status', (req: Request, res: Response) => {
+    console.log('Auth status endpoint called');
+    
+    // Check if authorization header exists
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader) {
+      return res.status(200).json({
+        authenticated: false,
+        message: 'No authorization header present',
+        headers: req.headers,
+      });
+    }
+    
+    // Return full authorization info for debugging
+    res.status(200).json({
+      authenticated: true,
+      authHeader: authHeader,
+      headers: req.headers,
+      message: 'Authorization header present',
+    });
+  });
+  
   // Directly serve static resources needed for the auth page
   app.use('/assets', express.static('client/public/assets'));
   
