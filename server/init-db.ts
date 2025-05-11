@@ -9,21 +9,33 @@ import {
   quotes,
   invoices,
   currencies,
-  taxRates
+  taxRates,
+  users,
+  organizations,
+  subscriptionPlans
 } from "@shared/schema";
+import { runMultiTenancyMigration } from './migrations/001-add-multi-tenancy';
 
 // Initialize demo data
 export async function initializeDemo() {
   console.log('Initializing demo data...');
   
-  // Initialize currencies and tax rates regardless of other data
-  await initializeSettingsData();
-  
-  // Check if we already have data
-  const existingCustomers = await db.select().from(customers);
-  if (existingCustomers.length > 0) {
-    console.log('Demo data already exists. Skipping initialization.');
-    return;
+  try {
+    // Run multi-tenancy migration first
+    await runMultiTenancyMigration();
+    
+    // Initialize currencies and tax rates regardless of other data
+    await initializeSettingsData();
+    
+    // Check if we already have data
+    const existingCustomers = await db.select().from(customers);
+    if (existingCustomers.length > 0) {
+      console.log('Demo data already exists. Skipping initialization.');
+      return;
+    }
+  } catch (error) {
+    console.error('Error initializing database:', error);
+    throw error;
   }
 
 // Initialize settings data (currencies and tax rates)
