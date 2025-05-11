@@ -440,9 +440,14 @@ export function OnboardingModal({
       refreshCurrentOrganization();
     },
     onError: (error: any) => {
+      console.error('Failed to save settings:', error);
+      
+      // Get the detailed error information if available
+      const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
+      
       toast({
-        title: 'Error',
-        description: `Failed to save settings: ${error.message}`,
+        title: 'Error Saving Settings',
+        description: `${errorMessage}`,
         variant: 'destructive',
       });
     }
@@ -468,6 +473,24 @@ export function OnboardingModal({
   };
   
   const handleTaxSettingsComplete = (taxRates) => {
+    console.log('Saving tax settings:', taxRates);
+    
+    // Validate tax rates before saving
+    if (!taxRates || !Array.isArray(taxRates) || taxRates.length === 0) {
+      toast({
+        title: 'Warning',
+        description: 'No tax rates to save. Adding a default tax rate.',
+        variant: 'default',
+      });
+      
+      // Add a default tax rate if none is provided
+      taxRates = [{
+        name: 'Sales Tax',
+        rate: 7.5,
+        isDefault: true
+      }];
+    }
+    
     saveSettingsMutation.mutate({
       taxRates,
       type: 'tax'

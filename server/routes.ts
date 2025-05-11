@@ -1703,6 +1703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const organizationId = isDevelopmentMode ? 1 : req.organizationId;
       
       console.log(`Processing settings for organization: ${organizationId}, type: ${type}, isDevelopmentMode: ${isDevelopmentMode}`);
+      console.log(`Received data:`, JSON.stringify(data, null, 2));
       
       if (!organizationId) {
         return res.status(403).json({ message: "No organization selected" });
@@ -1745,12 +1746,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
             
           // Add new tax rates
           if (data.taxRates && Array.isArray(data.taxRates)) {
+            // Validate the tax rates before inserting
+            console.log('Tax rates before processing:', data.taxRates);
+            
+            // Ensure we have at least one default tax rate
+            let hasDefault = data.taxRates.some(tax => tax.isDefault);
+            if (!hasDefault && data.taxRates.length > 0) {
+              data.taxRates[0].isDefault = true;
+            }
+            
+            // If no tax rates, add a default one
+            if (data.taxRates.length === 0) {
+              data.taxRates.push({
+                name: 'Sales Tax',
+                rate: 7.5,
+                isDefault: true
+              });
+            }
+            
             for (const tax of data.taxRates) {
+              // Ensure all required properties exist
+              const name = tax.name || 'Sales Tax';
+              const rate = typeof tax.rate === 'number' ? tax.rate : 0;
+              const isDefault = !!tax.isDefault;
+              
+              console.log('Inserting tax rate:', { name, rate, isDefault, organizationId });
+              
               await db.execute(sql`
                 INSERT INTO tax_rates (name, rate, is_default, organization_id) 
-                VALUES (${tax.name}, ${tax.rate}, ${tax.isDefault}, ${organizationId})
+                VALUES (${name}, ${rate}, ${isDefault}, ${organizationId})
               `);
             }
+          } else {
+            // If taxRates is missing or not an array, add a default one
+            console.log('No valid tax rates found, adding default');
+            await db.execute(sql`
+              INSERT INTO tax_rates (name, rate, is_default, organization_id) 
+              VALUES ('Sales Tax', 7.5, true, ${organizationId})
+            `);
           }
           break;
           
@@ -1817,7 +1850,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.json({ success: true });
     } catch (error) {
       console.error("Error updating organization settings:", error);
-      return res.status(500).json({ message: "Failed to update organization settings" });
+      return res.status(500).json({ 
+        message: "Failed to update organization settings", 
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 
