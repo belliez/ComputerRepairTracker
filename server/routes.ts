@@ -1892,6 +1892,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const firstName = nameParts[0];
                 const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
                 
+                // Generate a default email if none provided - required field
+                const defaultEmail = `${firstName.toLowerCase()}@${organizationId}.example.com`;
+                
                 await db.execute(sql`
                   INSERT INTO technicians (
                     first_name, 
@@ -1904,7 +1907,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   VALUES (
                     ${firstName},
                     ${lastName},
-                    ${tech.email || null},
+                    ${tech.email || defaultEmail},
                     ${tech.phone || null},
                     ${tech.role || 'Technician'}, 
                     ${tech.isActive !== false}
