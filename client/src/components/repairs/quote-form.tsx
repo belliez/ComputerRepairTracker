@@ -91,19 +91,19 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   
   // Get currencies and tax rates
   const { data: currencies, isLoading: isLoadingCurrencies } = useQuery<Currency[]>({
-    queryKey: ['/api/settings/currencies'],
+    queryKey: ['/api/public-settings/currencies'],
   });
   
   const { data: defaultCurrency, isLoading: isLoadingDefaultCurrency } = useQuery<Currency>({
-    queryKey: ['/api/settings/currencies/default'],
+    queryKey: ['/api/public-settings/currencies/default'],
   });
   
   const { data: taxRates, isLoading: isLoadingTaxRates } = useQuery<TaxRate[]>({
-    queryKey: ['/api/settings/tax-rates'],
+    queryKey: ['/api/public-settings/tax-rates'],
   });
   
   const { data: defaultTaxRate, isLoading: isLoadingDefaultTaxRate } = useQuery<TaxRate>({
-    queryKey: ['/api/settings/tax-rates/default'],
+    queryKey: ['/api/public-settings/tax-rates/default'],
   });
   
   // State for selected currency and tax rate

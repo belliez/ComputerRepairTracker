@@ -100,6 +100,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/public-settings/currencies/default', async (req: Request, res: Response) => {
+    try {
+      console.log("PUBLIC API: Getting default currency (public router)");
+      const defaultCurrency = await db.select().from(currencies).where(eq(currencies.isDefault, true)).limit(1);
+      console.log("PUBLIC API: Default currency:", JSON.stringify(defaultCurrency[0] || null));
+      
+      if (defaultCurrency.length > 0) {
+        res.json(defaultCurrency[0]);
+      } else {
+        // If no default currency is set, return the first one or null
+        const anyCurrency = await db.select().from(currencies).limit(1);
+        res.json(anyCurrency[0] || null);
+      }
+    } catch (error) {
+      console.error("PUBLIC API: Error fetching default currency:", error);
+      res.status(500).json({ message: "Error fetching default currency" });
+    }
+  });
+
   app.get('/api/public-settings/tax-rates', async (req: Request, res: Response) => {
     try {
       console.log("PUBLIC API: Getting tax rates (public router)");
@@ -109,6 +128,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("PUBLIC API: Error fetching tax rates:", error);
       res.status(500).json({ message: "Error fetching tax rates" });
+    }
+  });
+
+  app.get('/api/public-settings/tax-rates/default', async (req: Request, res: Response) => {
+    try {
+      console.log("PUBLIC API: Getting default tax rate (public router)");
+      const defaultTaxRate = await db.select().from(taxRates).where(eq(taxRates.isDefault, true)).limit(1);
+      console.log("PUBLIC API: Default tax rate:", JSON.stringify(defaultTaxRate[0] || null));
+      
+      if (defaultTaxRate.length > 0) {
+        res.json(defaultTaxRate[0]);
+      } else {
+        // If no default tax rate is set, return the first one or null
+        const anyTaxRate = await db.select().from(taxRates).limit(1);
+        res.json(anyTaxRate[0] || null);
+      }
+    } catch (error) {
+      console.error("PUBLIC API: Error fetching default tax rate:", error);
+      res.status(500).json({ message: "Error fetching default tax rate" });
     }
   });
 

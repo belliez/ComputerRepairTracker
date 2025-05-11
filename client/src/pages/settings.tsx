@@ -305,7 +305,7 @@ const SettingsPage = () => {
     isLoading: isLoadingTechnicians,
     error: techniciansError
   } = useQuery<Technician[]>({
-    queryKey: ['/api/technicians'],
+    queryKey: ['/api/public-settings/technicians'],
     enabled: activeTab === 'technicians',
     onSuccess: (data) => {
       console.log('✅ Technicians loaded successfully:', data);
