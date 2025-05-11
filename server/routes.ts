@@ -2450,9 +2450,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Mount the settings router BEFORE applying authentication
   app.use("/api/settings", settingsRouter);
 
-  // Now apply authentication for other routes
-  app.use(authenticateJWT);
-  app.use(addOrganizationContext);
+  // Authentication is already applied on the API router - don't duplicate it globally
+  // app.use(authenticateJWT);
+  // app.use(addOrganizationContext);
   
   // Stripe subscription endpoints
   if (stripe) {
