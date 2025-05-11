@@ -1,10 +1,12 @@
-import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, json, primaryKey, real, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, doublePrecision, json, primaryKey, real, varchar, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // Customers
 export const customers = pgTable("customers", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id"), // Make nullable for backward compatibility
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull(),
@@ -27,6 +29,7 @@ export const insertCustomerSchema = createInsertSchema(customers).omit({
 // Devices
 export const devices = pgTable("devices", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id"), // Make nullable for backward compatibility
   customerId: integer("customer_id").notNull().references(() => customers.id),
   type: text("type").notNull(), // laptop, desktop, tablet, etc.
   brand: text("brand").notNull(),
@@ -289,3 +292,196 @@ export type InsertCurrency = z.infer<typeof insertCurrencySchema>;
 
 export type TaxRate = typeof taxRates.$inferSelect;
 export type InsertTaxRate = z.infer<typeof insertTaxRateSchema>;
+
+// Multi-tenancy tables
+// Users table to store authentication information
+export const users = pgTable("users", {
+  id: text("id").primaryKey(), // Firebase UID
+  email: text("email").notNull().unique(),
+  displayName: text("display_name"),
+  photoURL: text("photo_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  lastLoginAt: timestamp("last_login_at"),
+  isAdmin: boolean("is_admin").default(false),
+  stripeCustomerId: text("stripe_customer_id"),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  lastLoginAt: true,
+  stripeCustomerId: true,
+});
+
+// Organizations table (each user can be part of multiple organizations)
+export const organizations = pgTable("organizations", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  logo: text("logo"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  ownerId: text("owner_id").notNull().references(() => users.id),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  subscriptionStatus: text("subscription_status").default("inactive"), // "active", "inactive", "past_due", "canceled", "trialing"
+  subscriptionTier: text("subscription_tier").default("free"), // "free", "basic", "premium", "enterprise"
+  subscriptionExpiresAt: timestamp("subscription_expires_at"),
+  maxUsers: integer("max_users").default(1),
+  maxStorage: integer("max_storage").default(0), // in MB
+  settings: json("settings").default({}),
+  deleted: boolean("deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at"),
+});
+
+export const insertOrganizationSchema = createInsertSchema(organizations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  stripeSubscriptionId: true,
+  subscriptionStatus: true,
+  subscriptionTier: true,
+  subscriptionExpiresAt: true,
+  maxUsers: true,
+  maxStorage: true,
+  settings: true,
+  deleted: true,
+  deletedAt: true,
+});
+
+// OrganizationUser - junction table for many-to-many relationship between users and organizations
+export const organizationUsers = pgTable("organization_users", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").notNull().references(() => organizations.id),
+  userId: text("user_id").notNull().references(() => users.id),
+  role: text("role").notNull().default("member"), // "owner", "admin", "member"
+  inviteAccepted: boolean("invite_accepted").default(false),
+  inviteEmail: text("invite_email"),
+  inviteToken: text("invite_token"),
+  inviteExpires: timestamp("invite_expires"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    userOrgIdx: primaryKey(table.organizationId, table.userId),
+  };
+});
+
+export const insertOrganizationUserSchema = createInsertSchema(organizationUsers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Subscription Plans table
+export const subscriptionPlans = pgTable("subscription_plans", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  stripePriceId: text("stripe_price_id").notNull(),
+  features: json("features").default({}),
+  tier: text("tier").notNull(), // "free", "basic", "premium", "enterprise"
+  price: integer("price").notNull(), // in cents
+  interval: text("interval").notNull().default("month"), // "month", "year"
+  maxUsers: integer("max_users").notNull().default(1),
+  maxStorage: integer("max_storage").notNull().default(0), // in MB
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// Add organizationId to all tables that need tenant isolation
+export const customersRelations = relations(customers, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [customers.id],
+    references: [organizations.id],
+  }),
+}));
+
+export const devicesRelations = relations(devices, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [devices.id],
+    references: [organizations.id],
+  }),
+}));
+
+export const techniciansRelations = relations(technicians, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [technicians.id],
+    references: [organizations.id],
+  }),
+}));
+
+export const inventoryItemsRelations = relations(inventoryItems, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [inventoryItems.id],
+    references: [organizations.id],
+  }),
+}));
+
+export const repairsRelations = relations(repairs, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [repairs.id],
+    references: [organizations.id],
+  }),
+}));
+
+export const quotesRelations = relations(quotes, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [quotes.id],
+    references: [organizations.id],
+  }),
+}));
+
+export const invoicesRelations = relations(invoices, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [invoices.id],
+    references: [organizations.id],
+  }),
+}));
+
+export const currenciesRelations = relations(currencies, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [currencies.code],
+    references: [organizations.id],
+  }),
+}));
+
+export const taxRatesRelations = relations(taxRates, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [taxRates.id],
+    references: [organizations.id],
+  }),
+}));
+
+export const organizationsRelations = relations(organizations, ({ many }) => ({
+  users: many(organizationUsers),
+}));
+
+export const usersRelations = relations(users, ({ many }) => ({
+  organizations: many(organizationUsers),
+}));
+
+export const organizationUsersRelations = relations(organizationUsers, ({ one }) => ({
+  user: one(users, {
+    fields: [organizationUsers.userId],
+    references: [users.id],
+  }),
+  organization: one(organizations, {
+    fields: [organizationUsers.organizationId],
+    references: [organizations.id],
+  }),
+}));
+
+// Types for multi-tenant models
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type Organization = typeof organizations.$inferSelect;
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+
+export type OrganizationUser = typeof organizationUsers.$inferSelect;
+export type InsertOrganizationUser = z.infer<typeof insertOrganizationUserSchema>;
+
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
