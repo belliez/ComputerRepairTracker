@@ -422,7 +422,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Use real Firebase authentication
-      await signInWithEmailAndPassword(auth, email, password);
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // If this is a successful sign in, ensure user is synchronized with the database
+      if (credential.user) {
+        // Get the token and manually trigger an API call to create the user in the database
+        const idToken = await credential.user.getIdToken(true);
+        localStorage.setItem('firebase_token', idToken);
+        
+        try {
+          // Make API call to force user creation/confirmation in the database
+          const response = await apiRequest('GET', '/api/me');
+          if (response.ok) {
+            console.log('User successfully verified in database');
+            
+            // Force redirect since we know the user is authenticated now
+            if (window.location.pathname.includes('/auth')) {
+              window.location.href = '/';
+            }
+          }
+        } catch (syncError) {
+          console.error('Error syncing user with database:', syncError);
+          // Continue anyway as onAuthStateChanged will try again
+        }
+      }
+      
       setIsSigningIn(false);
     } catch (error) {
       setIsSigningIn(false);
@@ -451,6 +475,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Update the user's display name
       if (credential.user) {
         await firebaseUpdateProfile(credential.user, { displayName: name });
+        
+        // Get the token and manually trigger an API call to create the user in the database
+        const idToken = await credential.user.getIdToken(true);
+        localStorage.setItem('firebase_token', idToken);
+        
+        try {
+          // Make API call to force user creation in the database
+          const response = await apiRequest('GET', '/api/me');
+          if (response.ok) {
+            // User is now created in the database
+            console.log('User successfully created in database');
+            
+            // Create a default organization for the new user
+            await apiRequest('POST', '/api/organizations', {
+              name: `${name}'s Organization`
+            });
+            
+            // Force redirect since we know the user is authenticated now
+            if (window.location.pathname.includes('/auth')) {
+              window.location.href = '/';
+            }
+          }
+        } catch (syncError) {
+          console.error('Error syncing user with database:', syncError);
+          // Continue anyway as onAuthStateChanged will try again
+        }
       }
       
       setIsSigningUp(false);
@@ -480,7 +530,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       // Attempt to sign in with popup
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      
+      // If this is a successful sign in, ensure user is synchronized with our database
+      if (result.user) {
+        // Get the token and manually trigger an API call to create the user in the database
+        const idToken = await result.user.getIdToken(true);
+        localStorage.setItem('firebase_token', idToken);
+        
+        try {
+          // Make API call to force user creation in the database
+          const response = await apiRequest('GET', '/api/me');
+          if (response.ok) {
+            // User is now created in the database
+            console.log('User successfully created/updated in database');
+            
+            // Check if user has organizations
+            const orgsResponse = await apiRequest('GET', '/api/organizations');
+            if (orgsResponse.ok) {
+              const orgs = await orgsResponse.json();
+              
+              // If user doesn't have any organizations, create a default one
+              if (!orgs || orgs.length === 0) {
+                await apiRequest('POST', '/api/organizations', {
+                  name: `${result.user.displayName || 'My'}'s Organization`
+                });
+              }
+            }
+            
+            // Force redirect since we know the user is authenticated now
+            if (window.location.pathname.includes('/auth')) {
+              window.location.href = '/';
+            }
+          }
+        } catch (syncError) {
+          console.error('Error syncing user with database:', syncError);
+          // Continue anyway as onAuthStateChanged will try again
+        }
+      }
       
       toast({
         title: 'Google Sign-in Successful',
