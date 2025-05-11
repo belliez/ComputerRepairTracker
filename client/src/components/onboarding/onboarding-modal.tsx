@@ -502,6 +502,36 @@ export function OnboardingModal({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Persistent form data storage
+  const [formData, setFormData] = useState({
+    company: {
+      name: '',
+      email: '',
+      phone: '',
+      address: ''
+    },
+    tax: {
+      taxRates: [{
+        name: 'Sales Tax',
+        rate: 7.5,
+        isDefault: true
+      }]
+    },
+    currency: {
+      code: 'USD',
+      symbol: '$',
+      name: 'US Dollar',
+      isDefault: true
+    },
+    technicians: [{
+      name: '',
+      email: '',
+      phone: '',
+      role: '',
+      isActive: true
+    }]
+  });
+  
   const [completed, setCompleted] = useState({
     company: false,
     tax: false,
@@ -534,6 +564,17 @@ export function OnboardingModal({
   });
   
   const handleCompanyInfoComplete = (data) => {
+    // Update the persistent form data
+    setFormData(prev => ({
+      ...prev,
+      company: {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        address: data.address
+      }
+    }));
+    
     saveSettingsMutation.mutate({
       name: data.name,
       email: data.email,
@@ -571,6 +612,12 @@ export function OnboardingModal({
       }];
     }
     
+    // Update the persistent form data
+    setFormData(prev => ({
+      ...prev,
+      tax: { taxRates }
+    }));
+    
     saveSettingsMutation.mutate({
       taxRates,
       type: 'tax'
@@ -587,6 +634,12 @@ export function OnboardingModal({
   };
   
   const handleCurrencySettingsComplete = (currency) => {
+    // Update the persistent form data
+    setFormData(prev => ({
+      ...prev,
+      currency
+    }));
+    
     saveSettingsMutation.mutate({
       currency,
       type: 'currency'
@@ -603,6 +656,12 @@ export function OnboardingModal({
   };
   
   const handleTechnicianSetupComplete = (technicians) => {
+    // Update the persistent form data
+    setFormData(prev => ({
+      ...prev,
+      technicians
+    }));
+    
     saveSettingsMutation.mutate({
       technicians,
       type: 'technicians'
@@ -636,9 +695,14 @@ export function OnboardingModal({
   };
   
   const handleStepClick = (step: string) => {
-    if (completed[step]) {
+    if (completed[step] || step === activeStep) {
       setActiveStep(step);
     }
+  };
+  
+  // Get the persisted form data for a specific step
+  const getFormDataForStep = (step: string) => {
+    return formData[step];
   };
   
   return (
