@@ -389,11 +389,13 @@ const SettingsPage = () => {
 
   // Mutations
   const updateOrganizationMutation = useMutation({
-    mutationFn: (data: z.infer<typeof organizationSchema>) => 
-      apiRequest('POST', '/api/settings/organization', {
+    mutationFn: (data: z.infer<typeof organizationSchema>) => {
+      console.log('Submitting organization update:', data);
+      return apiRequest('POST', '/api/settings/organization', {
         ...data,
         type: 'company'
-      }),
+      });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/organizations'] });
       setShowOrganizationDialog(false);
