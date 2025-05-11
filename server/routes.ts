@@ -1760,12 +1760,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
         case 'tax':
           // For now, handle tax settings in the organization settings
-          // Remove all existing tax rates with is_default = true
-          await db.execute(sql`
-            DELETE FROM tax_rates WHERE is_default = true
-          `);
-            
-          // Add new tax rates
+          // First, get all existing tax rates
+          const existingTaxRates = await db.execute(sql`SELECT * FROM tax_rates`);
+          console.log('Existing tax rates:', existingTaxRates.rows);
+          
+          // Add new tax rates or update existing ones
           if (data.taxRates && Array.isArray(data.taxRates)) {
             // Validate the tax rates before inserting
             console.log('Tax rates before processing:', data.taxRates);
@@ -1776,7 +1775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               data.taxRates[0].isDefault = true;
             }
             
-            // If no tax rates, add a default one
+            // If no tax rates, add/update with a default one
             if (data.taxRates.length === 0) {
               data.taxRates.push({
                 name: 'Sales Tax',
@@ -1785,64 +1784,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
               });
             }
             
+            // First, set all tax rates to non-default
+            await db.execute(sql`UPDATE tax_rates SET is_default = false`);
+            
+            // Then update or insert each tax rate
             for (const tax of data.taxRates) {
               // Ensure all required properties exist
               const name = tax.name || 'Sales Tax';
               const rate = typeof tax.rate === 'number' ? tax.rate : 0;
               const isDefault = !!tax.isDefault;
               
-              console.log('Inserting tax rate:', { name, rate, isDefault });
+              console.log('Processing tax rate:', { name, rate, isDefault });
               
-              await db.execute(sql`
-                INSERT INTO tax_rates (name, rate, is_default) 
-                VALUES (${name}, ${rate}, ${isDefault})
-              `);
+              // Check if we have existing records
+              if (existingTaxRates.rows.length > 0) {
+                // Update an existing tax rate
+                await db.execute(sql`
+                  UPDATE tax_rates 
+                  SET name = ${name}, rate = ${rate}, is_default = ${isDefault}
+                  WHERE id = ${existingTaxRates.rows[0].id}
+                `);
+              } else {
+                // Insert new tax rate
+                await db.execute(sql`
+                  INSERT INTO tax_rates (name, rate, is_default) 
+                  VALUES (${name}, ${rate}, ${isDefault})
+                `);
+              }
             }
           } else {
-            // If taxRates is missing or not an array, add a default one
-            console.log('No valid tax rates found, adding default');
-            await db.execute(sql`
-              INSERT INTO tax_rates (name, rate, is_default) 
-              VALUES ('Sales Tax', 7.5, true)
-            `);
+            // If taxRates is missing or not an array, update with a default one
+            if (existingTaxRates.rows.length > 0) {
+              await db.execute(sql`
+                UPDATE tax_rates 
+                SET name = 'Sales Tax', rate = 7.5, is_default = true
+                WHERE id = ${existingTaxRates.rows[0].id}
+              `);
+            } else {
+              await db.execute(sql`
+                INSERT INTO tax_rates (name, rate, is_default) 
+                VALUES ('Sales Tax', 7.5, true)
+              `);
+            }
           }
           break;
           
         case 'currency':
           // For now, handle currency settings globally
-          // Delete all currencies with is_default = true
-          await db.execute(sql`
-            DELETE FROM currencies WHERE is_default = true
-          `);
+          // First, get all existing currencies
+          const existingCurrencies = await db.execute(sql`SELECT * FROM currencies`);
+          console.log('Existing currencies:', existingCurrencies.rows);
+          
+          // Set all currencies to non-default first
+          await db.execute(sql`UPDATE currencies SET is_default = false`);
             
-          // Add new currency
+          // Add or update currency
           if (data.currency) {
-            await db.execute(sql`
-              INSERT INTO currencies (code, symbol, name, is_default) 
-              VALUES (
-                ${data.currency.code}, 
-                ${data.currency.symbol}, 
-                ${data.currency.name}, 
-                ${data.currency.isDefault}
-              )
-            `);
+            // Check if the currency already exists
+            const existingCurrency = existingCurrencies.rows.find(
+              c => c.code === data.currency.code
+            );
+            
+            if (existingCurrency) {
+              // Update existing currency
+              await db.execute(sql`
+                UPDATE currencies
+                SET name = ${data.currency.name}, 
+                    symbol = ${data.currency.symbol}, 
+                    is_default = ${!!data.currency.isDefault}
+                WHERE code = ${data.currency.code}
+              `);
+            } else {
+              // Create a new currency code that doesn't conflict
+              // First check if there are any currencies we can update
+              if (existingCurrencies.rows.length > 0) {
+                // Update the first currency we find
+                await db.execute(sql`
+                  UPDATE currencies
+                  SET name = ${data.currency.name}, 
+                      symbol = ${data.currency.symbol}, 
+                      is_default = ${!!data.currency.isDefault}
+                  WHERE code = ${existingCurrencies.rows[0].code}
+                `);
+              } else {
+                // Insert new currency if there are none
+                await db.execute(sql`
+                  INSERT INTO currencies (code, symbol, name, is_default) 
+                  VALUES (
+                    ${data.currency.code}, 
+                    ${data.currency.symbol}, 
+                    ${data.currency.name}, 
+                    ${!!data.currency.isDefault}
+                  )
+                `);
+              }
+            }
           }
           break;
           
         case 'technicians':
-          // Add new technicians
+          // We need to insert technicians with firstName and lastName
           if (data.technicians && Array.isArray(data.technicians)) {
             for (const tech of data.technicians) {
               if (tech.name) {
+                // Split the name into first and last name
+                const nameParts = tech.name.trim().split(' ');
+                const firstName = nameParts[0];
+                const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+                
                 await db.execute(sql`
-                  INSERT INTO technicians (name, email, phone, role, is_active, organization_id) 
+                  INSERT INTO technicians (
+                    first_name, 
+                    last_name, 
+                    email, 
+                    phone, 
+                    role, 
+                    is_active
+                  ) 
                   VALUES (
-                    ${tech.name},
+                    ${firstName},
+                    ${lastName},
                     ${tech.email || null},
                     ${tech.phone || null},
-                    ${tech.role || null},
-                    ${tech.isActive !== false},
-                    ${organizationId}
+                    ${tech.role || 'Technician'}, 
+                    ${tech.isActive !== false}
                   )
                 `);
               }
