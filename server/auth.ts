@@ -556,6 +556,15 @@ function generateInviteToken() {
 
 // Middleware to add organization context
 export const addOrganizationContext = async (req: Request, res: Response, next: NextFunction) => {
+  // Special handling for development mode
+  const authHeader = req.headers.authorization;
+  if (process.env.NODE_ENV === 'development' && authHeader && authHeader.startsWith('Bearer dev-token-')) {
+    console.log('Development token detected, setting default organization context');
+    // In development mode, automatically set organization ID to 1
+    req.organizationId = 1;
+    return next();
+  }
+  
   if (!req.user) {
     return next();
   }
