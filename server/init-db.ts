@@ -16,6 +16,7 @@ import {
   subscriptionPlans
 } from "@shared/schema";
 import { runMultiTenancyMigration } from './migrations/001-add-multi-tenancy';
+import { runSettingsOrganizationMigration } from './migrations/002-add-settings-organization-id';
 
 // Initialize demo data
 export async function initializeDemo() {
@@ -24,6 +25,7 @@ export async function initializeDemo() {
   try {
     // Run multi-tenancy migration first
     await runMultiTenancyMigration();
+    await runSettingsOrganizationMigration();
     
     // Initialize development user and organization
     await initializeDevEnvironment();

@@ -1571,10 +1571,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Settings API - Currencies - Fixed GET method with auth bypass for debugging
   apiRouter.get("/settings/currencies", async (req: Request, res: Response) => {
     try {
-      console.log("Getting currencies - bypassing auth for debugging...");
+      console.log("Getting currencies for organization ID:", (global as any).currentOrganizationId);
       
-      // Allow this endpoint without authentication for debugging
-      const allCurrencies = await db.select().from(currencies);
+      // Get organization-specific currencies or global ones
+      const allCurrencies = await db.select().from(currencies)
+        .where(
+          // Get either organization-specific currencies or global ones
+          sql`(${currencies.organizationId} = ${(global as any).currentOrganizationId} OR ${currencies.organizationId} IS NULL)`
+        );
       
       console.log("Currencies found:", allCurrencies.length, allCurrencies);
       return res.json(allCurrencies);
@@ -1586,18 +1590,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   apiRouter.get("/settings/currencies/default", async (req: Request, res: Response) => {
     try {
-      const allCurrencies = await db.select().from(currencies);
-      // Find the default currency
-      const defaultCurrency = allCurrencies.find(currency => currency.isDefault === true);
+      console.log("Getting default currency for organization ID:", (global as any).currentOrganizationId);
       
+      // Get organization-specific currencies or global ones
+      const orgCurrencies = await db.select().from(currencies)
+        .where(
+          sql`(${currencies.organizationId} = ${(global as any).currentOrganizationId} OR ${currencies.organizationId} IS NULL)`
+        );
+        
+      // First try to find a default currency specific to this organization
+      let defaultCurrency = orgCurrencies.find(currency => 
+        currency.isDefault === true && 
+        currency.organizationId === (global as any).currentOrganizationId
+      );
+      
+      // If no org-specific default, try to find a global default
       if (!defaultCurrency) {
-        // If no default, return USD as fallback
-        const usdCurrency = allCurrencies.find(currency => currency.code === "USD");
+        defaultCurrency = orgCurrencies.find(currency => 
+          currency.isDefault === true && 
+          (currency.organizationId === null || currency.organizationId === undefined)
+        );
+      }
+      
+      // If no default at all, try to find USD in the org currencies
+      if (!defaultCurrency) {
+        const usdCurrency = orgCurrencies.find(currency => currency.code === "USD");
         return res.json(usdCurrency || { code: "USD", symbol: "$", name: "US Dollar" });
       }
-      res.json(defaultCurrency);
+      
+      return res.json(defaultCurrency);
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error("Error fetching default currency:", error);
+      return res.status(500).json({ error: error.message });
     }
   });
   
