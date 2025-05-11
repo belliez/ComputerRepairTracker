@@ -1705,15 +1705,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.delete("/settings/currencies/:code", async (req: Request, res: Response) => {
     try {
       const { code } = req.params;
+      const organizationId = (global as any).currentOrganizationId;
       
-      // Check if currency is in use
+      console.log(`Deleting currency for organization ID: ${organizationId}`);
+      
+      // Check if currency is in use within this organization
       const quotesUsingCurrency = await db.select({ count: sql`count(*)` })
         .from(quotes)
-        .where(eq(quotes.currencyCode, code));
+        .where(
+          and(
+            eq(quotes.currencyCode, code),
+            eq(quotes.organizationId, organizationId)
+          )
+        );
         
       const invoicesUsingCurrency = await db.select({ count: sql`count(*)` })
         .from(invoices)
-        .where(eq(invoices.currencyCode, code));
+        .where(
+          and(
+            eq(invoices.currencyCode, code),
+            eq(invoices.organizationId, organizationId)
+          )
+        );
         
       if (quotesUsingCurrency[0].count > 0 || invoicesUsingCurrency[0].count > 0) {
         return res.status(400).json({ 
@@ -1721,10 +1734,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Check if it's the default currency
+      // Check if it's the default currency for this organization
       const [currencyToDelete] = await db.select()
         .from(currencies)
-        .where(eq(currencies.code, code));
+        .where(
+          and(
+            eq(currencies.code, code),
+            eq(currencies.organizationId, organizationId)
+          )
+        );
+        
+      if (!currencyToDelete) {
+        return res.status(404).json({ 
+          error: "Currency not found for this organization" 
+        });
+      }
         
       if (currencyToDelete?.isDefault) {
         return res.status(400).json({ 
@@ -1732,7 +1756,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      await db.delete(currencies).where(eq(currencies.code, code));
+      await db.delete(currencies)
+        .where(
+          and(
+            eq(currencies.code, code),
+            eq(currencies.organizationId, organizationId)
+          )
+        );
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -1799,20 +1829,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/settings/tax-rates", async (req: Request, res: Response) => {
     try {
       const { countryCode, regionCode, name, rate, isDefault } = req.body;
+      const organizationId = (global as any).currentOrganizationId;
       
-      // If setting as default, unset any existing default
+      console.log(`Creating tax rate for organization ID: ${organizationId}`);
+      
+      // If setting as default, unset any existing defaults for this organization
       if (isDefault) {
         await db.update(taxRates)
           .set({ isDefault: false })
-          .where(eq(taxRates.isDefault, true));
+          .where(
+            and(
+              eq(taxRates.isDefault, true),
+              eq(taxRates.organizationId, organizationId)
+            )
+          );
       }
       
       const [taxRate] = await db.insert(taxRates)
-        .values({ countryCode, regionCode, name, rate, isDefault })
+        .values({ 
+          countryCode, 
+          regionCode, 
+          name, 
+          rate, 
+          isDefault,
+          organizationId 
+        })
         .returning();
         
       res.status(201).json(taxRate);
     } catch (error: any) {
+      console.error("Error creating tax rate:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1821,25 +1867,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const { countryCode, regionCode, name, rate, isDefault } = req.body;
+      const organizationId = (global as any).currentOrganizationId;
       
-      // If setting as default, unset any existing default
+      console.log(`Updating tax rate for organization ID: ${organizationId}`);
+      
+      // If setting as default, unset any existing defaults for this organization
       if (isDefault) {
         await db.update(taxRates)
           .set({ isDefault: false })
-          .where(eq(taxRates.isDefault, true));
+          .where(
+            and(
+              eq(taxRates.isDefault, true),
+              eq(taxRates.organizationId, organizationId)
+            )
+          );
       }
       
       const [updatedTaxRate] = await db.update(taxRates)
         .set({ countryCode, regionCode, name, rate, isDefault })
-        .where(eq(taxRates.id, id))
+        .where(
+          and(
+            eq(taxRates.id, id),
+            eq(taxRates.organizationId, organizationId)
+          )
+        )
         .returning();
         
       if (!updatedTaxRate) {
-        return res.status(404).json({ error: "Tax rate not found" });
+        return res.status(404).json({ error: "Tax rate not found for this organization" });
       }
       
       res.json(updatedTaxRate);
     } catch (error: any) {
+      console.error("Error updating tax rate:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -1847,15 +1907,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.delete("/settings/tax-rates/:id", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
+      const organizationId = (global as any).currentOrganizationId;
       
-      // Check if tax rate is in use
+      console.log(`Deleting tax rate for organization ID: ${organizationId}`);
+      
+      // Check if tax rate is in use within this organization
       const quotesUsingTaxRate = await db.select({ count: sql`count(*)` })
         .from(quotes)
-        .where(eq(quotes.taxRateId, id));
+        .where(
+          and(
+            eq(quotes.taxRateId, id),
+            eq(quotes.organizationId, organizationId)
+          )
+        );
         
       const invoicesUsingTaxRate = await db.select({ count: sql`count(*)` })
         .from(invoices)
-        .where(eq(invoices.taxRateId, id));
+        .where(
+          and(
+            eq(invoices.taxRateId, id),
+            eq(invoices.organizationId, organizationId)
+          )
+        );
         
       if (quotesUsingTaxRate[0].count > 0 || invoicesUsingTaxRate[0].count > 0) {
         return res.status(400).json({ 
@@ -1863,10 +1936,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Check if it's the default tax rate
+      // Check if it's the default tax rate for this organization
       const [taxRateToDelete] = await db.select()
         .from(taxRates)
-        .where(eq(taxRates.id, id));
+        .where(
+          and(
+            eq(taxRates.id, id),
+            eq(taxRates.organizationId, organizationId)
+          )
+        );
+        
+      if (!taxRateToDelete) {
+        return res.status(404).json({ 
+          error: "Tax rate not found for this organization" 
+        });
+      }
         
       if (taxRateToDelete?.isDefault) {
         return res.status(400).json({ 
@@ -1874,7 +1958,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      await db.delete(taxRates).where(eq(taxRates.id, id));
+      await db.delete(taxRates)
+        .where(
+          and(
+            eq(taxRates.id, id),
+            eq(taxRates.organizationId, organizationId)
+          )
+        );
       res.status(204).send();
     } catch (error: any) {
       res.status(500).json({ error: error.message });
