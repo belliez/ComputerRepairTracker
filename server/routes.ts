@@ -2526,57 +2526,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Starting data deletion for organization: ${orgId}`);
       
-      // Delete data in the correct order to respect foreign key constraints
+      // Use a single transaction with cascading deletes to handle foreign key constraints
       try {
-        // 1. First delete repair items
-        await db.execute(sql`
-          DELETE FROM repair_items 
-          WHERE repair_id IN (
-            SELECT id FROM repairs 
+        console.log(`Organization ${orgId}: Starting deletion with single transaction approach`);
+        
+        // Use a transaction to ensure all operations succeed or fail together
+        await db.transaction(async (tx) => {
+          // First, let's check what's in the database for this organization
+          const customerCount = await tx.execute(sql`
+            SELECT COUNT(*) FROM customers WHERE organization_id = ${orgId}
+          `);
+          console.log(`Organization ${orgId}: Found ${customerCount.rows[0].count} customers`);
+          
+          const repairCount = await tx.execute(sql`
+            SELECT COUNT(*) FROM repairs WHERE organization_id = ${orgId}
+          `);
+          console.log(`Organization ${orgId}: Found ${repairCount.rows[0].count} repairs`);
+          
+          // 1. First delete repair items (they reference repairs)
+          console.log(`Organization ${orgId}: Deleting repair items`);
+          await tx.execute(sql`
+            DELETE FROM repair_items 
+            WHERE repair_id IN (
+              SELECT id FROM repairs 
+              WHERE organization_id = ${orgId}
+            )
+          `);
+          
+          // 2. Delete quotes (they reference repairs)
+          console.log(`Organization ${orgId}: Deleting quotes`);
+          await tx.execute(sql`
+            DELETE FROM quotes 
             WHERE organization_id = ${orgId}
-          )
-        `);
-        
-        // 2. Delete quotes and invoices
-        await db.execute(sql`
-          DELETE FROM quotes 
-          WHERE organization_id = ${orgId}
-        `);
-        
-        await db.execute(sql`
-          DELETE FROM invoices 
-          WHERE organization_id = ${orgId}
-        `);
-        
-        // 3. Delete repairs
-        await db.execute(sql`
-          DELETE FROM repairs 
-          WHERE organization_id = ${orgId}
-        `);
-        
-        // 4. Delete devices
-        await db.execute(sql`
-          DELETE FROM devices 
-          WHERE organization_id = ${orgId}
-        `);
-        
-        // 5. Delete customers
-        await db.execute(sql`
-          DELETE FROM customers 
-          WHERE organization_id = ${orgId}
-        `);
-        
-        // 6. Delete technicians
-        await db.execute(sql`
-          DELETE FROM technicians 
-          WHERE organization_id = ${orgId}
-        `);
-        
-        // 7. Delete inventory items
-        await db.execute(sql`
-          DELETE FROM inventory_items 
-          WHERE organization_id = ${orgId}
-        `);
+          `);
+          
+          // 3. Delete invoices (they reference repairs)
+          console.log(`Organization ${orgId}: Deleting invoices`);
+          await tx.execute(sql`
+            DELETE FROM invoices 
+            WHERE organization_id = ${orgId}
+          `);
+          
+          // 4. Delete repairs (they reference customers)
+          console.log(`Organization ${orgId}: Deleting repairs`);
+          await tx.execute(sql`
+            DELETE FROM repairs 
+            WHERE organization_id = ${orgId}
+          `);
+          
+          // 5. Delete devices (they reference customers)
+          console.log(`Organization ${orgId}: Deleting devices`);
+          await tx.execute(sql`
+            DELETE FROM devices 
+            WHERE organization_id = ${orgId}
+          `);
+          
+          // 6. Delete customers
+          console.log(`Organization ${orgId}: Deleting customers`);
+          await tx.execute(sql`
+            DELETE FROM customers 
+            WHERE organization_id = ${orgId}
+          `);
+          
+          // 7. Delete technicians
+          console.log(`Organization ${orgId}: Deleting technicians`);
+          await tx.execute(sql`
+            DELETE FROM technicians 
+            WHERE organization_id = ${orgId}
+          `);
+          
+          // 8. Delete inventory items
+          console.log(`Organization ${orgId}: Deleting inventory items`);
+          await tx.execute(sql`
+            DELETE FROM inventory_items 
+            WHERE organization_id = ${orgId}
+          `);
+          
+          console.log(`Organization ${orgId}: Transaction completed successfully`);
+        });
         
         // Success!
         console.log(`Successfully deleted all data for organization: ${orgId}`);
