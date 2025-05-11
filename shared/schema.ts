@@ -49,6 +49,7 @@ export const insertDeviceSchema = createInsertSchema(devices).omit({
 // Technicians
 export const technicians = pgTable("technicians", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id"), // Added for multi-tenancy
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull(),
