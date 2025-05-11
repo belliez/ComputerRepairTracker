@@ -87,6 +87,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
+  // Add public settings endpoints before any authentication
+  app.get('/api/public-settings/currencies', async (req: Request, res: Response) => {
+    try {
+      console.log("PUBLIC API: Getting currencies (public router)");
+      const allCurrencies = await db.select().from(currencies);
+      console.log("PUBLIC API: All currencies:", JSON.stringify(allCurrencies));
+      res.json(allCurrencies);
+    } catch (error) {
+      console.error("PUBLIC API: Error fetching currencies:", error);
+      res.status(500).json({ message: "Error fetching currencies" });
+    }
+  });
+
+  app.get('/api/public-settings/tax-rates', async (req: Request, res: Response) => {
+    try {
+      console.log("PUBLIC API: Getting tax rates (public router)");
+      const allTaxRates = await db.select().from(taxRates);
+      console.log("PUBLIC API: All tax rates:", JSON.stringify(allTaxRates));
+      res.json(allTaxRates);
+    } catch (error) {
+      console.error("PUBLIC API: Error fetching tax rates:", error);
+      res.status(500).json({ message: "Error fetching tax rates" });
+    }
+  });
+
+  app.get('/api/public-settings/technicians', async (req: Request, res: Response) => {
+    try {
+      console.log("PUBLIC API: Getting technicians (public router)");
+      const allTechnicians = await db.select().from(technicians).where(eq(technicians.deleted, false));
+      console.log("PUBLIC API: Technicians count:", allTechnicians.length);
+      res.json(allTechnicians);
+    } catch (error) {
+      console.error("PUBLIC API: Error fetching technicians:", error);
+      res.status(500).json({ message: "Error fetching technicians" });
+    }
+  });
+
   // Add a simple endpoint to check auth status
   app.get('/api/auth-status', (req: Request, res: Response) => {
     console.log('Auth status endpoint called');

@@ -77,27 +77,82 @@ export const getQueryFn: <T>(options: {
     }
     
     const url = queryKey[0] as string;
-    console.log(`Making query to ${url}`);
+    console.log(`QUERY DEBUG: Making query to ${url}`);
     
-    const res = await fetch(url, {
-      credentials: "include",
-      headers: headers
-    });
-
-    console.log(`Query to ${url} returned status ${res.status}`);
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      console.log(`Query to ${url} returned 401, returning null as configured`);
-      return null;
-    }
-
     try {
+      // Special handling for settings endpoints with debugging
+      if (url.includes('/settings/currencies') || url.includes('/settings/tax-rates')) {
+        console.log(`SETTINGS DEBUG: Making direct fetch to ${url} (settings endpoint)`);
+        
+        // Debugging mode - show headers
+        console.log('Request headers:', JSON.stringify(headers));
+        
+        const res = await fetch(url, {
+          credentials: "include",
+          headers: headers,
+          mode: 'cors'
+        });
+        
+        console.log(`SETTINGS DEBUG: ${url} returned status ${res.status}`);
+        
+        // If CORS issue, try a different approach
+        if (!res.ok) {
+          console.log(`SETTINGS DEBUG: Trying fallback approach for ${url}`);
+          const fallbackUrl = url.replace('/api/settings/', '/api/public-settings/');
+          console.log(`SETTINGS DEBUG: Fallback URL: ${fallbackUrl}`);
+          
+          const fallbackRes = await fetch(fallbackUrl, {
+            credentials: "include",
+            headers: headers
+          });
+          
+          console.log(`SETTINGS DEBUG: Fallback request returned status ${fallbackRes.status}`);
+          
+          if (fallbackRes.ok) {
+            const fallbackData = await fallbackRes.json();
+            console.log(`SETTINGS DEBUG: Fallback data:`, fallbackData);
+            return fallbackData;
+          }
+        }
+        
+        if (res.ok) {
+          try {
+            const text = await res.text();
+            console.log(`SETTINGS DEBUG: Raw response text: ${text}`);
+            if (text) {
+              const data = JSON.parse(text);
+              console.log(`SETTINGS DEBUG: Parsed JSON data:`, data);
+              return data;
+            } else {
+              console.log(`SETTINGS DEBUG: Empty response text`);
+              return [];
+            }
+          } catch (parseError) {
+            console.error(`SETTINGS DEBUG: JSON parse error:`, parseError);
+            return [];
+          }
+        }
+      }
+      
+      // Standard query handling
+      const res = await fetch(url, {
+        credentials: "include",
+        headers: headers
+      });
+
+      console.log(`QUERY DEBUG: Query to ${url} returned status ${res.status}`);
+
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        console.log(`QUERY DEBUG: Query to ${url} returned 401, returning null as configured`);
+        return null;
+      }
+
       await throwIfResNotOk(res);
       const data = await res.json();
-      console.log(`Query to ${url} response data:`, data);
+      console.log(`QUERY DEBUG: Query to ${url} response data:`, data);
       return data;
     } catch (error) {
-      console.error(`Error processing query to ${url}:`, error);
+      console.error(`QUERY DEBUG: Error processing query to ${url}:`, error);
       throw error;
     }
   };
