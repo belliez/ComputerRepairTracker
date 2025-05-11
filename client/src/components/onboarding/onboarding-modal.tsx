@@ -131,12 +131,27 @@ function TaxSettingsForm({ onComplete }: { onComplete: (taxRates: any) => void }
   ]);
   const [newTaxName, setNewTaxName] = useState('');
   const [newTaxRate, setNewTaxRate] = useState('');
+  const { toast } = useToast();
   
   const handleAddTax = () => {
-    if (!newTaxName || !newTaxRate) return;
+    if (!newTaxName || !newTaxRate) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please provide both a name and rate for the tax',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     const rate = parseFloat(newTaxRate);
-    if (isNaN(rate)) return;
+    if (isNaN(rate) || rate < 0 || rate > 100) {
+      toast({
+        title: 'Invalid Tax Rate',
+        description: 'Please enter a valid tax rate between 0 and 100',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     setTaxRates([...taxRates, {
       name: newTaxName,
@@ -148,9 +163,54 @@ function TaxSettingsForm({ onComplete }: { onComplete: (taxRates: any) => void }
     setNewTaxRate('');
   };
   
+  const setAsDefault = (index: number) => {
+    setTaxRates(taxRates.map((tax, i) => ({
+      ...tax,
+      isDefault: i === index
+    })));
+  };
+  
+  const removeTax = (index: number) => {
+    // Don't allow removing if it's the only tax rate
+    if (taxRates.length <= 1) {
+      toast({
+        title: 'Cannot Remove',
+        description: 'You must have at least one tax rate',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    // If removing the default tax, make another one default
+    const isRemovingDefault = taxRates[index].isDefault;
+    
+    const newTaxRates = taxRates.filter((_, i) => i !== index);
+    
+    if (isRemovingDefault && newTaxRates.length > 0) {
+      newTaxRates[0].isDefault = true;
+    }
+    
+    setTaxRates(newTaxRates);
+  };
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onComplete(taxRates);
+    
+    // Validate that we have at least one tax rate
+    if (taxRates.length === 0) {
+      setTaxRates([{ name: 'Sales Tax', rate: 7.5, isDefault: true }]);
+    }
+    
+    // Ensure we have a default tax rate
+    const hasDefault = taxRates.some(tax => tax.isDefault);
+    if (!hasDefault && taxRates.length > 0) {
+      const updatedTaxRates = [...taxRates];
+      updatedTaxRates[0].isDefault = true;
+      setTaxRates(updatedTaxRates);
+      onComplete(updatedTaxRates);
+    } else {
+      onComplete(taxRates);
+    }
   };
   
   return (
@@ -161,12 +221,32 @@ function TaxSettingsForm({ onComplete }: { onComplete: (taxRates: any) => void }
           <Separator className="my-2" />
           
           {taxRates.map((tax, index) => (
-            <div key={index} className="flex justify-between items-center py-2">
+            <div key={index} className="flex justify-between items-center py-2 border-b last:border-0 border-gray-100">
               <div>
                 <span className="font-medium">{tax.name}</span>
                 {tax.isDefault && <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Default</span>}
               </div>
-              <span>{tax.rate}%</span>
+              <div className="flex items-center gap-2">
+                <span className="mr-2">{tax.rate}%</span>
+                {!tax.isDefault && (
+                  <Button 
+                    type="button" 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setAsDefault(index)}
+                  >
+                    Make Default
+                  </Button>
+                )}
+                <Button 
+                  type="button" 
+                  size="sm" 
+                  variant="destructive"
+                  onClick={() => removeTax(index)}
+                >
+                  Remove
+                </Button>
+              </div>
             </div>
           ))}
         </Card>
