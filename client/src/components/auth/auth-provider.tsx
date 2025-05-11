@@ -77,15 +77,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: mockUser.email || 'dev@example.com',
           displayName: mockUser.displayName || 'Development User',
           photoURL: null,
-          lastLoginAt: new Date(),
+          lastLoginAt: new Date().toISOString(),
         };
         
         const mockOrg = {
           id: 1,
           name: 'Development Organization',
           slug: 'dev-org',
-          createdAt: new Date(),
-          updatedAt: new Date(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
           ownerId: mockUser.id || 'dev-user-123',
           logo: null,
           stripeSubscriptionId: 'mock_sub_123',
@@ -204,11 +204,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setFirebaseUser(null);
         setOrganizations([]);
         setCurrentOrganization(null);
+        
+        // Clear all auth-related localStorage keys
         localStorage.removeItem('firebase_token');
         localStorage.removeItem('currentOrganizationId');
-        localStorage.removeItem('useDevelopmentAuth');
         localStorage.removeItem('dev_mode');
         localStorage.removeItem('dev_user');
+        
+        // Also clear any legacy keys to prevent conflicts
+        localStorage.removeItem('useDevelopmentAuth');
       }
       
       setIsLoading(false);
@@ -334,8 +338,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // In development, we'll simulate a successful login
     console.log('Using development auth mode - bypassing Firebase');
     
-    // Store a flag that we're using development mode
-    localStorage.setItem('useDevelopmentAuth', 'true');
+    // Store flags for development mode using the same keys as the debug page
+    localStorage.setItem('dev_mode', 'true');
+    
+    // Generate a development token with timestamp (same format as debug page)
+    const devToken = `dev-token-${Date.now()}`;
+    localStorage.setItem('firebase_token', devToken);
     
     // Notify user we're in development mode
     toast({
@@ -346,14 +354,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // No error in dev mode
     setError(null);
     
-    // Create a mock development user
+    // Create a mock development user (same format as debug page)
     const mockUser = {
       id: 'dev-user-123',
       email: email || 'dev@example.com',
       displayName: name || 'Development User',
       photoURL: null,
-      lastLoginAt: new Date(),
+      lastLoginAt: new Date().toISOString(),
     };
+    
+    // Store the user in localStorage (same format as debug page)
+    localStorage.setItem('dev_user', JSON.stringify({
+      id: mockUser.id,
+      email: mockUser.email,
+      displayName: mockUser.displayName
+    }));
     
     // Set the user directly
     setUser(mockUser as any);
@@ -363,8 +378,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       id: 1,
       name: 'Development Organization',
       slug: 'dev-org',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       ownerId: 'dev-user-123',
       logo: null,
       stripeSubscriptionId: 'dev_sub_123',
@@ -517,13 +532,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       // Check if we're in development mode first
-      const devMode = localStorage.getItem('useDevelopmentAuth') === 'true';
+      const devMode = localStorage.getItem('dev_mode') === 'true';
       
       if (devMode) {
         // Development mode cleanup
         console.log('Development mode detected, cleaning up dev auth');
-        localStorage.removeItem('useDevelopmentAuth');
+        
+        // Clear all auth-related localStorage keys
+        localStorage.removeItem('dev_mode');
+        localStorage.removeItem('dev_user');
+        localStorage.removeItem('firebase_token');
         localStorage.removeItem('currentOrganizationId');
+        
+        // Also clear any legacy keys to prevent conflicts
+        localStorage.removeItem('useDevelopmentAuth');
         
         // Reset auth state
         setUser(null);
