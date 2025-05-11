@@ -253,7 +253,7 @@ const SettingsPage = () => {
     isLoading: isLoadingCurrencies,
     error: currenciesError
   } = useQuery<Currency[]>({
-    queryKey: ['/api/public-settings/currencies'],
+    queryKey: ['/api/settings/currencies'],
     onSuccess: (data) => {
       console.log('✅ Currencies loaded successfully:', data);
       console.log('Currencies type:', typeof data);
@@ -279,7 +279,7 @@ const SettingsPage = () => {
     isLoading: isLoadingTaxRates,
     error: taxRatesError
   } = useQuery<TaxRate[]>({
-    queryKey: ['/api/public-settings/tax-rates'],
+    queryKey: ['/api/settings/tax-rates'],
     onSuccess: (data) => {
       console.log('✅ Tax rates loaded successfully:', data);
       console.log('Tax rates type:', typeof data);
