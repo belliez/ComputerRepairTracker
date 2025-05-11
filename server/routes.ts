@@ -64,6 +64,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.sendFile('simple-auth.html', { root: './public' });
   });
   
+  // Direct route to our comprehensive auth debugging page
+  app.get('/auth-debug', (req: Request, res: Response) => {
+    console.log('Serving auth debugging page');
+    res.sendFile('auth-debug.html', { root: './public' });
+  });
+  
   // Auth page data route - always publicly accessible
   app.get('/api/auth-data', (req: Request, res: Response) => {
     console.log('Auth data endpoint called');

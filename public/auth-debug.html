@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authentication Debugging</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f7fa;
+    }
+    h1, h2, h3 {
+      color: #333;
+    }
+    .card {
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+      gap: 20px;
+    }
+    .status {
+      padding: 15px;
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+    input, select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #4361ee;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #3a56d4;
+    }
+    button:disabled {
+      background-color: #a0aec0;
+      cursor: not-allowed;
+    }
+    button.secondary {
+      background-color: #6c757d;
+    }
+    button.secondary:hover {
+      background-color: #5a6268;
+    }
+    button.danger {
+      background-color: #dc3545;
+    }
+    button.danger:hover {
+      background-color: #c82333;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+    }
+    .button-group button {
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <h1>Authentication Debugging Tool</h1>
+  
+  <div class="grid">
+    <div class="card">
+      <h2>System Status</h2>
+      <div class="status" id="status">Loading...</div>
+      <button id="checkStatus">Check API Status</button>
+    </div>
+    
+    <div class="card">
+      <h2>Local Storage</h2>
+      <div class="status" id="localStorage">Loading...</div>
+      <div class="button-group">
+        <button id="refreshStorage">Refresh</button>
+        <button id="clearStorage" class="danger">Clear All</button>
+      </div>
+    </div>
+    
+    <div class="card">
+      <h2>Development Login</h2>
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" value="dev@example.com" />
+        </div>
+        <div class="form-group">
+          <label for="name">Name</label>
+          <input type="text" id="name" value="Development User" />
+        </div>
+        <button type="submit" id="loginButton">Login as Development User</button>
+      </form>
+      <div class="status" id="loginResult"></div>
+    </div>
+    
+    <div class="card">
+      <h2>Test API Endpoint</h2>
+      <div class="form-group">
+        <label for="endpoint">Endpoint</label>
+        <input type="text" id="endpoint" value="/api/auth-status" />
+      </div>
+      <div class="form-group">
+        <label for="method">Method</label>
+        <select id="method">
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="requestBody">Request Body (JSON, optional)</label>
+        <textarea id="requestBody" rows="3" style="width: 100%; padding: 8px;"></textarea>
+      </div>
+      <button id="testEndpoint">Test Endpoint</button>
+      <div class="status" id="apiResult">No results yet</div>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>Navigation</h2>
+    <div class="button-group">
+      <button id="goHome">Go to Main App</button>
+      <button id="goAuth">Go to Auth Page</button>
+      <button id="goSimpleAuth">Go to Simple Auth</button>
+    </div>
+  </div>
+  
+  <script>
+    // Elements
+    const statusElement = document.getElementById('status');
+    const localStorageElement = document.getElementById('localStorage');
+    const loginResultElement = document.getElementById('loginResult');
+    const apiResultElement = document.getElementById('apiResult');
+    
+    // Buttons
+    const checkStatusButton = document.getElementById('checkStatus');
+    const refreshStorageButton = document.getElementById('refreshStorage');
+    const clearStorageButton = document.getElementById('clearStorage');
+    const loginForm = document.getElementById('loginForm');
+    const testEndpointButton = document.getElementById('testEndpoint');
+    const goHomeButton = document.getElementById('goHome');
+    const goAuthButton = document.getElementById('goAuth');
+    const goSimpleAuthButton = document.getElementById('goSimpleAuth');
+    
+    // Form fields
+    const emailInput = document.getElementById('email');
+    const nameInput = document.getElementById('name');
+    const endpointInput = document.getElementById('endpoint');
+    const methodSelect = document.getElementById('method');
+    const requestBodyInput = document.getElementById('requestBody');
+    
+    // Initial load
+    refreshLocalStorage();
+    checkStatus();
+    
+    // Check API status
+    async function checkStatus() {
+      statusElement.textContent = 'Checking status...';
+      try {
+        const response = await fetch('/api/status');
+        const data = await response.json();
+        statusElement.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        statusElement.textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    // Refresh local storage display
+    function refreshLocalStorage() {
+      const items = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          let value = localStorage.getItem(key) || '';
+          
+          // Try to parse JSON values for better display
+          try {
+            if (value.startsWith('{') || value.startsWith('[')) {
+              value = JSON.parse(value);
+            }
+          } catch (e) {
+            // Keep as string if not valid JSON
+          }
+          
+          items[key] = value;
+        }
+      }
+      
+      localStorageElement.textContent = JSON.stringify(items, null, 2);
+    }
+    
+    // Login with development credentials
+    async function login(event) {
+      event.preventDefault();
+      loginResultElement.textContent = 'Logging in...';
+      
+      try {
+        const response = await fetch('/api/dev-login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: emailInput.value,
+            name: nameInput.value
+          })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Login failed: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        // Store token in localStorage
+        localStorage.setItem('firebase_token', data.token || `dev-token-${Date.now()}`);
+        localStorage.setItem('dev_mode', 'true');
+        localStorage.setItem('dev_user', JSON.stringify({
+          id: data.user?.id || 'dev-user-123',
+          email: emailInput.value,
+          displayName: nameInput.value,
+        }));
+        
+        loginResultElement.textContent = JSON.stringify(data, null, 2);
+        refreshLocalStorage();
+        
+      } catch (error) {
+        loginResultElement.textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    // Test API endpoint
+    async function testEndpoint() {
+      apiResultElement.textContent = 'Testing endpoint...';
+      
+      try {
+        const method = methodSelect.value;
+        const endpoint = endpointInput.value;
+        const requestBodyText = requestBodyInput.value.trim();
+        
+        // Prepare headers
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+        
+        // Add auth token if available
+        const token = localStorage.getItem('firebase_token');
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        // Prepare fetch options
+        const options = {
+          method,
+          headers,
+          credentials: 'include'
+        };
+        
+        // Add body for non-GET requests if provided
+        if (method !== 'GET' && requestBodyText) {
+          try {
+            options.body = JSON.stringify(JSON.parse(requestBodyText));
+          } catch (e) {
+            apiResultElement.textContent = `Error parsing JSON body: ${e.message}`;
+            return;
+          }
+        }
+        
+        const response = await fetch(endpoint, options);
+        
+        // Try to get JSON response
+        let data;
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          data = await response.text();
+        }
+        
+        // Display response details
+        apiResultElement.textContent = 
+          `Status: ${response.status}\n` +
+          `Headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}\n\n` +
+          `Response: ${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}`;
+        
+      } catch (error) {
+        apiResultElement.textContent = `Error: ${error.message}`;
+      }
+    }
+    
+    // Event listeners
+    checkStatusButton.addEventListener('click', checkStatus);
+    refreshStorageButton.addEventListener('click', refreshLocalStorage);
+    clearStorageButton.addEventListener('click', () => {
+      localStorage.clear();
+      refreshLocalStorage();
+      alert('Local storage cleared');
+    });
+    loginForm.addEventListener('submit', login);
+    testEndpointButton.addEventListener('click', testEndpoint);
+    
+    // Navigation
+    goHomeButton.addEventListener('click', () => { window.location.href = '/'; });
+    goAuthButton.addEventListener('click', () => { window.location.href = '/auth'; });
+    goSimpleAuthButton.addEventListener('click', () => { window.location.href = '/simple-auth'; });
+  </script>
+</body>
+</html>
