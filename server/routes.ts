@@ -1709,21 +1709,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "No organization selected" });
       }
       
-      // For development mode, make sure the organization exists with defaults
+      // For development mode, make sure the user and organization exist with defaults
       if (isDevelopmentMode) {
-        const existingOrgs = await db.select().from(organizations).where(eq(organizations.id, 1));
-        if (existingOrgs.length === 0) {
-          // Create default organization for development
-          await db.insert(organizations).values({
-            id: 1,
-            name: 'Development Organization',
-            slug: 'dev-org',
-            createdAt: new Date(),
-            updatedAt: new Date(),
-            ownerId: 'dev-user-123',
-            settings: {}
-          });
-          console.log('Created default development organization');
+        try {
+          // First check if dev user exists
+          const existingUsers = await db.select().from(users).where(eq(users.id, 'dev-user-123'));
+          
+          if (existingUsers.length === 0) {
+            console.log('Creating development user');
+            // Create development user first
+            await db.insert(users).values({
+              id: 'dev-user-123',
+              email: 'dev@example.com',
+              name: 'Development User',
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
+          }
+          
+          // Now check for organization
+          const existingOrgs = await db.select().from(organizations).where(eq(organizations.id, 1));
+          if (existingOrgs.length === 0) {
+            // Create default organization for development
+            await db.insert(organizations).values({
+              id: 1,
+              name: 'Development Organization',
+              slug: 'dev-org',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              ownerId: 'dev-user-123',
+              settings: {}
+            });
+            console.log('Created default development organization');
+          }
+        } catch (error) {
+          console.error('Error setting up development environment:', error);
         }
       }
       
