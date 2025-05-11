@@ -137,6 +137,10 @@ export default function Header({ onSidebarToggle, user, organization }: HeaderPr
               <span>Organization Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => localStorage.removeItem('useDevelopmentAuth')}>
+              <UserIcon className="mr-2 h-4 w-4" />
+              <span>Disable Development Mode</span>
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => signOut()}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log Out</span>

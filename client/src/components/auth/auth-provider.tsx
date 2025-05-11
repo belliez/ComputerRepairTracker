@@ -235,6 +235,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // In development, we'll simulate a successful login
     console.log('Using development auth mode - bypassing Firebase');
     
+    // Store a flag that we're using development mode
+    localStorage.setItem('useDevelopmentAuth', 'true');
+    
     // Notify user we're in development mode
     toast({
       title: 'Development Mode',
@@ -265,13 +268,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updatedAt: new Date(),
       ownerId: 'dev-user-123',
       logo: null,
-      stripeSubscriptionId: null,
-      subscriptionStatus: null,
-      trialEndsAt: null,
-      planId: null,
-      billingEmail: email || 'dev@example.com',
-      billingName: name || 'Development User',
-      billingAddress: null,
+      stripeSubscriptionId: 'dev_sub_123',
+      subscriptionStatus: 'active',
+      subscriptionTier: 'premium',
+      maxUsers: 10,
+      maxStorage: 1000,
+      settings: {
+        onboardingCompleted: false // Set to false to test onboarding
+      },
       deleted: false,
       deletedAt: null,
       role: 'owner' as const
