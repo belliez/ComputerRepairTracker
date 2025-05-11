@@ -1780,6 +1780,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             phone: phone,
             address: address
           };
+          
+          console.log('Final updated settings object to be saved:', JSON.stringify(updatedSettings));
           console.log('Updated settings object:', updatedSettings);
           
           // Update with the new settings object

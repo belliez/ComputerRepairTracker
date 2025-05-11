@@ -886,11 +886,21 @@ const SettingsPage = () => {
                 <DialogTrigger asChild>
                   <Button onClick={() => {
                     if (organization) {
+                      console.log('Organization data:', organization);
+                      
+                      // Get settings data with fallbacks to empty strings
+                      const settings = organization.settings || {};
+                      const email = settings.email || '';
+                      const phone = settings.phone || '';
+                      const address = settings.address || '';
+                      
+                      console.log('Settings data extracted:', { email, phone, address });
+                      
                       organizationForm.reset({
                         name: organization.name || '',
-                        email: (organization.settings?.email as string) || '',
-                        phone: (organization.settings?.phone as string) || '',
-                        address: (organization.settings?.address as string) || '',
+                        email: email,
+                        phone: phone,
+                        address: address,
                       });
                     }
                   }}>
@@ -989,15 +999,21 @@ const SettingsPage = () => {
                     </div>
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium text-gray-500">Email</h3>
-                      <p className="text-base">{organization.settings?.email || "No email set"}</p>
+                      <p className="text-base">
+                        {(organization.settings?.email && organization.settings.email !== "null") ? organization.settings.email : "No email set"}
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium text-gray-500">Phone</h3>
-                      <p className="text-base">{organization.settings?.phone || "No phone set"}</p>
+                      <p className="text-base">
+                        {(organization.settings?.phone && organization.settings.phone !== "null") ? organization.settings.phone : "No phone set"}
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium text-gray-500">Address</h3>
-                      <p className="text-base">{organization.settings?.address || "No address set"}</p>
+                      <p className="text-base">
+                        {(organization.settings?.address && organization.settings.address !== "null") ? organization.settings.address : "No address set"}
+                      </p>
                     </div>
                   </div>
                 </div>
