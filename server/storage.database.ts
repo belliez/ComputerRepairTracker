@@ -145,15 +145,30 @@ export class DatabaseStorage implements IStorage {
   
   // Customer methods
   async getCustomers(): Promise<Customer[]> {
-    return db.select().from(customers).where(eq(customers.deleted, false));
+    // Get organization context from request
+    const orgId = (global as any).currentOrganizationId || 1; // Default to org 1 in dev mode
+    console.log(`Fetching customers for organization: ${orgId}`);
+    
+    return db.select()
+      .from(customers)
+      .where(
+        and(
+          eq(customers.deleted, false),
+          eq(customers.organizationId, orgId)
+        )
+      );
   }
 
   async getCustomer(id: number): Promise<Customer | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching customer ${id} for organization: ${orgId}`);
+    
     const [customer] = await db.select()
       .from(customers)
       .where(and(
         eq(customers.id, id),
-        eq(customers.deleted, false)
+        eq(customers.deleted, false),
+        eq(customers.organizationId, orgId)
       ));
     return customer;
   }
@@ -169,7 +184,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCustomer(customer: InsertCustomer): Promise<Customer> {
-    const [newCustomer] = await db.insert(customers).values(customer).returning();
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Creating customer for organization: ${orgId}`);
+    
+    // Ensure organizationId is set
+    const customerData = {
+      ...customer,
+      organizationId: orgId
+    };
+    
+    const [newCustomer] = await db.insert(customers).values(customerData).returning();
     return newCustomer;
   }
 

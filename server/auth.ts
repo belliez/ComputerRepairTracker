@@ -595,6 +595,8 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
       if (req.path.includes('/api/') && !req.user) {
         console.log('Development mode API detected without user, setting default user and organization');
         req.organizationId = 1;
+        (global as any).currentOrganizationId = 1;
+        console.log('Setting global organization context to 1 (development mode)');
         req.user = {
           uid: 'dev-user-123',
           email: 'dev@example.com',
@@ -635,7 +637,10 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
         );
       
       if (userOrg) {
-        req.organizationId = Number(organizationId);
+        const orgId = Number(organizationId);
+        req.organizationId = orgId;
+        (global as any).currentOrganizationId = orgId;
+        console.log(`Setting global organization context to ${orgId} from user membership`);
       }
     } catch (error) {
       console.error('Error checking organization membership:', error);
