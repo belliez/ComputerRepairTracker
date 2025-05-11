@@ -720,6 +720,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const switchOrganization = async (organizationId: number) => {
     try {
+      console.log(`Switching to organization ID: ${organizationId}`);
       const org = organizations.find(org => org.id === organizationId);
       if (!org) {
         throw new Error('Organization not found');
@@ -729,17 +730,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem('currentOrganizationId', organizationId.toString());
       
       // Set the organization context in the backend
-      await apiRequest('POST', '/api/set-organization', {
+      console.log('Setting organization context in backend...');
+      const response = await apiRequest('POST', '/api/set-organization', {
         organizationId
       });
+      console.log('Backend response:', response.status, await response.text());
       
-      // Reload organization-specific data
-      // This would be a good place to invalidate React Query caches for organization data
+      // Invalidate all organization-specific data queries
+      console.log('Invalidating organization-specific data queries...');
+      // Import queryClient from the query client module
+      const { queryClient } = await import('@/lib/queryClient');
+      
+      // Invalidate the most critical data first - repairs, customers, etc.
+      queryClient.invalidateQueries({ queryKey: ['/api/repairs'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/customers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/devices'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/technicians'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/quotes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
       
       toast({
         title: 'Organization switched',
         description: `You are now working in ${org.name}`,
       });
+      
+      console.log(`Successfully switched to organization: ${org.name} (ID: ${organizationId})`);
     } catch (error) {
       console.error('Error switching organization:', error);
       toast({

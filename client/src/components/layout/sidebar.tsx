@@ -1,6 +1,7 @@
 import { NavItem } from "@/types";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/components/auth/auth-provider";
 
 const navItems: NavItem[] = [
   { label: "Dashboard", path: "/", icon: "tachometer-alt" },
@@ -19,6 +20,7 @@ interface SidebarProps {
 
 export default function Sidebar({ isVisible, onClose }: SidebarProps) {
   const [location] = useLocation();
+  const { user } = useAuth();
 
   // Common classes for sidebar both mobile and desktop
   const sidebarBaseClasses = "bg-gray-800 text-white";
@@ -47,13 +49,39 @@ export default function Sidebar({ isVisible, onClose }: SidebarProps) {
       
       {/* User info */}
       <div className="p-4 border-b border-gray-700 flex items-center">
-        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-2">
-          <span className="text-white font-semibold">JD</span>
-        </div>
-        <div>
-          <p className="text-sm font-medium">John Doe</p>
-          <p className="text-xs text-gray-400">Senior Technician</p>
-        </div>
+        {user && (
+          <>
+            {user.photoURL ? (
+              <img 
+                src={user.photoURL} 
+                alt={user.displayName || user.email || "User"} 
+                className="w-8 h-8 rounded-full mr-2 object-cover"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center mr-2">
+                <span className="text-white font-semibold">
+                  {user.displayName?.split(' ').map((n: string) => n[0]).join('') || 
+                  user.email?.[0]?.toUpperCase() || 'U'}
+                </span>
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-medium">{user.displayName || user.email || "User"}</p>
+              <p className="text-xs text-gray-400">Technician</p>
+            </div>
+          </>
+        )}
+        {!user && (
+          <>
+            <div className="w-8 h-8 rounded-full bg-gray-500 flex items-center justify-center mr-2">
+              <span className="text-white font-semibold">U</span>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Loading...</p>
+              <p className="text-xs text-gray-400">Please wait</p>
+            </div>
+          </>
+        )}
       </div>
       
       {/* Navigation links */}

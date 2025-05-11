@@ -573,18 +573,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const technicianId = req.query.technicianId ? parseInt(req.query.technicianId as string) : undefined;
       const status = req.query.status as string;
       const priority = req.query.priority as string;
+      const orgId = (global as any).currentOrganizationId;
       
-      console.log("GET /repairs with query params:", { customerId, technicianId, status, priority });
+      console.log(`GET /repairs with query params: ${JSON.stringify({ customerId, technicianId, status, priority })} for organization: ${orgId}`);
       
       // Filter by customer first if specified
       if (customerId) {
         const repairs = await storage.getRepairsByCustomer(customerId);
+        console.log(`Found ${repairs.length} repairs for customer ${customerId}`);
         return res.json(repairs);
       }
       
       // Filter by technician if specified
       if (technicianId) {
         const repairs = await storage.getRepairsByTechnician(technicianId);
+        console.log(`Found ${repairs.length} repairs for technician ${technicianId}`);
         return res.json(repairs);
       }
       
@@ -592,6 +595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (status && status.length > 0 && repairStatuses.includes(status as any)) {
         console.log(`Filtering repairs by status: ${status}`);
         const repairs = await storage.getRepairsByStatus(status as any);
+        console.log(`Found ${repairs.length} repairs with status: ${status}`);
         return res.json(repairs);
       }
       
@@ -603,18 +607,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Handle array of priorities
           const priorityLevels = priority.split(',').map(p => parseInt(p.trim()));
           const repairs = await storage.getRepairsByPriority(priorityLevels);
+          console.log(`Found ${repairs.length} repairs with priorities: ${priorityLevels.join(', ')}`);
           return res.json(repairs);
         } else {
           // Handle single priority
           const priorityLevel = parseInt(priority);
           const repairs = await storage.getRepairsByPriority(priorityLevel);
+          console.log(`Found ${repairs.length} repairs with priority: ${priorityLevel}`);
           return res.json(repairs);
         }
       }
       
       // If no filters are active, return all repairs
-      console.log("No filters active, returning all repairs");
+      console.log(`Getting all repairs for organization: ${orgId}`);
       const repairs = await storage.getRepairs();
+      console.log(`Found ${repairs.length} total repairs for organization: ${orgId}`);
       res.json(repairs);
     } catch (error) {
       console.error("Error fetching repairs:", error);
@@ -686,10 +693,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/repairs", async (req: Request, res: Response) => {
     try {
+      const orgId = (global as any).currentOrganizationId;
+      console.log(`Creating repair with organization context: ${orgId}`);
+      
       const validatedData = insertRepairSchema.parse(req.body);
+      console.log("Repair data validated successfully:", validatedData);
+      
       const repair = await storage.createRepair(validatedData);
+      console.log("Repair created successfully:", repair);
+      
       res.status(201).json(repair);
     } catch (error) {
+      console.error("Error creating repair:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid repair data", details: error.errors });
       }
