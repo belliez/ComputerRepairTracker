@@ -76,17 +76,30 @@ export const getQueryFn: <T>(options: {
       console.log('No auth token available for query');
     }
     
-    const res = await fetch(queryKey[0] as string, {
+    const url = queryKey[0] as string;
+    console.log(`Making query to ${url}`);
+    
+    const res = await fetch(url, {
       credentials: "include",
       headers: headers
     });
 
+    console.log(`Query to ${url} returned status ${res.status}`);
+
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      console.log(`Query to ${url} returned 401, returning null as configured`);
       return null;
     }
 
-    await throwIfResNotOk(res);
-    return await res.json();
+    try {
+      await throwIfResNotOk(res);
+      const data = await res.json();
+      console.log(`Query to ${url} response data:`, data);
+      return data;
+    } catch (error) {
+      console.error(`Error processing query to ${url}:`, error);
+      throw error;
+    }
   };
 
 export const queryClient = new QueryClient({
