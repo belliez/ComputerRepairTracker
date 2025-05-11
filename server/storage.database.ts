@@ -988,38 +988,109 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getQuote(id: number): Promise<Quote | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching quote ${id} for organization: ${orgId}`);
+    
     const [quote] = await db.select()
       .from(quotes)
       .where(and(
         eq(quotes.id, id),
-        eq(quotes.deleted, false)
+        eq(quotes.deleted, false),
+        eq((quotes as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
       ));
+      
     return quote;
   }
 
   async createQuote(quote: InsertQuote): Promise<Quote> {
-    const [newQuote] = await db.insert(quotes).values(quote).returning();
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Creating quote for repair ${quote.repairId} in organization: ${orgId}`);
+    
+    // Verify that the repair belongs to the current organization before creating the quote
+    const repair = await db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.id, quote.repairId),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
+      .limit(1);
+      
+    if (repair.length === 0) {
+      console.log(`Cannot create quote: Repair ${quote.repairId} not found in organization ${orgId}`);
+      throw new Error(`Repair ${quote.repairId} not found in current organization`);
+    }
+    
+    // Add organization ID to the quote data
+    const quoteWithOrg = {
+      ...quote,
+      organizationId: orgId
+    };
+    
+    // Create the quote with organization context
+    const [newQuote] = await db.insert(quotes).values(quoteWithOrg as any).returning();
     return newQuote;
   }
 
   async updateQuote(id: number, quoteData: Partial<Quote>): Promise<Quote | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Updating quote ${id} in organization: ${orgId}`);
+    
+    // First verify that the quote exists and belongs to the current organization
+    const [quote] = await db.select()
+      .from(quotes)
+      .where(and(
+        eq(quotes.id, id),
+        eq(quotes.deleted, false),
+        eq((quotes as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
+      
+    if (!quote) {
+      console.log(`Cannot update quote ${id}: Quote not found in organization ${orgId}`);
+      return undefined;
+    }
+    
+    // Update the quote with organizationId check
     const [updatedQuote] = await db
       .update(quotes)
       .set(quoteData)
-      .where(eq(quotes.id, id))
+      .where(and(
+        eq(quotes.id, id),
+        eq((quotes as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
+      
     return updatedQuote;
   }
 
   async deleteQuote(id: number): Promise<boolean> {
-    // Soft delete the quote by setting deleted flag
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Deleting quote ${id} in organization: ${orgId}`);
+    
+    // First verify that the quote exists and belongs to the current organization
+    const [quote] = await db.select()
+      .from(quotes)
+      .where(and(
+        eq(quotes.id, id),
+        eq(quotes.deleted, false),
+        eq((quotes as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
+      
+    if (!quote) {
+      console.log(`Cannot delete quote ${id}: Quote not found in organization ${orgId}`);
+      return false;
+    }
+    
+    // Soft delete the quote by setting deleted flag, checking organization ownership
     const [updatedQuote] = await db
       .update(quotes)
       .set({
         deleted: true,
         deletedAt: new Date()
       })
-      .where(eq(quotes.id, id))
+      .where(and(
+        eq(quotes.id, id),
+        eq((quotes as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
       
     return !!updatedQuote;
