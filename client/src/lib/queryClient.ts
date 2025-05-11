@@ -84,6 +84,25 @@ export const getQueryFn: <T>(options: {
       if (url.includes('/settings/currencies') || url.includes('/settings/tax-rates')) {
         console.log(`SETTINGS DEBUG: Making direct fetch to ${url} (settings endpoint)`);
         
+        // Automatically use public endpoints for settings to avoid auth issues
+        const publicUrl = url.replace('/api/settings/', '/api/public-settings/');
+        console.log(`SETTINGS DEBUG: Using public endpoint: ${publicUrl}`);
+        
+        // For public endpoints, we don't need auth headers
+        const publicRes = await fetch(publicUrl, {
+          credentials: "include"
+        });
+        
+        console.log(`SETTINGS DEBUG: ${publicUrl} returned status ${publicRes.status}`);
+        
+        if (publicRes.ok) {
+          const publicData = await publicRes.json();
+          console.log(`SETTINGS DEBUG: Public endpoint data:`, publicData);
+          return publicData;
+        }
+        
+        // Fallback to original request with auth if needed
+        console.log(`SETTINGS DEBUG: Public endpoint failed, trying original with auth`);
         // Debugging mode - show headers
         console.log('Request headers:', JSON.stringify(headers));
         
@@ -94,26 +113,6 @@ export const getQueryFn: <T>(options: {
         });
         
         console.log(`SETTINGS DEBUG: ${url} returned status ${res.status}`);
-        
-        // If CORS issue, try a different approach
-        if (!res.ok) {
-          console.log(`SETTINGS DEBUG: Trying fallback approach for ${url}`);
-          const fallbackUrl = url.replace('/api/settings/', '/api/public-settings/');
-          console.log(`SETTINGS DEBUG: Fallback URL: ${fallbackUrl}`);
-          
-          const fallbackRes = await fetch(fallbackUrl, {
-            credentials: "include",
-            headers: headers
-          });
-          
-          console.log(`SETTINGS DEBUG: Fallback request returned status ${fallbackRes.status}`);
-          
-          if (fallbackRes.ok) {
-            const fallbackData = await fallbackRes.json();
-            console.log(`SETTINGS DEBUG: Fallback data:`, fallbackData);
-            return fallbackData;
-          }
-        }
         
         if (res.ok) {
           try {
