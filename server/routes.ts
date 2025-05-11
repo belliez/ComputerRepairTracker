@@ -52,9 +52,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create API router
   const apiRouter = express.Router();
   
+  // IMPORTANT: Intentionally adding these routes BEFORE any middleware to ensure they're accessible
+  
   // Public routes (no auth required)
   // Auth page data route - always publicly accessible
   app.get('/api/auth-data', (req: Request, res: Response) => {
+    console.log('Auth data endpoint called');
     res.status(200).json({
       message: 'Auth data fetched successfully',
       appName: 'RepairTrack',
@@ -62,6 +65,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       enableGoogleAuth: true
     });
   });
+  
+  // Directly serve static resources needed for the auth page
+  app.use('/assets', express.static('client/public/assets'));
   
   // Development routes
   if (process.env.NODE_ENV === 'development') {
@@ -85,6 +91,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Development login successful',
         user: mockUser,
         devMode: true
+      });
+    });
+    
+    // Development diagnostic endpoint
+    app.get('/api/status', (req: Request, res: Response) => {
+      console.log('Status endpoint called');
+      res.status(200).json({ 
+        status: 'ok',
+        environment: process.env.NODE_ENV,
+        time: new Date().toISOString()
       });
     });
   }
