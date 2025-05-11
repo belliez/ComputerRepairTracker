@@ -262,7 +262,9 @@ export const addUserToOrganization = async (req: Request, res: Response) => {
     let existingUser;
     try {
       const auth = getAdminAuth();
-      existingUser = await auth.getUserByEmail(email);
+      if (auth) {
+        existingUser = await auth.getUserByEmail(email);
+      }
     } catch (error) {
       // User doesn't exist in Firebase
     }
