@@ -1,7 +1,18 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
-// Use Vite environment variables
+// Use Vite environment variables with type declaration
+// This helps TypeScript recognize the properties
+declare global {
+  interface ImportMeta {
+    env: {
+      VITE_FIREBASE_API_KEY?: string;
+      VITE_FIREBASE_PROJECT_ID?: string;
+      VITE_FIREBASE_APP_ID?: string;
+    };
+  }
+}
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: `${import.meta.env.VITE_FIREBASE_PROJECT_ID}.firebaseapp.com`,

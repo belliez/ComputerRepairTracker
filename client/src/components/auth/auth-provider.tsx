@@ -469,6 +469,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const refreshCurrentOrganization = async () => {
+    try {
+      // Fetch user organizations
+      const orgsResponse = await apiRequest('GET', '/api/organizations');
+      if (!orgsResponse.ok) {
+        throw new Error('Failed to get organizations');
+      }
+      const organizationsData = await orgsResponse.json();
+      setOrganizations(organizationsData);
+      
+      // Update current organization if it exists
+      if (currentOrganization) {
+        const updatedOrg = organizationsData.find((org: any) => org.id === currentOrganization.id);
+        if (updatedOrg) {
+          setCurrentOrganization(updatedOrg);
+        }
+      }
+      
+      toast({
+        title: 'Success',
+        description: 'Organization data refreshed',
+      });
+    } catch (error) {
+      console.error('Error refreshing organization data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to refresh organization data',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const value = {
     user,
     isLoading,
@@ -483,6 +515,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut,
     switchOrganization,
     createOrganization,
+    refreshCurrentOrganization,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { apiRequest } from "@/lib/api";
+import { apiRequest } from "@/lib/queryClient";
 import { useLocation } from 'wouter';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
