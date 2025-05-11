@@ -1750,12 +1750,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle different types of settings
       switch (type) {
         case 'company':
+          // Update the organization name
           await db.update(organizations)
             .set({
               name: data.name,
               updatedAt: new Date()
             })
             .where(eq(organizations.id, organizationId));
+            
+          // Update the company contact details in the settings JSON
+          await db.execute(sql`
+            UPDATE organizations 
+            SET settings = jsonb_set(
+              COALESCE(settings, '{}'::jsonb),
+              '{email}', 
+              ${data.email ? sql`${data.email}::jsonb` : sql`null::jsonb`}
+            ),
+            settings = jsonb_set(
+              settings,
+              '{phone}', 
+              ${data.phone ? sql`${data.phone}::jsonb` : sql`null::jsonb`}
+            ),
+            settings = jsonb_set(
+              settings,
+              '{address}', 
+              ${data.address ? sql`${data.address}::jsonb` : sql`null::jsonb`}
+            )
+            WHERE id = ${organizationId}
+          `);
           break;
           
         case 'tax':
