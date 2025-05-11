@@ -624,14 +624,13 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
   console.log(`Processing request to ${req.path}, auth header: ${req.headers.authorization ? 'present' : 'absent'}, user: ${req.user ? 'authenticated' : 'unauthenticated'}, debug mode: ${debugMode ? 'enabled' : 'disabled'}`);
 
   try {  
-    // IMPORTANT: Don't automatically set organization ID to 1
-    // This was the source of the multi-tenant issues
-    
-    // Special handling for development tokens
     const authHeader = req.headers.authorization;
+    
+    // Development token handling
     if (authHeader && authHeader.startsWith('Bearer dev-token-')) {
-      console.log('Development token detected, using development organization ID');
+      console.log('Development token detected, setting default organization and user');
       
+      // Ensure user is set for API requests
       if (!req.user && req.path.includes('/api/')) {
         req.user = {
           uid: 'dev-user-123',
@@ -640,8 +639,7 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
         } as any;
       }
       
-      // Set organization ID to 2 for development testing
-      // This will allow us to test the multi-tenant features
+      // Set organization context for development to org ID 2
       req.organizationId = 2;
       (global as any).currentOrganizationId = 2;
       console.log('Setting development organization ID to 2');
@@ -649,19 +647,20 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
       return next();
     }
     
-    // Development mode special handling for API paths
+    // Also handle API paths that need data in development mode
     if (process.env.NODE_ENV === 'development' && (
-      req.path.includes('/api/settings/') || 
-      req.path.includes('/api/organizations') || 
-      req.path.includes('/public-settings') ||
-      req.path.includes('/api/customers') ||
-      req.path.includes('/api/devices') ||
-      req.path.includes('/api/repairs') ||
-      req.path.includes('/api/technicians') ||
-      req.path.includes('/api/inventory')
-    )) {
+        req.path.includes('/api/settings/') || 
+        req.path.includes('/api/organizations') || 
+        req.path.includes('/public-settings') ||
+        req.path.includes('/api/customers') ||
+        req.path.includes('/api/devices') ||
+        req.path.includes('/api/repairs') ||
+        req.path.includes('/api/technicians') ||
+        req.path.includes('/api/inventory'))) {
+      
+      // If no auth header or user, set a mock user
       if (!req.user) {
-        console.log('Development mode API request, using mock user');
+        console.log('Development mode API detected, using default organization and user');
         req.user = {
           uid: 'dev-user-123',
           email: 'dev@example.com',
@@ -669,12 +668,10 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
         } as any;
       }
       
-      // Only set organization ID if not already set
-      if (!req.organizationId) {
-        req.organizationId = 2;
-        (global as any).currentOrganizationId = 2;
-        console.log('Setting development API organization ID to 2');
-      }
+      // Set organization context to 2 for development
+      req.organizationId = 2;
+      (global as any).currentOrganizationId = 2;
+      console.log('Setting development API organization ID to 2');
       
       return next();
     }
@@ -714,15 +711,14 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
     }
   } catch (error) {
     console.error('Error in organization context middleware:', error);
-    
-    // Fallback to organization ID 2 in case of error in development mode
+    // Ensure we still have organization context in dev mode as fallback
     if (process.env.NODE_ENV === 'development') {
-      req.organizationId = 2;
+      req.organizationId = 2; // Use organization ID 2 as fallback
       (global as any).currentOrganizationId = 2;
-      console.log('Using fallback organization ID 2 due to error');
+      console.log('Set fallback organization ID to 2 due to error');
     }
-    
-    return next();
+    next();
+    return;
   }
   
   next();
@@ -730,10 +726,10 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
 
 // Extend the Express Request interface
 declare global {
-  namespace Express {
-    interface Request {
-      user?: admin.auth.DecodedIdToken;
-      organizationId?: number;
+    namespace Express {
+      interface Request {
+        user?: admin.auth.DecodedIdToken;
+        organizationId?: number;
+      }
     }
-  }
 }
