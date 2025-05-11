@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -239,6 +239,17 @@ const SettingsPage = () => {
 
   // Queries
   const {
+    data: organization,
+    isLoading: isLoadingOrganization,
+  } = useQuery<Organization>({
+    queryKey: ['/api/organizations'],
+    enabled: activeTab === 'organization',
+    select: (data) => {
+      return Array.isArray(data) && data.length > 0 ? data[0] : null;
+    }
+  });
+  
+  const {
     data: currencies = [],
     isLoading: isLoadingCurrencies,
   } = useQuery<Currency[]>({
@@ -354,7 +365,53 @@ const SettingsPage = () => {
     }
   });
   
+  // Form for organization
+  const organizationForm = useForm<z.infer<typeof organizationSchema>>({
+    resolver: zodResolver(organizationSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+    }
+  });
+
+  // Update form when organization data is loaded
+  useEffect(() => {
+    if (organization) {
+      organizationForm.reset({
+        name: organization.name || '',
+        email: (organization.settings?.email as string) || '',
+        phone: (organization.settings?.phone as string) || '',
+        address: (organization.settings?.address as string) || '',
+      });
+    }
+  }, [organization, organizationForm]);
+
   // Mutations
+  const updateOrganizationMutation = useMutation({
+    mutationFn: (data: z.infer<typeof organizationSchema>) => 
+      apiRequest('POST', '/api/settings/organization', {
+        ...data,
+        type: 'company'
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/organizations'] });
+      setShowOrganizationDialog(false);
+      toast({
+        title: "Organization updated",
+        description: "Your organization information has been updated successfully",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error updating organization",
+        description: error.message || "Something went wrong",
+        variant: "destructive",
+      });
+    }
+  });
+  
   const createCurrencyMutation = useMutation({
     mutationFn: (data: z.infer<typeof currencySchema>) => 
       apiRequest('POST', '/api/settings/currencies', data),
@@ -803,8 +860,9 @@ const SettingsPage = () => {
         <p className="text-gray-500 mt-1">Configure application settings</p>
       </div>
       
-      <Tabs defaultValue="currencies" onValueChange={setActiveTab} value={activeTab}>
+      <Tabs defaultValue="organization" onValueChange={setActiveTab} value={activeTab}>
         <TabsList className="mb-6">
+          <TabsTrigger value="organization">Organization</TabsTrigger>
           <TabsTrigger value="currencies">Currencies</TabsTrigger>
           <TabsTrigger value="tax-rates">Tax Rates</TabsTrigger>
           <TabsTrigger value="technicians">Technicians</TabsTrigger>
