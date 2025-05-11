@@ -53,6 +53,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const apiRouter = express.Router();
   
   // Public routes (no auth required)
+  // Auth page data route - always publicly accessible
+  app.get('/api/auth-data', (req: Request, res: Response) => {
+    res.status(200).json({
+      message: 'Auth data fetched successfully',
+      appName: 'RepairTrack',
+      appDescription: 'Professional repair shop management system',
+      enableGoogleAuth: true
+    });
+  });
+  
+  // Development routes
   if (process.env.NODE_ENV === 'development') {
     // Development-only endpoints with no auth
     app.post('/api/dev-login', (req: Request, res: Response) => {
