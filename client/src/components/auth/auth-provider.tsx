@@ -751,6 +751,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       queryClient.invalidateQueries({ queryKey: ['/api/quotes'] });
       queryClient.invalidateQueries({ queryKey: ['/api/invoices'] });
       
+      // Also invalidate settings data
+      queryClient.invalidateQueries({ queryKey: ['/api/settings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/tax-rates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/public-settings/currencies'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/public-settings/tax-rates'] });
+      
       toast({
         title: 'Organization switched',
         description: `You are now working in ${org.name}`,
