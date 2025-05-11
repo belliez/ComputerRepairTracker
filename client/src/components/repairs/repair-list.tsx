@@ -159,8 +159,11 @@ export default function RepairList({
     setTimeFilter(value);
     setCurrentPage(1); // Reset to first page when filter changes
     
-    // Make sure data is fresh
-    queryClient.invalidateQueries({ queryKey: [queryPath] });
+    // Only invalidate queries if we're not just time-filtering already loaded data
+    if (value === 'all') {
+      // For "all time" view, we might need fresher data
+      queryClient.invalidateQueries({ queryKey: [queryPath] });
+    }
   };
 
   return (

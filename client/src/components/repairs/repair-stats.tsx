@@ -22,10 +22,14 @@ export default function RepairStats({
 }: RepairStatsProps) {
   const { data: repairs, isLoading: isLoadingRepairs } = useQuery<Repair[]>({
     queryKey: ["/api/repairs"],
+    refetchOnWindowFocus: false,
+    staleTime: 20000, // Consider data stale after 20 seconds
   });
 
   const { data: technicians, isLoading: isLoadingTechnicians } = useQuery<Technician[]>({
     queryKey: ["/api/technicians"],
+    refetchOnWindowFocus: false,
+    staleTime: 60000, // Consider technician data stale after 60 seconds
   });
 
   const [showAllTechs, setShowAllTechs] = useState(false);

@@ -31,11 +31,12 @@ export default function Dashboard() {
   
   const queryClient = useQueryClient();
   
-  // Get repair data with regular refresh
+  // Get repair data with appropriate refresh intervals
   const { data: repairs, isLoading: isLoadingRepairs } = useQuery<Repair[]>({
     queryKey: ["/api/repairs"],
-    refetchInterval: 10000, // Refresh every 10 seconds
-    staleTime: 5000, // Consider data stale after 5 seconds
+    refetchInterval: 30000, // Reduce refresh frequency to 30 seconds
+    staleTime: 20000, // Consider data stale after 20 seconds
+    refetchOnWindowFocus: false, // Don't refetch when window gains focus
   });
   
   // When a form closes, make sure to refresh the data

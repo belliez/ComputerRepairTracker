@@ -134,14 +134,36 @@ export class DatabaseStorage implements IStorage {
   }
   
   async restoreDevice(id: number): Promise<Device | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Restoring device ${id} in organization: ${orgId}`);
+    
+    // Verify the device belongs to the current organization before restoring
+    const [device] = await db.select()
+      .from(devices)
+      .where(and(
+        eq(devices.id, id),
+        eq(devices.deleted, true),
+        eq((devices as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
+      
+    if (!device) {
+      console.log(`Cannot restore device ${id}: Device not found in organization ${orgId}`);
+      return undefined;
+    }
+    
+    // Restore the device with organization context
     const [restoredDevice] = await db
       .update(devices)
       .set({
         deleted: false,
         deletedAt: null
       })
-      .where(eq(devices.id, id))
+      .where(and(
+        eq(devices.id, id),
+        eq((devices as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
+      
     return restoredDevice;
   }
   
@@ -149,6 +171,21 @@ export class DatabaseStorage implements IStorage {
     const orgId = (global as any).currentOrganizationId || 1;
     console.log(`Restoring repair ${id} in organization: ${orgId}`);
     
+    // Verify the repair belongs to the current organization before restoring
+    const [repair] = await db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.id, id),
+        eq(repairs.deleted, true),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
+      
+    if (!repair) {
+      console.log(`Cannot restore repair ${id}: Repair not found in organization ${orgId}`);
+      return undefined;
+    }
+    
+    // Restore the repair with organization context
     const [restoredRepair] = await db
       .update(repairs)
       .set({
@@ -160,6 +197,7 @@ export class DatabaseStorage implements IStorage {
         eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
       ))
       .returning();
+      
     return restoredRepair;
   }
   
@@ -167,6 +205,21 @@ export class DatabaseStorage implements IStorage {
     const orgId = (global as any).currentOrganizationId || 1;
     console.log(`Restoring technician ${id} in organization: ${orgId}`);
     
+    // Verify the technician belongs to the current organization before restoring
+    const [technician] = await db.select()
+      .from(technicians)
+      .where(and(
+        eq(technicians.id, id),
+        eq(technicians.deleted, true),
+        eq((technicians as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
+      
+    if (!technician) {
+      console.log(`Cannot restore technician ${id}: Technician not found in organization ${orgId}`);
+      return undefined;
+    }
+    
+    // Restore the technician with organization context
     const [restoredTechnician] = await db
       .update(technicians)
       .set({
@@ -178,6 +231,7 @@ export class DatabaseStorage implements IStorage {
         eq((technicians as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
       ))
       .returning();
+      
     return restoredTechnician;
   }
   
