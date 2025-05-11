@@ -1483,16 +1483,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Settings API - Currencies
+  // Settings API - Currencies - Fixed GET method
   apiRouter.get("/settings/currencies", async (req: Request, res: Response) => {
     try {
       console.log("Getting currencies...");
       const allCurrencies = await db.select().from(currencies);
-      console.log("Currencies found:", allCurrencies.length);
-      res.json(allCurrencies);
+      console.log("Currencies found:", allCurrencies.length, allCurrencies);
+      return res.json(allCurrencies);
     } catch (error: any) {
       console.error("Error fetching currencies:", error);
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   });
   
@@ -1603,11 +1603,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Getting tax rates...");
       const allTaxRates = await db.select().from(taxRates);
-      console.log("Tax rates found:", allTaxRates.length);
-      res.json(allTaxRates);
+      console.log("Tax rates found:", allTaxRates.length, allTaxRates);
+      return res.json(allTaxRates);
     } catch (error: any) {
       console.error("Error fetching tax rates:", error);
-      res.status(500).json({ error: error.message });
+      return res.status(500).json({ error: error.message });
     }
   });
   
