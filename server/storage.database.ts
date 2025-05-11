@@ -1098,51 +1098,149 @@ export class DatabaseStorage implements IStorage {
 
   // Invoice methods
   async getInvoices(): Promise<Invoice[]> {
-    return db.select().from(invoices).where(eq(invoices.deleted, false));
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching all invoices for organization: ${orgId}`);
+    
+    return db.select()
+      .from(invoices)
+      .where(and(
+        eq(invoices.deleted, false),
+        eq((invoices as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
   }
 
   async getInvoicesByRepair(repairId: number): Promise<Invoice[]> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching invoices for repair ${repairId} in organization: ${orgId}`);
+    
+    // First check that the repair belongs to the current organization
+    const repair = await db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.id, repairId),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
+      .limit(1);
+      
+    if (repair.length === 0) {
+      console.log(`Repair ${repairId} not found in organization ${orgId}`);
+      return []; // Return empty array if repair doesn't belong to this organization
+    }
+    
+    // Now get the invoices for this repair
     return db.select()
       .from(invoices)
       .where(and(
         eq(invoices.repairId, repairId),
-        eq(invoices.deleted, false)
+        eq(invoices.deleted, false),
+        eq((invoices as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
       ));
   }
 
   async getInvoice(id: number): Promise<Invoice | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching invoice ${id} for organization: ${orgId}`);
+    
     const [invoice] = await db.select()
       .from(invoices)
       .where(and(
         eq(invoices.id, id),
-        eq(invoices.deleted, false)
+        eq(invoices.deleted, false),
+        eq((invoices as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
       ));
+      
     return invoice;
   }
 
   async createInvoice(invoice: InsertInvoice): Promise<Invoice> {
-    const [newInvoice] = await db.insert(invoices).values(invoice).returning();
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Creating invoice for repair ${invoice.repairId} in organization: ${orgId}`);
+    
+    // Verify that the repair belongs to the current organization before creating the invoice
+    const repair = await db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.id, invoice.repairId),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
+      .limit(1);
+      
+    if (repair.length === 0) {
+      console.log(`Cannot create invoice: Repair ${invoice.repairId} not found in organization ${orgId}`);
+      throw new Error(`Repair ${invoice.repairId} not found in current organization`);
+    }
+    
+    // Add organization ID to the invoice data
+    const invoiceWithOrg = {
+      ...invoice,
+      organizationId: orgId
+    };
+    
+    // Create the invoice with organization context
+    const [newInvoice] = await db.insert(invoices).values(invoiceWithOrg as any).returning();
     return newInvoice;
   }
 
   async updateInvoice(id: number, invoiceData: Partial<Invoice>): Promise<Invoice | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Updating invoice ${id} in organization: ${orgId}`);
+    
+    // First verify that the invoice exists and belongs to the current organization
+    const [invoice] = await db.select()
+      .from(invoices)
+      .where(and(
+        eq(invoices.id, id),
+        eq(invoices.deleted, false),
+        eq((invoices as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
+      
+    if (!invoice) {
+      console.log(`Cannot update invoice ${id}: Invoice not found in organization ${orgId}`);
+      return undefined;
+    }
+    
+    // Update the invoice with organizationId check
     const [updatedInvoice] = await db
       .update(invoices)
       .set(invoiceData)
-      .where(eq(invoices.id, id))
+      .where(and(
+        eq(invoices.id, id),
+        eq((invoices as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
+      
     return updatedInvoice;
   }
 
   async deleteInvoice(id: number): Promise<boolean> {
-    // Soft delete the invoice by setting deleted flag
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Deleting invoice ${id} in organization: ${orgId}`);
+    
+    // First verify that the invoice exists and belongs to the current organization
+    const [invoice] = await db.select()
+      .from(invoices)
+      .where(and(
+        eq(invoices.id, id),
+        eq(invoices.deleted, false),
+        eq((invoices as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
+      
+    if (!invoice) {
+      console.log(`Cannot delete invoice ${id}: Invoice not found in organization ${orgId}`);
+      return false;
+    }
+    
+    // Soft delete the invoice by setting deleted flag, checking organization ownership
     const [updatedInvoice] = await db
       .update(invoices)
       .set({
         deleted: true,
         deletedAt: new Date()
       })
-      .where(eq(invoices.id, id))
+      .where(and(
+        eq(invoices.id, id),
+        eq((invoices as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
       
     return !!updatedInvoice;
