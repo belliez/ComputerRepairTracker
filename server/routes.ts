@@ -194,7 +194,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!organizationId) {
       return res.status(400).json({ message: 'Organization ID is required' });
     }
-    req.organizationId = Number(organizationId);
+    const orgId = Number(organizationId);
+    req.organizationId = orgId;
+    
+    // Set the global organization context for this request and future requests
+    (global as any).currentOrganizationId = orgId;
+    console.log(`Setting global organization context to ${orgId} from request`);
+    
     res.json({ message: 'Organization context set', organizationId });
   });
   
