@@ -5,15 +5,33 @@ import { users, organizations, organizationUsers } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
-// Flag to indicate if we're in development mode with no Firebase
-// In a real application, this would be properly set up
+// Flag to indicate if Firebase Admin SDK is initialized
 let firebaseInitialized = false;
 console.log('Initializing Firebase Admin with Project ID:', process.env.VITE_FIREBASE_PROJECT_ID);
 
 try {
-  // In a production environment, we would initialize Firebase Admin properly
-  // For this development setup, we'll skip actual Firebase initialization
-  console.log('Skipping Firebase Admin SDK initialization for development');
+  // Check if required environment variables are available
+  if (
+    process.env.FIREBASE_ADMIN_PRIVATE_KEY &&
+    process.env.FIREBASE_ADMIN_CLIENT_EMAIL &&
+    process.env.VITE_FIREBASE_PROJECT_ID
+  ) {
+    // Initialize Firebase Admin SDK with the service account credentials
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+        // The private key comes as a string with "\n" characters
+        // We need to replace them with actual newlines
+        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      }),
+    });
+    
+    firebaseInitialized = true;
+    console.log('Firebase Admin SDK initialized successfully');
+  } else {
+    console.log('Missing Firebase Admin credentials, skipping initialization');
+  }
 } catch (error) {
   console.error('Error initializing Firebase Admin SDK:', error);
 }
