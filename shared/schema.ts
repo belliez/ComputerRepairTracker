@@ -258,6 +258,7 @@ export const currencies = pgTable("currencies", {
   name: text("name").notNull(), // US Dollar, Euro, British Pound
   symbol: text("symbol").notNull(), // $, €, £
   isDefault: boolean("is_default").default(false),
+  // No organization_id because currencies are global
 });
 
 export const insertCurrencySchema = createInsertSchema(currencies);
@@ -265,11 +266,12 @@ export const insertCurrencySchema = createInsertSchema(currencies);
 // Tax rates for different regions
 export const taxRates = pgTable("tax_rates", {
   id: serial("id").primaryKey(),
-  countryCode: text("country_code").notNull(), // US, GB, etc
+  countryCode: text("country_code"), // US, GB, etc (optional for organization-specific settings)
   regionCode: text("region_code"), // State/province code like CA, TX, etc
   name: text("name").notNull(), // Sales Tax, VAT
   rate: doublePrecision("rate").notNull(), // 0.07 for 7%
   isDefault: boolean("is_default").default(false),
+  // No organization_id because tax rates are global
 });
 
 export const insertTaxRateSchema = createInsertSchema(taxRates).omit({

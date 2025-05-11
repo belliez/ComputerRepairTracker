@@ -1759,9 +1759,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
           
         case 'tax':
-          // Delete existing tax rates for this organization 
+          // For now, handle tax settings in the organization settings
+          // Remove all existing tax rates with is_default = true
           await db.execute(sql`
-            DELETE FROM tax_rates WHERE organization_id = ${organizationId}
+            DELETE FROM tax_rates WHERE is_default = true
           `);
             
           // Add new tax rates
@@ -1790,39 +1791,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const rate = typeof tax.rate === 'number' ? tax.rate : 0;
               const isDefault = !!tax.isDefault;
               
-              console.log('Inserting tax rate:', { name, rate, isDefault, organizationId });
+              console.log('Inserting tax rate:', { name, rate, isDefault });
               
               await db.execute(sql`
-                INSERT INTO tax_rates (name, rate, is_default, organization_id) 
-                VALUES (${name}, ${rate}, ${isDefault}, ${organizationId})
+                INSERT INTO tax_rates (name, rate, is_default) 
+                VALUES (${name}, ${rate}, ${isDefault})
               `);
             }
           } else {
             // If taxRates is missing or not an array, add a default one
             console.log('No valid tax rates found, adding default');
             await db.execute(sql`
-              INSERT INTO tax_rates (name, rate, is_default, organization_id) 
-              VALUES ('Sales Tax', 7.5, true, ${organizationId})
+              INSERT INTO tax_rates (name, rate, is_default) 
+              VALUES ('Sales Tax', 7.5, true)
             `);
           }
           break;
           
         case 'currency':
-          // Delete existing currencies for this organization
+          // For now, handle currency settings globally
+          // Delete all currencies with is_default = true
           await db.execute(sql`
-            DELETE FROM currencies WHERE organization_id = ${organizationId}
+            DELETE FROM currencies WHERE is_default = true
           `);
             
           // Add new currency
           if (data.currency) {
             await db.execute(sql`
-              INSERT INTO currencies (code, symbol, name, is_default, organization_id) 
+              INSERT INTO currencies (code, symbol, name, is_default) 
               VALUES (
                 ${data.currency.code}, 
                 ${data.currency.symbol}, 
                 ${data.currency.name}, 
-                ${data.currency.isDefault}, 
-                ${organizationId}
+                ${data.currency.isDefault}
               )
             `);
           }
