@@ -254,8 +254,18 @@ const SettingsPage = () => {
     error: currenciesError
   } = useQuery<Currency[]>({
     queryKey: ['/api/settings/currencies'],
-    onSuccess: (data) => console.log('Currencies loaded successfully:', data),
-    onError: (error) => console.error('Error loading currencies:', error)
+    onSuccess: (data) => {
+      console.log('✅ Currencies loaded successfully:', data);
+      console.log('Currencies type:', typeof data);
+      console.log('Is Array:', Array.isArray(data));
+      if (Array.isArray(data)) {
+        console.log('Number of currencies:', data.length);
+      }
+    },
+    onError: (error) => {
+      console.error('❌ Error loading currencies:', error);
+      console.error('Error details:', JSON.stringify(error));
+    }
   });
   
   const {
@@ -264,8 +274,18 @@ const SettingsPage = () => {
     error: taxRatesError
   } = useQuery<TaxRate[]>({
     queryKey: ['/api/settings/tax-rates'],
-    onSuccess: (data) => console.log('Tax rates loaded successfully:', data),
-    onError: (error) => console.error('Error loading tax rates:', error)
+    onSuccess: (data) => {
+      console.log('✅ Tax rates loaded successfully:', data);
+      console.log('Tax rates type:', typeof data);
+      console.log('Is Array:', Array.isArray(data));
+      if (Array.isArray(data)) {
+        console.log('Number of tax rates:', data.length);
+      }
+    },
+    onError: (error) => {
+      console.error('❌ Error loading tax rates:', error);
+      console.error('Error details:', JSON.stringify(error));
+    }
   });
   
   const {
