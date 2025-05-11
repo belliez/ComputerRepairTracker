@@ -1,6 +1,8 @@
 import { useState } from "react";
 import Sidebar from "./sidebar";
 import Header from "./header";
+import { useAuth } from "@/components/auth/auth-provider";
+import { useLocation } from "wouter";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -8,6 +10,8 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const { user, currentOrganization } = useAuth();
+  const [location] = useLocation();
 
   const toggleSidebar = () => {
     setSidebarVisible(!sidebarVisible);
@@ -17,6 +21,16 @@ export default function MainLayout({ children }: MainLayoutProps) {
     setSidebarVisible(false);
   };
 
+  // Don't show layout for auth page
+  if (location === '/auth') {
+    return <>{children}</>;
+  }
+
+  // Don't show layout if not authenticated
+  if (!user) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
@@ -25,7 +39,11 @@ export default function MainLayout({ children }: MainLayoutProps) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <Header onSidebarToggle={toggleSidebar} />
+        <Header 
+          onSidebarToggle={toggleSidebar} 
+          user={user} 
+          organization={currentOrganization} 
+        />
         
         {/* Content Area */}
         <main className="flex-1 overflow-auto bg-gray-50 p-4">

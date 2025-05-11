@@ -123,7 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   // Get current organization
-  const currentOrganization = organizations.find(org => org.id === currentOrganizationId) || 
+  const currentOrganization = organizations.find((org: Organization) => org.id === currentOrganizationId) || 
                              (organizations.length > 0 ? organizations[0] : null);
   
   // Effect to set default organization when orgs load

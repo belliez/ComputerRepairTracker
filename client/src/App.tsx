@@ -16,42 +16,69 @@ import Inventory from "@/pages/inventory";
 import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
+import AuthPage from "@/pages/auth-page";
 import MainLayout from "@/components/layout/main-layout";
+import { AuthProvider } from "@/components/auth/auth-provider";
+import { ProtectedRoute } from "@/components/auth/protected-route";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/repairs" component={Repairs} />
-      <Route path="/repairs/create" component={CreateRepair} />
-      <Route path="/repairs/edit/:id" component={EditRepair} />
-      <Route path="/repairs/:id/items/add" component={AddRepairItem} />
-      <Route path="/repairs/:repairId/items/:itemId/edit" component={EditRepairItem} />
-      <Route path="/repairs/:id/quotes/create" component={CreateRepairQuote} />
-      <Route path="/repairs/:id/quotes/:quoteId/edit" component={CreateRepairQuote} />
-      <Route path="/repairs/:id/invoices/create" component={CreateRepairInvoice} />
-      <Route path="/repairs/:id/invoices/:invoiceId/edit" component={CreateRepairInvoice} />
-      <Route path="/repairs/view/:id" component={ViewRepair} />
-      <Route path="/repairs/:id" component={ViewRepair} />
-      <Route path="/customers" component={Customers} />
-      <Route path="/inventory" component={Inventory} />
-      <Route path="/invoices" component={Invoices} />
-      <Route path="/reports" component={Reports} />
-      <Route path="/settings" component={Settings} />
+      {/* Public Routes */}
+      <Route path="/auth" component={AuthPage} />
+      
+      {/* Protected Routes */}
+      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/repairs" component={Repairs} />
+      <ProtectedRoute path="/repairs/create" component={CreateRepair} />
+      <ProtectedRoute path="/repairs/edit/:id" component={EditRepair} />
+      <ProtectedRoute path="/repairs/:id/items/add" component={AddRepairItem} />
+      <ProtectedRoute path="/repairs/:repairId/items/:itemId/edit" component={EditRepairItem} />
+      <ProtectedRoute path="/repairs/:id/quotes/create" component={CreateRepairQuote} />
+      <ProtectedRoute path="/repairs/:id/quotes/:quoteId/edit" component={CreateRepairQuote} />
+      <ProtectedRoute path="/repairs/:id/invoices/create" component={CreateRepairInvoice} />
+      <ProtectedRoute path="/repairs/:id/invoices/:invoiceId/edit" component={CreateRepairInvoice} />
+      <ProtectedRoute path="/repairs/view/:id" component={ViewRepair} />
+      <ProtectedRoute path="/repairs/:id" component={ViewRepair} />
+      <ProtectedRoute path="/customers" component={Customers} />
+      <ProtectedRoute path="/inventory" component={Inventory} />
+      <ProtectedRoute path="/invoices" component={Invoices} />
+      <ProtectedRoute path="/reports" component={Reports} />
+      <ProtectedRoute path="/settings" component={Settings} />
+      
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-function App() {
+function AppWithProviders() {
   return (
-    <TooltipProvider>
-      <MainLayout>
-        <Router />
-      </MainLayout>
-      <Toaster />
-    </TooltipProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <MainLayout>
+            <Router />
+          </MainLayout>
+          <Toaster />
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
+}
+
+function App() {
+  return <AppWithProviders />;
 }
 
 export default App;

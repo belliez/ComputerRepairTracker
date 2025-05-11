@@ -6,13 +6,35 @@ import { eq } from 'drizzle-orm';
 
 // Initialize Firebase Admin once
 if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.VITE_FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n')
-    })
-  });
+  try {
+    // For debugging only
+    console.log('Initializing Firebase Admin with Project ID:', process.env.VITE_FIREBASE_PROJECT_ID);
+    
+    // Check if all required env vars are available
+    if (!process.env.VITE_FIREBASE_PROJECT_ID || 
+        !process.env.FIREBASE_ADMIN_CLIENT_EMAIL || 
+        !process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
+      console.error('Missing required Firebase Admin environment variables');
+      console.error('VITE_FIREBASE_PROJECT_ID:', process.env.VITE_FIREBASE_PROJECT_ID ? 'Present' : 'Missing');
+      console.error('FIREBASE_ADMIN_CLIENT_EMAIL:', process.env.FIREBASE_ADMIN_CLIENT_EMAIL ? 'Present' : 'Missing');
+      console.error('FIREBASE_ADMIN_PRIVATE_KEY:', process.env.FIREBASE_ADMIN_PRIVATE_KEY ? 'Present' : 'Missing');
+    }
+    
+    // Initialize with environment variables
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.VITE_FIREBASE_PROJECT_ID || '',
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL || '',
+        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY ? 
+                   process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n') : 
+                   ''
+      })
+    });
+    
+    console.log('Firebase Admin SDK initialized successfully');
+  } catch (error) {
+    console.error('Error initializing Firebase Admin SDK:', error);
+  }
 }
 
 // Middleware to authenticate requests

@@ -20,6 +20,15 @@ import {
   quotes,
   invoices,
 } from "@shared/schema";
+import { 
+  authenticateJWT, 
+  getCurrentUser, 
+  createOrganization, 
+  getUserOrganizations,
+  addUserToOrganization,
+  acceptOrganizationInvite,
+  addOrganizationContext
+} from "./auth";
 import { db } from "./db";
 import { eq, sql } from "drizzle-orm";
 
@@ -1768,6 +1777,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Authentication routes
+  apiRouter.get("/user", authenticateJWT, getCurrentUser);
+  apiRouter.get("/organizations", authenticateJWT, getUserOrganizations);
+  apiRouter.post("/organizations", authenticateJWT, createOrganization);
+  apiRouter.post("/organizations/:organizationId/users", authenticateJWT, addUserToOrganization);
+  apiRouter.get("/auth/accept-invite/:token", acceptOrganizationInvite);
+  
+  // Add organization context middleware (after auth routes)
+  app.use(authenticateJWT);
+  app.use(addOrganizationContext);
+  
+  // Stripe subscription endpoints
+  if (stripe) {
+    apiRouter.post("/subscriptions", authenticateJWT, async (req: Request, res: Response) => {
+      try {
+        if (!req.user) {
+          return res.status(401).json({ message: 'Not authenticated' });
+        }
+        
+        const { organizationId, priceId } = req.body;
+        
+        if (!organizationId || !priceId) {
+          return res.status(400).json({ message: 'Organization ID and price ID are required' });
+        }
+        
+        // Get user and organization info
+        const [user] = await db.select().from(users).where(eq(users.id, req.user.uid));
+        const [organization] = await db.select().from(organizations).where(eq(organizations.id, organizationId));
+        
+        if (!user || !organization) {
+          return res.status(404).json({ message: 'User or organization not found' });
+        }
+        
+        // Check if user has permission
+        const [membership] = await db.select()
+          .from(organizationUsers)
+          .where(eq(organizationUsers.organizationId, organizationId))
+          .where(eq(organizationUsers.userId, req.user.uid));
+          
+        if (!membership || membership.role !== 'owner') {
+          return res.status(403).json({ message: 'Only organization owners can manage subscriptions' });
+        }
+        
+        // Create or get Stripe customer
+        let customerId = user.stripeCustomerId;
+        
+        if (!customerId) {
+          const customer = await stripe.customers.create({
+            email: user.email,
+            name: user.displayName || user.email,
+            metadata: {
+              userId: user.id,
+              organizationId: organization.id.toString()
+            }
+          });
+          
+          customerId = customer.id;
+          
+          // Update user with Stripe customer ID
+          await db.update(users)
+            .set({ stripeCustomerId: customerId })
+            .where(eq(users.id, user.id));
+        }
+        
+        // Create a subscription
+        const subscription = await stripe.subscriptions.create({
+          customer: customerId,
+          items: [{ price: priceId }],
+          payment_behavior: 'default_incomplete',
+          expand: ['latest_invoice.payment_intent'],
+          metadata: {
+            organizationId: organization.id.toString()
+          }
+        });
+        
+        // Update organization with subscription info
+        await db.update(organizations)
+          .set({ 
+            stripeSubscriptionId: subscription.id,
+            subscriptionStatus: subscription.status,
+            subscriptionTier: priceId.includes('basic') ? 'basic' : 
+                             priceId.includes('premium') ? 'premium' : 
+                             priceId.includes('enterprise') ? 'enterprise' : 'free',
+            subscriptionExpiresAt: new Date(subscription.current_period_end * 1000)
+          })
+          .where(eq(organizations.id, organizationId));
+        
+        // Return the subscription details
+        res.json({
+          subscriptionId: subscription.id,
+          clientSecret: (subscription.latest_invoice as any).payment_intent.client_secret,
+          status: subscription.status
+        });
+      } catch (error: any) {
+        console.error('Error creating subscription:', error);
+        res.status(500).json({ message: error.message || 'Error creating subscription' });
+      }
+    });
+    
+    // Stripe webhook handler for subscription events
+    apiRouter.post("/webhooks/stripe", express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+      const sig = req.headers['stripe-signature'] as string;
+      
+      if (!process.env.STRIPE_WEBHOOK_SECRET) {
+        return res.status(500).json({ message: 'Stripe webhook secret not configured' });
+      }
+      
+      try {
+        const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+        
+        switch (event.type) {
+          case 'customer.subscription.updated':
+          case 'customer.subscription.deleted':
+            const subscription = event.data.object as any;
+            
+            // Update organization subscription status
+            if (subscription.metadata && subscription.metadata.organizationId) {
+              const organizationId = parseInt(subscription.metadata.organizationId);
+              
+              await db.update(organizations)
+                .set({ 
+                  subscriptionStatus: subscription.status,
+                  subscriptionExpiresAt: new Date(subscription.current_period_end * 1000)
+                })
+                .where(eq(organizations.id, organizationId));
+            }
+            break;
+            
+          case 'invoice.payment_succeeded':
+            const invoice = event.data.object as any;
+            
+            if (invoice.subscription) {
+              const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+              
+              if (subscription.metadata && subscription.metadata.organizationId) {
+                const organizationId = parseInt(subscription.metadata.organizationId);
+                
+                await db.update(organizations)
+                  .set({ 
+                    subscriptionStatus: 'active',
+                    subscriptionExpiresAt: new Date(subscription.current_period_end * 1000)
+                  })
+                  .where(eq(organizations.id, organizationId));
+              }
+            }
+            break;
+            
+          case 'invoice.payment_failed':
+            const failedInvoice = event.data.object as any;
+            
+            if (failedInvoice.subscription) {
+              const subscription = await stripe.subscriptions.retrieve(failedInvoice.subscription);
+              
+              if (subscription.metadata && subscription.metadata.organizationId) {
+                const organizationId = parseInt(subscription.metadata.organizationId);
+                
+                await db.update(organizations)
+                  .set({ subscriptionStatus: 'past_due' })
+                  .where(eq(organizations.id, organizationId));
+              }
+            }
+            break;
+        }
+        
+        res.json({ received: true });
+      } catch (err: any) {
+        console.error('Error processing webhook:', err);
+        res.status(400).send(`Webhook Error: ${err.message}`);
+      }
+    });
+  }
+  
   const httpServer = createServer(app);
   return httpServer;
 }
