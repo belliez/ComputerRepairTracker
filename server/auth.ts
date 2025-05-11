@@ -120,6 +120,12 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
       
       // Cast to any to avoid type issues since we're in development mode only
       req.user = mockUser as any;
+      
+      // Always set the organization context to org ID 1 for the dev user
+      req.organizationId = 1;
+      (global as any).currentOrganizationId = 1;
+      console.log('Development token detected - setting organization ID to 1');
+      
       return next();
     }
     
@@ -145,6 +151,12 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
       };
       // Cast to any to avoid type issues since we're in development mode only
       req.user = mockUser as any;
+      
+      // Always set the organization context to org ID 1 for the dev user
+      req.organizationId = 1;
+      (global as any).currentOrganizationId = 1;
+      console.log('Development mode - setting organization ID to 1');
+      
       return next();
     }
   }
