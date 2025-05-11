@@ -28,6 +28,13 @@ export async function apiRequest(
   // Add special header for organization debugging
   headers["X-Debug-Client"] = "RepairTrackerClient";
   
+  // Add organization ID from localStorage if available
+  const orgId = localStorage.getItem('currentOrganizationId');
+  if (orgId) {
+    console.log(`Adding organization ID ${orgId} to request`);
+    headers["X-Organization-ID"] = orgId;
+  }
+  
   // Add Authorization header with appropriate token
   if (firebaseToken) {
     console.log('Adding auth header with token for API request to', url);

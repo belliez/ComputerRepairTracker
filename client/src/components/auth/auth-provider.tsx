@@ -105,6 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(user as any);
         setOrganizations([mockOrg as any]);
         setCurrentOrganization(mockOrg as any);
+        // This crucial line sets the organization ID that will be used for API requests
         localStorage.setItem('currentOrganizationId', '1');
         
         console.log('Successfully set up development auth');

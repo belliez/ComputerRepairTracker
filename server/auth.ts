@@ -651,7 +651,7 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
     // Special handling for development tokens
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer dev-token-')) {
-      console.log('Development token detected, using development organization ID');
+      console.log('Development token detected, using mock user');
       
       if (!req.user && req.path.includes('/api/')) {
         req.user = {
@@ -661,11 +661,14 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
         } as any;
       }
       
-      // Set organization ID to 1 for development testing
-      // This will allow us to test the multi-tenant features with the dev organization
-      req.organizationId = 1;
-      (global as any).currentOrganizationId = 1;
-      console.log('Setting development organization ID to 1');
+      // Check if organization ID is specified in headers
+      const orgIdHeader = req.headers['x-organization-id'];
+      const orgId = orgIdHeader ? parseInt(orgIdHeader as string) : 1;
+      
+      // Set organization ID from header or default to 1
+      req.organizationId = orgId;
+      (global as any).currentOrganizationId = orgId;
+      console.log(`Development token detected - setting organization ID to ${orgId}`);
       
       return next();
     }
