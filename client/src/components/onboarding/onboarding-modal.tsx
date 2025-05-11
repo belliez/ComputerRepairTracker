@@ -692,10 +692,10 @@ export function OnboardingModal({
   };
   
   const stepComponents = {
-    company: <CompanyInfoForm onComplete={handleCompanyInfoComplete} />,
-    tax: <TaxSettingsForm onComplete={handleTaxSettingsComplete} />,
-    currency: <CurrencySettingsForm onComplete={handleCurrencySettingsComplete} />,
-    technicians: <TechnicianSetupForm onComplete={handleTechnicianSetupComplete} />
+    company: <CompanyInfoForm onComplete={handleCompanyInfoComplete} initialData={formData.company} />,
+    tax: <TaxSettingsForm onComplete={handleTaxSettingsComplete} initialData={formData.tax} />,
+    currency: <CurrencySettingsForm onComplete={handleCurrencySettingsComplete} initialData={formData.currency} />,
+    technicians: <TechnicianSetupForm onComplete={handleTechnicianSetupComplete} initialData={formData.technicians} />
   };
   
   const handleStepClick = (step: string) => {
