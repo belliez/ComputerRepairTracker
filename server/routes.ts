@@ -2303,7 +2303,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/organizations/:organizationId/users", authenticateJWT, addUserToOrganization);
   apiRouter.get("/auth/accept-invite/:token", acceptOrganizationInvite);
   
-  // Add organization context middleware (after auth routes)
+  // Create a separate router for settings endpoints that don't require authentication
+  const settingsRouter = express.Router();
+  
+  // Settings - Currencies
+  settingsRouter.get("/currencies", async (req: Request, res: Response) => {
+    try {
+      console.log("Getting currencies (public router)");
+      const allCurrencies = await db.select().from(currencies);
+      console.log("All currencies:", JSON.stringify(allCurrencies));
+      res.json(allCurrencies);
+    } catch (error) {
+      console.error("Error fetching currencies:", error);
+      res.status(500).json({ message: "Error fetching currencies" });
+    }
+  });
+
+  settingsRouter.get("/currencies/default", async (req: Request, res: Response) => {
+    try {
+      const [defaultCurrency] = await db.select().from(currencies).where(eq(currencies.isDefault, true));
+      res.json(defaultCurrency || null);
+    } catch (error) {
+      console.error("Error fetching default currency:", error);
+      res.status(500).json({ message: "Error fetching default currency" });
+    }
+  });
+
+  // Settings - Tax Rates
+  settingsRouter.get("/tax-rates", async (req: Request, res: Response) => {
+    try {
+      console.log("Getting tax rates (public router)");
+      const allTaxRates = await db.select().from(taxRates);
+      console.log("All tax rates:", JSON.stringify(allTaxRates));
+      res.json(allTaxRates);
+    } catch (error) {
+      console.error("Error fetching tax rates:", error);
+      res.status(500).json({ message: "Error fetching tax rates" });
+    }
+  });
+
+  settingsRouter.get("/tax-rates/default", async (req: Request, res: Response) => {
+    try {
+      const [defaultTaxRate] = await db.select().from(taxRates).where(eq(taxRates.isDefault, true));
+      res.json(defaultTaxRate || null);
+    } catch (error) {
+      console.error("Error fetching default tax rate:", error);
+      res.status(500).json({ message: "Error fetching default tax rate" });
+    }
+  });
+
+  // Public Technicians endpoint
+  app.get("/api/technicians", async (req, res) => {
+    try {
+      console.log("Getting technicians (public endpoint)");
+      const allTechnicians = await db
+        .select()
+        .from(technicians)
+        .where(
+          and(
+            eq(technicians.deleted, false)
+          )
+        );
+      console.log("Technicians count:", allTechnicians.length);
+      res.json(allTechnicians);
+    } catch (error) {
+      console.error("Error fetching technicians:", error);
+      res.status(500).json({ message: "Error fetching technicians" });
+    }
+  });
+
+  // Mount the settings router BEFORE applying authentication
+  app.use("/api/settings", settingsRouter);
+
+  // Now apply authentication for other routes
   app.use(authenticateJWT);
   app.use(addOrganizationContext);
   
