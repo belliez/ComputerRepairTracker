@@ -158,6 +158,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         case 'auth/network-request-failed':
           errorMessage = 'Network error. Please check your connection';
           break;
+        case 'auth/unauthorized-domain':
+          errorMessage = 'Development mode: Firebase domain not authorized. Using mock authentication...';
+          // In development, we'll continue with a mock user
+          // This is only for development purposes
+          if (process.env.NODE_ENV === 'development') {
+            // Use the manual mock development login
+            return useDevelopmentAuth();
+          }
+          break;
         default:
           errorMessage = error.message;
       }
@@ -172,12 +181,81 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       variant: 'destructive',
     });
   };
+  
+  // Development helper function - for local development only
+  const useDevelopmentAuth = (email?: string, name?: string) => {
+    // In development, we'll simulate a successful login
+    console.log('Using development auth mode - bypassing Firebase');
+    
+    // Notify user we're in development mode
+    toast({
+      title: 'Development Mode',
+      description: 'Using mocked authentication for development',
+    });
+    
+    // No error in dev mode
+    setError(null);
+    
+    // Create a mock development user
+    const mockUser = {
+      id: 'dev-user-123',
+      email: email || 'dev@example.com',
+      displayName: name || 'Development User',
+      photoURL: null,
+      lastLoginAt: new Date(),
+    };
+    
+    // Set the user directly
+    setUser(mockUser as any);
+    
+    // Create a mock organization
+    const mockOrg = {
+      id: 1,
+      name: 'Development Organization',
+      slug: 'dev-org',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ownerId: 'dev-user-123',
+      logo: null,
+      stripeSubscriptionId: null,
+      subscriptionStatus: null,
+      trialEndsAt: null,
+      planId: null,
+      billingEmail: email || 'dev@example.com',
+      billingName: name || 'Development User',
+      billingAddress: null,
+      deleted: false,
+      deletedAt: null,
+      role: 'owner' as const
+    };
+    
+    // Set organizations
+    setOrganizations([mockOrg as any]);
+    setCurrentOrganization(mockOrg as any);
+    localStorage.setItem('currentOrganizationId', '1');
+    
+    // Also notify of successful login
+    toast({
+      title: 'Development Login',
+      description: `Logged in as ${mockUser.displayName}`,
+    });
+  };
 
   const signIn = async (email: string, password: string) => {
     setIsSigningIn(true);
     setError(null);
     
     try {
+      // Check if we're in development mode and want to bypass Firebase
+      if (process.env.NODE_ENV === 'development' && 
+          import.meta.env.MODE === 'development') {
+        console.log('Development mode: Bypassing Firebase auth for email sign-in');
+        // Development authentication
+        useDevelopmentAuth();
+        setIsSigningIn(false);
+        return;
+      }
+      
       await signInWithEmailAndPassword(auth, email, password);
       setIsSigningIn(false);
     } catch (error) {
@@ -192,6 +270,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
+      // Check if we're in development mode and want to bypass Firebase
+      if (process.env.NODE_ENV === 'development' && 
+          import.meta.env.MODE === 'development') {
+        console.log('Development mode: Bypassing Firebase auth for sign-up');
+        // Use development auth with the provided email/name
+        useDevelopmentAuth(email, name);
+        setIsSigningUp(false);
+        return;
+      }
+      
       const credential = await createUserWithEmailAndPassword(auth, email, password);
       
       // Update the user's display name
@@ -212,6 +300,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
+      // Check if we're in development mode and bypassing Firebase
+      if (process.env.NODE_ENV === 'development' && 
+          !import.meta.env.FIREBASE_AUTH_CONFIGURED) {
+        console.log('Development mode: Bypassing Firebase auth for Google Sign-In');
+        // Use development authentication
+        useDevelopmentAuth();
+        setIsSigningIn(false);
+        return;
+      }
+      
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       setIsSigningIn(false);
