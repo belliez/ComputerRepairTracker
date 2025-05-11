@@ -85,9 +85,18 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
     
     // Only set the organization ID if not already determined from the user's session
     if (!req.organizationId) {
-      req.organizationId = 2; // Using organization ID 2 as default for the Laptop Fixers organization
-      (global as any).currentOrganizationId = 2;
-      console.log('Setting global organization context to 2 for settings request');
+      // For the development user (dev@example.com), use organization ID 1
+      // otherwise, use organization ID 2 for the Laptop Fixers organization
+      if (req.originalUrl.includes('dev-login') || 
+          (req.body && req.body.username === 'dev@example.com')) {
+        req.organizationId = 1;
+        (global as any).currentOrganizationId = 1;
+        console.log('Setting global organization context to 1 for development user');
+      } else {
+        req.organizationId = 2;
+        (global as any).currentOrganizationId = 2;
+        console.log('Setting global organization context to 2 for settings request');
+      }
     }
     return next();
   }
@@ -652,11 +661,11 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
         } as any;
       }
       
-      // Set organization ID to 2 for development testing
-      // This will allow us to test the multi-tenant features
-      req.organizationId = 2;
-      (global as any).currentOrganizationId = 2;
-      console.log('Setting development organization ID to 2');
+      // Set organization ID to 1 for development testing
+      // This will allow us to test the multi-tenant features with the dev organization
+      req.organizationId = 1;
+      (global as any).currentOrganizationId = 1;
+      console.log('Setting development organization ID to 1');
       
       return next();
     }

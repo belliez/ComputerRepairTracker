@@ -2510,8 +2510,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.delete("/settings/delete-all-data", async (req: Request, res: Response) => {
     try {
-      // Get the current organization context
-      const orgId = (global as any).currentOrganizationId || 2;
+      // Check if the request is from a development user (auth token or header)
+      const authHeader = req.headers.authorization;
+      let orgId = (global as any).currentOrganizationId;
+      
+      // If we have a dev token, ensure we use organization ID 1
+      if (process.env.NODE_ENV === 'development' && authHeader && authHeader.startsWith('Bearer dev-token-')) {
+        console.log('Development token detected, setting organization ID to 1 for data deletion');
+        orgId = 1;
+      }
       
       if (!orgId) {
         return res.status(400).json({ error: "No organization context found" });
