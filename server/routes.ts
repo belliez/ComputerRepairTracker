@@ -203,9 +203,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     res.json({ message: 'Organization context set', organizationId });
   });
-  
-  // Mount API router
-  app.use("/api", apiRouter);
 
   // Customers
   apiRouter.get("/customers", async (req: Request, res: Response) => {
@@ -2454,6 +2451,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
   }
+  
+  // Mount API router - This needs to happen after all routes are defined
+  app.use("/api", apiRouter);
   
   const httpServer = createServer(app);
   return httpServer;
