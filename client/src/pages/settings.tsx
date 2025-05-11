@@ -762,6 +762,10 @@ const SettingsPage = () => {
   });
   
   // Event handlers
+  const handleUpdateOrganization = (data: z.infer<typeof organizationSchema>) => {
+    updateOrganizationMutation.mutate(data);
+  };
+  
   const handleAddCurrency = (data: z.infer<typeof currencySchema>) => {
     if (editingCurrency) {
       updateCurrencyMutation.mutate(data);
@@ -868,6 +872,144 @@ const SettingsPage = () => {
           <TabsTrigger value="technicians">Technicians</TabsTrigger>
           <TabsTrigger value="data-management">Data Management</TabsTrigger>
         </TabsList>
+        
+        {/* Organization Tab */}
+        <TabsContent value="organization">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Organization Settings</CardTitle>
+                <CardDescription>
+                  Manage your organization information
+                </CardDescription>
+              </div>
+              <Dialog open={showOrganizationDialog} onOpenChange={setShowOrganizationDialog}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => {
+                    if (organization) {
+                      organizationForm.reset({
+                        name: organization.name || '',
+                        email: (organization.settings?.email as string) || '',
+                        phone: (organization.settings?.phone as string) || '',
+                        address: (organization.settings?.address as string) || '',
+                      });
+                    }
+                  }}>
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit Organization
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Edit Organization</DialogTitle>
+                    <DialogDescription>
+                      Update your organization information below
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...organizationForm}>
+                    <form onSubmit={organizationForm.handleSubmit(handleUpdateOrganization)} className="space-y-4">
+                      <FormField
+                        control={organizationForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Organization Name</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Your Repair Shop Name" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={organizationForm.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Business Email</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="contact@yourcompany.com" />
+                            </FormControl>
+                            <FormDescription>
+                              This email will be used on invoices and customer communications
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={organizationForm.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Business Phone</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="(555) 123-4567" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={organizationForm.control}
+                        name="address"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Business Address</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="123 Main St, Anytown, ST 12345" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <DialogFooter>
+                        <Button type="submit" disabled={updateOrganizationMutation.isPending}>
+                          {updateOrganizationMutation.isPending && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Save Changes
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {isLoadingOrganization ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : organization ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium text-gray-500">Organization Name</h3>
+                      <p className="text-base">{organization.name}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium text-gray-500">Email</h3>
+                      <p className="text-base">{organization.settings?.email || "No email set"}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium text-gray-500">Phone</h3>
+                      <p className="text-base">{organization.settings?.phone || "No phone set"}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium text-gray-500">Address</h3>
+                      <p className="text-base">{organization.settings?.address || "No address set"}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="text-gray-500">No organization information found</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
         
         {/* Currencies Tab */}
         <TabsContent value="currencies">
