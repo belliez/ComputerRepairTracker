@@ -556,16 +556,35 @@ function generateInviteToken() {
 
 // Middleware to add organization context
 export const addOrganizationContext = async (req: Request, res: Response, next: NextFunction) => {
-  // Special handling for development mode
-  const authHeader = req.headers.authorization;
-  if (process.env.NODE_ENV === 'development' && authHeader && authHeader.startsWith('Bearer dev-token-')) {
-    console.log('Development token detected, setting default organization context');
-    // In development mode, automatically set organization ID to 1
-    req.organizationId = 1;
-    return next();
-  }
-  
-  if (!req.user) {
+  try {
+    // Special handling for development mode
+    const authHeader = req.headers.authorization;
+    if (process.env.NODE_ENV === 'development') {
+      // In development mode with token, set organization ID to 1
+      if (authHeader && authHeader.startsWith('Bearer dev-token-')) {
+        console.log('Development token detected, setting default organization context');
+        req.organizationId = 1;
+        return next();
+      }
+      
+      // Also handle case where there's a dev user but no authorization header
+      // This ensures onboarding still works in development mode
+      if (req.path.includes('/api/settings/') && (!authHeader || !req.user)) {
+        console.log('Development settings API detected, using default organization');
+        req.organizationId = 1;
+        return next();
+      }
+    }
+    
+    if (!req.user) {
+      return next();
+    }
+  } catch (error) {
+    console.error('Error in organization context middleware:', error);
+    // Ensure we still have organization context in dev mode as fallback
+    if (process.env.NODE_ENV === 'development') {
+      req.organizationId = 1;
+    }
     return next();
   }
   
