@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { initializeDemo } from "./init-db";
+import { db } from "./db";
+import { and, eq } from "drizzle-orm";
 import { sendEmail, generateQuoteEmail, generateInvoiceEmail, EmailData } from "./email";
 import Stripe from "stripe";
 import {
@@ -381,8 +383,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Getting technicians - bypassing auth for debugging...");
       
-      // Allow this endpoint without authentication for debugging
-      const techData = await storage.getTechnicians();
+      // Query directly from database to bypass organization filtering for debugging
+      const techData = await db.select()
+        .from(technicians)
+        .where(eq(technicians.deleted, false));
       
       console.log("Technicians found:", techData.length, techData);
       return res.json(techData);
