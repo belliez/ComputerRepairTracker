@@ -17,6 +17,8 @@ import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
+import SubscribePage from "@/pages/subscribe";
+import SubscriptionSuccessPage from "@/pages/subscription-success";
 import MainLayout from "@/components/layout/main-layout";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -37,6 +39,10 @@ function Router() {
     <Switch>
       {/* Public Routes */}
       <Route path="/auth" component={AuthPage} />
+      
+      {/* Subscription Routes */}
+      <ProtectedRoute path="/subscribe" component={SubscribePage} />
+      <ProtectedRoute path="/subscription-success" component={SubscriptionSuccessPage} />
       
       {/* Protected Routes */}
       <ProtectedRoute path="/" component={Dashboard} />

@@ -32,6 +32,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   switchOrganization: (organizationId: number) => Promise<void>;
   createOrganization: (name: string) => Promise<void>;
+  refreshCurrentOrganization: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
