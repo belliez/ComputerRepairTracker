@@ -43,6 +43,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 // Schemas for form validation
+const organizationSchema = z.object({
+  name: z.string().min(2, { message: "Organization name is required" }),
+  email: z.string().email({ message: "Valid email is required" }).optional().nullable(),
+  phone: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+});
+
 const currencySchema = z.object({
   code: z.string().length(3, { message: "Currency code must be exactly 3 characters (e.g., USD)" }),
   name: z.string().min(2, { message: "Currency name is required" }),
@@ -69,13 +76,15 @@ const technicianSchema = z.object({
 });
 
 const SettingsPage = () => {
-  const [activeTab, setActiveTab] = useState('currencies');
+  const [activeTab, setActiveTab] = useState('organization');
   const [showCurrencyDialog, setShowCurrencyDialog] = useState(false);
   const [showTaxRateDialog, setShowTaxRateDialog] = useState(false);
   const [showTechnicianDialog, setShowTechnicianDialog] = useState(false);
+  const [showOrganizationDialog, setShowOrganizationDialog] = useState(false);
   const [editingCurrency, setEditingCurrency] = useState<any>(null);
   const [editingTaxRate, setEditingTaxRate] = useState<any>(null);
   const [editingTechnician, setEditingTechnician] = useState<any>(null);
+  const [editingOrganization, setEditingOrganization] = useState<any>(null);
   const [deletingCurrencyCode, setDeletingCurrencyCode] = useState<string | null>(null);
   const [deletingTaxRateId, setDeletingTaxRateId] = useState<number | null>(null);
   const [deletingTechnicianId, setDeletingTechnicianId] = useState<number | null>(null);
@@ -86,6 +95,18 @@ const SettingsPage = () => {
   const queryClient = useQueryClient();
   
   // Define types for our queries
+  interface Organization {
+    id: number;
+    name: string;
+    slug: string;
+    logo?: string;
+    ownerId: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    settings?: Record<string, any>;
+  }
+  
   interface Currency {
     code: string;
     name: string;
