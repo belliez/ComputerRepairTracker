@@ -40,7 +40,15 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getDeletedRepairs(): Promise<Repair[]> {
-    return db.select().from(repairs).where(eq(repairs.deleted, true));
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching deleted repairs for organization: ${orgId}`);
+    
+    return db.select()
+      .from(repairs)
+      .where(and(
+        eq(repairs.deleted, true),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
   }
   
   async getDeletedTechnicians(): Promise<Technician[]> {
@@ -92,13 +100,19 @@ export class DatabaseStorage implements IStorage {
   }
   
   async restoreRepair(id: number): Promise<Repair | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Restoring repair ${id} in organization: ${orgId}`);
+    
     const [restoredRepair] = await db
       .update(repairs)
       .set({
         deleted: false,
         deletedAt: null
       })
-      .where(eq(repairs.id, id))
+      .where(and(
+        eq(repairs.id, id),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
     return restoredRepair;
   }
