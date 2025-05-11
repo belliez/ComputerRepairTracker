@@ -114,16 +114,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         try {
           // Get user data from our backend
-          const idToken = await firebaseUser.getIdToken();
+          const idToken = await firebaseUser.getIdToken(true); // Force token refresh
           localStorage.setItem('firebase_token', idToken);
           
           // Fetch user data
           const userResponse = await apiRequest('GET', '/api/me');
           if (!userResponse.ok) {
-            throw new Error('Failed to get user data');
+            // Check if the error is due to an invalid token
+            if (userResponse.status === 401) {
+              // Try one more time with a forced token refresh
+              const refreshedToken = await firebaseUser.getIdToken(true);
+              localStorage.setItem('firebase_token', refreshedToken);
+              
+              // Retry with the new token
+              const retryResponse = await apiRequest('GET', '/api/me');
+              if (!retryResponse.ok) {
+                throw new Error('Authentication failed after token refresh');
+              }
+              const userData = await retryResponse.json();
+              setUser(userData);
+            } else {
+              throw new Error('Failed to get user data');
+            }
+          } else {
+            const userData = await userResponse.json();
+            setUser(userData);
           }
-          const userData = await userResponse.json();
-          setUser(userData);
           
           // Fetch user organizations
           const orgsResponse = await apiRequest('GET', '/api/organizations');
@@ -168,6 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
           setFirebaseUser(null);
           localStorage.removeItem('firebase_token');
+          localStorage.removeItem('currentOrganizationId');
         }
       } else {
         setUser(null);
@@ -176,19 +193,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setCurrentOrganization(null);
         localStorage.removeItem('firebase_token');
         localStorage.removeItem('currentOrganizationId');
+        localStorage.removeItem('useDevelopmentAuth');
+        localStorage.removeItem('dev_mode');
+        localStorage.removeItem('dev_user');
       }
       
       setIsLoading(false);
     });
     
-    return () => unsubscribe();
+    // Setup token refresh logic
+    const tokenRefreshInterval = setInterval(async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        try {
+          // Refresh the token every 50 minutes to avoid expiration (default is 1 hour)
+          const newToken = await currentUser.getIdToken(true);
+          localStorage.setItem('firebase_token', newToken);
+          console.log('Firebase token refreshed successfully');
+        } catch (error) {
+          console.error('Failed to refresh token:', error);
+        }
+      }
+    }, 50 * 60 * 1000); // 50 minutes
+    
+    return () => {
+      unsubscribe();
+      clearInterval(tokenRefreshInterval);
+    };
   }, [auth, toast]);
 
   const handleAuthError = (error: unknown) => {
     console.error('Auth error:', error);
     let errorMessage = 'Authentication failed';
+    let errorCode = '';
+    let shouldUseDevelopmentAuth = false;
     
     if (error instanceof FirebaseError) {
+      errorCode = error.code;
+      
       switch (error.code) {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
@@ -206,13 +248,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         case 'auth/network-request-failed':
           errorMessage = 'Network error. Please check your connection';
           break;
+        case 'auth/requires-recent-login':
+          errorMessage = 'This action requires a recent login. Please sign in again';
+          break;
+        case 'auth/account-exists-with-different-credential':
+          errorMessage = 'An account already exists with the same email address but different sign-in credentials';
+          break;
+        case 'auth/popup-blocked':
+          errorMessage = 'Sign-in popup was blocked by your browser. Please allow popups for this site';
+          break;
+        case 'auth/popup-closed-by-user':
+          errorMessage = 'Sign-in popup was closed before completing the process';
+          break;
+        case 'auth/cancelled-popup-request':
+          errorMessage = 'The sign-in operation was cancelled'; 
+          break;
         case 'auth/unauthorized-domain':
           errorMessage = 'Development mode: Firebase domain not authorized. Using mock authentication...';
           // In development, we'll continue with a mock user
           // This is only for development purposes
-          if (process.env.NODE_ENV === 'development') {
-            // Use the manual mock development login
-            return useDevelopmentAuth();
+          if (import.meta.env.MODE === 'development' || process.env.NODE_ENV === 'development') {
+            shouldUseDevelopmentAuth = true;
+          }
+          break;
+        case 'auth/invalid-credential':
+          errorMessage = 'The authentication credential is invalid';
+          break;
+        case 'auth/operation-not-allowed':
+          errorMessage = 'This authentication method is not enabled for this project';
+          if (import.meta.env.MODE === 'development' || process.env.NODE_ENV === 'development') {
+            shouldUseDevelopmentAuth = true;
+            errorMessage += '. Using development authentication instead.';
+          }
+          break;
+        case 'auth/invalid-persistence-type':
+          errorMessage = 'The persistence type is invalid';
+          break;
+        case 'auth/unsupported-persistence-type':
+          errorMessage = 'The current environment does not support the persistence type';
+          break;
+        case 'auth/internal-error':
+          errorMessage = 'The authentication service encountered an internal error';
+          if (import.meta.env.MODE === 'development' || process.env.NODE_ENV === 'development') {
+            shouldUseDevelopmentAuth = true;
+            errorMessage += '. Using development authentication instead.';
           }
           break;
         default:
@@ -223,8 +302,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     setError(errorMessage);
+    
+    // In development, use development auth for specific errors
+    if (shouldUseDevelopmentAuth) {
+      // Use the manual mock development login
+      return useDevelopmentAuth();
+    }
+    
     toast({
-      title: 'Error',
+      title: `Authentication Error${errorCode ? ` (${errorCode})` : ''}`,
       description: errorMessage,
       variant: 'destructive',
     });
@@ -353,23 +439,64 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     try {
       const provider = new GoogleAuthProvider();
+      // Add scopes for additional access if needed
+      provider.addScope('profile');
+      provider.addScope('email');
+      
+      // Set custom parameters for the auth request
+      provider.setCustomParameters({
+        // Request a specific login hint if needed
+        // login_hint: 'user@example.com',
+        // Force account selection even if user has only one account
+        prompt: 'select_account'
+      });
+      
+      // Attempt to sign in with popup
       await signInWithPopup(auth, provider);
+      
+      toast({
+        title: 'Google Sign-in Successful',
+        description: 'Welcome back!',
+      });
+      
       setIsSigningIn(false);
     } catch (error) {
       setIsSigningIn(false);
       
-      // Special handling for development mode if Google sign-in fails
-      // This is a fallback for when Google sign-in fails due to misconfiguration
-      if (error instanceof FirebaseError && 
-          (error.code === 'auth/unauthorized-domain' || 
-           error.code === 'auth/operation-not-allowed' ||
-           error.code === 'auth/internal-error')) {
-        console.log('Google auth failed, using development auth as fallback');
-        useDevelopmentAuth('dev@example.com', 'Development User (Google)');
-        return;
+      if (error instanceof FirebaseError) {
+        // Special handling for specific Google auth errors
+        switch (error.code) {
+          case 'auth/account-exists-with-different-credential':
+            toast({
+              title: 'Sign-in Error',
+              description: 'An account already exists with the same email but different sign-in credentials. Try signing in using the original method.',
+              variant: 'destructive',
+            });
+            break;
+          
+          // Special handling for development mode if Google sign-in fails
+          // This is a fallback for when Google sign-in fails due to misconfiguration
+          case 'auth/unauthorized-domain':
+          case 'auth/operation-not-allowed':
+          case 'auth/internal-error':
+            console.log('Google auth failed, using development auth as fallback');
+            
+            if (import.meta.env.MODE === 'development' || process.env.NODE_ENV === 'development') {
+              useDevelopmentAuth('dev@example.com', 'Development User (Google)');
+              return;
+            }
+            break;
+            
+          default:
+            // Use the general error handler for other errors
+            handleAuthError(error);
+        }
+      } else {
+        // For non-Firebase errors
+        handleAuthError(error);
       }
       
-      handleAuthError(error);
+      // Re-throw the error to allow the calling component to handle it
       throw error;
     }
   };

@@ -84,56 +84,131 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
       return next();
     }
     
-    const decodedToken = await auth.verifyIdToken(token);
-    req.user = decodedToken;
-    
-    // Check if user exists in our database, create if not
-    const [existingUser] = await db.select().from(users).where(eq(users.id, decodedToken.uid));
-    
-    if (!existingUser) {
-      // Get user details from Firebase
-      const userRecord = await auth.getUser(decodedToken.uid);
+    try {
+      const decodedToken = await auth.verifyIdToken(token);
+      req.user = decodedToken;
       
-      // Create user in our database
-      await db.insert(users).values({
-        id: userRecord.uid,
-        email: userRecord.email || '',
-        displayName: userRecord.displayName || null,
-        photoURL: userRecord.photoURL || null,
-        lastLoginAt: new Date(),
-      });
-    } else {
-      // Update last login time
-      await db
-        .update(users)
-        .set({ lastLoginAt: new Date() })
-        .where(eq(users.id, decodedToken.uid));
+      // Check if user exists in our database, create if not
+      const [existingUser] = await db.select().from(users).where(eq(users.id, decodedToken.uid));
+      
+      if (!existingUser) {
+        // Get user details from Firebase
+        const userRecord = await auth.getUser(decodedToken.uid);
+        
+        // Create user in our database
+        await db.insert(users).values({
+          id: userRecord.uid,
+          email: userRecord.email || '',
+          displayName: userRecord.displayName || null,
+          photoURL: userRecord.photoURL || null,
+          lastLoginAt: new Date(),
+        });
+      } else {
+        // Update last login time
+        await db
+          .update(users)
+          .set({ lastLoginAt: new Date() })
+          .where(eq(users.id, decodedToken.uid));
+      }
+      
+      next();
+    } catch (tokenError: any) {
+      // Check if the token is expired
+      if (tokenError.code === 'auth/id-token-expired') {
+        console.error('Firebase token expired');
+        return res.status(401).json({ 
+          message: 'Authentication token expired', 
+          code: 'token_expired',
+          error: tokenError.message 
+        });
+      }
+      
+      // Check if the token is revoked
+      if (tokenError.code === 'auth/id-token-revoked') {
+        console.error('Firebase token revoked');
+        return res.status(401).json({ 
+          message: 'Authentication token revoked', 
+          code: 'token_revoked',
+          error: tokenError.message 
+        });
+      }
+      
+      throw tokenError; // Re-throw to be caught by outer catch
     }
-    
-    next();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Authentication error:', error);
-    return res.status(403).json({ message: 'Invalid or expired token' });
+    
+    // Return structured error response
+    return res.status(403).json({ 
+      message: 'Authentication failed',
+      error: error.message || 'Unknown error',
+      code: error.code || 'unknown_error'
+    });
   }
 };
 
 // API endpoint to get current user
 export const getCurrentUser = async (req: Request, res: Response) => {
   if (!req.user) {
-    return res.status(401).json({ message: 'Not authenticated' });
+    return res.status(401).json({ 
+      message: 'Not authenticated',
+      code: 'not_authenticated'
+    });
   }
   
   try {
     const [user] = await db.select().from(users).where(eq(users.id, req.user.uid));
     
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      // If user exists in Firebase but not in our database, we create them
+      try {
+        const auth = getAdminAuth();
+        if (!auth) {
+          return res.status(500).json({ 
+            message: 'Auth service unavailable',
+            code: 'auth_service_unavailable'
+          });
+        }
+        
+        // Get user details from Firebase
+        const userRecord = await auth.getUser(req.user.uid);
+        
+        // Create user in our database
+        const [newUser] = await db.insert(users).values({
+          id: userRecord.uid,
+          email: userRecord.email || '',
+          displayName: userRecord.displayName || null,
+          photoURL: userRecord.photoURL || null,
+          lastLoginAt: new Date(),
+        }).returning();
+        
+        return res.json(newUser);
+      } catch (error) {
+        console.error('Error creating user:', error);
+        return res.status(404).json({ 
+          message: 'User not found and could not be created', 
+          code: 'user_creation_failed' 
+        });
+      }
     }
     
-    res.json(user);
+    // Include auth metadata
+    const enhancedUser = {
+      ...user,
+      // Add Firebase auth fields that might be useful for the client
+      firebaseAuth: {
+        emailVerified: req.user.email_verified || false,
+        provider: req.user.firebase?.sign_in_provider || null,
+      }
+    };
+    
+    res.json(enhancedUser);
   } catch (error) {
     console.error('Error fetching user:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error fetching user data',
+      code: 'server_error'
+    });
   }
 };
 
