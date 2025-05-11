@@ -160,6 +160,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             throw new Error('Failed to get organizations');
           }
           const organizationsData = await orgsResponse.json();
+          
+          // If the user has no organizations, create one automatically
+          if (organizationsData.length === 0 && firebaseUser) {
+            console.log('No organizations found for user, creating a default one');
+            try {
+              const orgResponse = await apiRequest('POST', '/api/settings/organization', {
+                name: `${firebaseUser.displayName || 'My'}'s Repair Shop`,
+                email: firebaseUser.email || '',
+                phone: '',
+                address: '',
+                logo: '',
+                settings: {
+                  onboardingCompleted: false
+                }
+              });
+              
+              if (!orgResponse.ok) {
+                console.error('Failed to create default organization', await orgResponse.text());
+              } else {
+                const newOrg = await orgResponse.json();
+                console.log('Default organization created:', newOrg);
+                organizationsData.push(newOrg);
+              }
+            } catch (orgError) {
+              console.error('Error creating default organization:', orgError);
+              // Continue anyway with empty organizations
+            }
+          }
+          
           setOrganizations(organizationsData);
           
           // Set current organization (either from localStorage or first available)
@@ -478,6 +507,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Get the token and manually trigger an API call to create the user in the database
         const idToken = await credential.user.getIdToken(true);
+        
+        // Create a default organization for the new user
+        // The name will be "<User>'s Repair Shop"
+        try {
+          console.log('Creating default organization for new user');
+          const orgResponse = await fetch('/api/settings/organization', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({
+              name: `${name}'s Repair Shop`,
+              email: email,
+              phone: '',
+              address: '',
+              logo: '',
+              settings: {
+                onboardingCompleted: false
+              }
+            })
+          });
+          
+          if (!orgResponse.ok) {
+            console.error('Failed to create default organization', await orgResponse.text());
+          } else {
+            console.log('Default organization created for new user');
+          }
+        } catch (orgError) {
+          console.error('Error creating default organization:', orgError);
+          // Continue anyway - user can create organization later in onboarding
+        }
         localStorage.setItem('firebase_token', idToken);
         
         try {
