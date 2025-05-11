@@ -2384,9 +2384,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Settings - Currencies
   settingsRouter.get("/currencies", async (req: Request, res: Response) => {
     try {
-      console.log("Getting currencies (public router)");
-      const allCurrencies = await db.select().from(currencies);
-      console.log("All currencies:", JSON.stringify(allCurrencies));
+      // Get organization ID from global context or default to 1
+      const orgId = (global as any).currentOrganizationId || 1;
+      console.log(`Getting currencies for organization: ${orgId} (public router)`);
+      
+      const allCurrencies = await db.select()
+        .from(currencies)
+        .where(eq((currencies as any).organizationId, orgId));
+      
+      console.log(`Found ${allCurrencies.length} currencies for organization: ${orgId}`);
       res.json(allCurrencies);
     } catch (error) {
       console.error("Error fetching currencies:", error);
@@ -2396,7 +2402,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   settingsRouter.get("/currencies/default", async (req: Request, res: Response) => {
     try {
-      const [defaultCurrency] = await db.select().from(currencies).where(eq(currencies.isDefault, true));
+      // Get organization ID from global context or default to 1
+      const orgId = (global as any).currentOrganizationId || 1;
+      console.log(`Getting default currency for organization: ${orgId} (public router)`);
+      
+      const [defaultCurrency] = await db.select()
+        .from(currencies)
+        .where(and(
+          eq(currencies.isDefault, true),
+          eq((currencies as any).organizationId, orgId)
+        ));
+      
       res.json(defaultCurrency || null);
     } catch (error) {
       console.error("Error fetching default currency:", error);
@@ -2407,9 +2423,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Settings - Tax Rates
   settingsRouter.get("/tax-rates", async (req: Request, res: Response) => {
     try {
-      console.log("Getting tax rates (public router)");
-      const allTaxRates = await db.select().from(taxRates);
-      console.log("All tax rates:", JSON.stringify(allTaxRates));
+      // Get organization ID from global context or default to 1
+      const orgId = (global as any).currentOrganizationId || 1;
+      console.log(`Getting tax rates for organization: ${orgId} (public router)`);
+      
+      const allTaxRates = await db.select()
+        .from(taxRates)
+        .where(eq((taxRates as any).organizationId, orgId));
+      
+      console.log(`Found ${allTaxRates.length} tax rates for organization: ${orgId}`);
       res.json(allTaxRates);
     } catch (error) {
       console.error("Error fetching tax rates:", error);
@@ -2419,7 +2441,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   settingsRouter.get("/tax-rates/default", async (req: Request, res: Response) => {
     try {
-      const [defaultTaxRate] = await db.select().from(taxRates).where(eq(taxRates.isDefault, true));
+      // Get organization ID from global context or default to 1
+      const orgId = (global as any).currentOrganizationId || 1;
+      console.log(`Getting default tax rate for organization: ${orgId} (public router)`);
+      
+      const [defaultTaxRate] = await db.select()
+        .from(taxRates)
+        .where(and(
+          eq(taxRates.isDefault, true),
+          eq((taxRates as any).organizationId, orgId)
+        ));
+      
       res.json(defaultTaxRate || null);
     } catch (error) {
       console.error("Error fetching default tax rate:", error);
