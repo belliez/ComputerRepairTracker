@@ -19,6 +19,10 @@ import {
   taxRates,
   quotes,
   invoices,
+  organizations,
+  technicians,
+  users,
+  organizationUsers,
 } from "@shared/schema";
 import { 
   authenticateJWT, 
@@ -1735,43 +1739,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
         case 'tax':
           // Delete existing tax rates for this organization 
-          await db.execute(
-            `DELETE FROM tax_rates WHERE organization_id = $1`,
-            [organizationId]
-          );
+          await db.execute(sql`
+            DELETE FROM tax_rates WHERE organization_id = ${organizationId}
+          `);
             
           // Add new tax rates
           if (data.taxRates && Array.isArray(data.taxRates)) {
             for (const tax of data.taxRates) {
-              await db.execute(
-                `INSERT INTO tax_rates (name, rate, is_default, organization_id) 
-                 VALUES ($1, $2, $3, $4)`,
-                [tax.name, tax.rate, tax.isDefault, organizationId]
-              );
+              await db.execute(sql`
+                INSERT INTO tax_rates (name, rate, is_default, organization_id) 
+                VALUES (${tax.name}, ${tax.rate}, ${tax.isDefault}, ${organizationId})
+              `);
             }
           }
           break;
           
         case 'currency':
           // Delete existing currencies for this organization
-          await db.execute(
-            `DELETE FROM currencies WHERE organization_id = $1`,
-            [organizationId]
-          );
+          await db.execute(sql`
+            DELETE FROM currencies WHERE organization_id = ${organizationId}
+          `);
             
           // Add new currency
           if (data.currency) {
-            await db.execute(
-              `INSERT INTO currencies (code, symbol, name, is_default, organization_id) 
-               VALUES ($1, $2, $3, $4, $5)`,
-              [
-                data.currency.code, 
-                data.currency.symbol, 
-                data.currency.name, 
-                data.currency.isDefault, 
-                organizationId
-              ]
-            );
+            await db.execute(sql`
+              INSERT INTO currencies (code, symbol, name, is_default, organization_id) 
+              VALUES (
+                ${data.currency.code}, 
+                ${data.currency.symbol}, 
+                ${data.currency.name}, 
+                ${data.currency.isDefault}, 
+                ${organizationId}
+              )
+            `);
           }
           break;
           
@@ -1780,18 +1780,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (data.technicians && Array.isArray(data.technicians)) {
             for (const tech of data.technicians) {
               if (tech.name) {
-                await db.execute(
-                  `INSERT INTO technicians (name, email, phone, role, is_active, organization_id) 
-                   VALUES ($1, $2, $3, $4, $5, $6)`,
-                  [
-                    tech.name,
-                    tech.email || null,
-                    tech.phone || null,
-                    tech.role || null,
-                    tech.isActive !== false,
-                    organizationId
-                  ]
-                );
+                await db.execute(sql`
+                  INSERT INTO technicians (name, email, phone, role, is_active, organization_id) 
+                  VALUES (
+                    ${tech.name},
+                    ${tech.email || null},
+                    ${tech.phone || null},
+                    ${tech.role || null},
+                    ${tech.isActive !== false},
+                    ${organizationId}
+                  )
+                `);
               }
             }
           }
@@ -1799,17 +1798,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
         case 'onboarding':
           // Using raw SQL for maximum compatibility in development mode
-          await db.execute(
-            `UPDATE organizations 
-             SET settings = jsonb_set(
-               COALESCE(settings, '{}'::jsonb), 
-               '{onboardingCompleted}', 
-               'true'::jsonb
-             ),
-             updated_at = $1
-             WHERE id = $2`,
-            [new Date(), organizationId]
-          );
+          await db.execute(sql`
+            UPDATE organizations 
+            SET settings = jsonb_set(
+              COALESCE(settings, '{}'::jsonb), 
+              '{onboardingCompleted}', 
+              'true'::jsonb
+            ),
+            updated_at = ${new Date()}
+            WHERE id = ${organizationId}
+          `);
           break;
           
         default:
