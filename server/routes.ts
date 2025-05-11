@@ -49,16 +49,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error("Error initializing database:", error);
   }
   
-  // Register authentication and organization middleware
-  app.use(addOrganizationContext);
-  
-  // Auth and organization API routes
-  app.get('/api/me', authenticateJWT, getCurrentUser);
-  app.get('/api/organizations', authenticateJWT, getUserOrganizations);
-  app.post('/api/organizations', authenticateJWT, createOrganization);
-  app.post('/api/organizations/invite', authenticateJWT, addUserToOrganization);
-  app.post('/api/organizations/accept-invite', authenticateJWT, acceptOrganizationInvite);
-  
   // Development-only endpoints
   if (process.env.NODE_ENV === 'development') {
     app.post('/api/dev-login', (req: Request, res: Response) => {
@@ -68,7 +58,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json({ message: 'Development login successful' });
     });
   }
-  app.post('/api/set-organization', authenticateJWT, (req: Request, res: Response) => {
+  
+  // Apply organization context middleware after dev login route
+  app.use(addOrganizationContext);
+  
+  // Auth and organization API routes
+  app.get('/api/me', getCurrentUser);
+  app.get('/api/organizations', getUserOrganizations);
+  app.post('/api/organizations', createOrganization);
+  app.post('/api/organizations/invite', addUserToOrganization);
+  app.post('/api/organizations/accept-invite', acceptOrganizationInvite);
+  app.post('/api/set-organization', (req: Request, res: Response) => {
     const { organizationId } = req.body;
     if (!organizationId) {
       return res.status(400).json({ message: 'Organization ID is required' });
@@ -79,6 +79,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // API routes prefix
   const apiRouter = express.Router();
+  // Apply authentication middleware to all API routes
+  apiRouter.use(authenticateJWT);
   app.use("/api", apiRouter);
 
   // Customers
