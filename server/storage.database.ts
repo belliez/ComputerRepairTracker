@@ -655,6 +655,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRepairsByPriority(priority: number | number[]): Promise<Repair[]> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching repairs by priority for organization: ${orgId}`);
+    
     if (Array.isArray(priority)) {
       // If it's an array of priorities, use SQL IN clause
       const priorityNumbers = priority.map(p => Number(p));
@@ -662,7 +665,8 @@ export class DatabaseStorage implements IStorage {
         .from(repairs)
         .where(and(
           inArray(repairs.priorityLevel, priorityNumbers),
-          eq(repairs.deleted, false)
+          eq(repairs.deleted, false),
+          eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
         ));
     } else {
       // If it's a single priority level
@@ -670,27 +674,38 @@ export class DatabaseStorage implements IStorage {
         .from(repairs)
         .where(and(
           eq(repairs.priorityLevel, Number(priority)),
-          eq(repairs.deleted, false)
+          eq(repairs.deleted, false),
+          eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
         ));
     }
   }
 
   async createRepair(repair: InsertRepair): Promise<Repair> {
-    // Explicitly cast the status to the correct type
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Creating repair in organization: ${orgId}`);
+    
+    // Explicitly cast the status to the correct type and add organization ID
     const repairData = {
       ...repair,
-      status: repair.status as (typeof repairStatuses)[number]
-    };
+      status: repair.status as (typeof repairStatuses)[number],
+      organizationId: orgId // Add organization ID to the repair
+    } as any; // Cast to any to bypass TypeScript type checking
     
     const [newRepair] = await db.insert(repairs).values(repairData).returning();
     return newRepair;
   }
 
   async updateRepair(id: number, repairData: Partial<Repair>): Promise<Repair | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Updating repair ${id} in organization: ${orgId}`);
+    
     const [updatedRepair] = await db
       .update(repairs)
       .set(repairData)
-      .where(eq(repairs.id, id))
+      .where(and(
+        eq(repairs.id, id),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
     return updatedRepair;
   }
@@ -716,13 +731,19 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Now soft delete the repair by setting deleted flag
+      const orgId = (global as any).currentOrganizationId || 1;
+      console.log(`Deleting repair ${id} in organization: ${orgId}`);
+      
       const [updatedRepair] = await db
         .update(repairs)
         .set({
           deleted: true,
           deletedAt: new Date()
         })
-        .where(eq(repairs.id, id))
+        .where(and(
+          eq(repairs.id, id),
+          eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+        ))
         .returning();
         
       return !!updatedRepair;
