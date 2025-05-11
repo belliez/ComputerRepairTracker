@@ -49,6 +49,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.error("Error initializing database:", error);
   }
   
+  // Register authentication and organization middleware
+  app.use(addOrganizationContext);
+  
+  // Auth and organization API routes
+  app.get('/api/me', authenticateJWT, getCurrentUser);
+  app.get('/api/organizations', authenticateJWT, getUserOrganizations);
+  app.post('/api/organizations', authenticateJWT, createOrganization);
+  app.post('/api/organizations/invite', authenticateJWT, addUserToOrganization);
+  app.post('/api/organizations/accept-invite', authenticateJWT, acceptOrganizationInvite);
+  app.post('/api/set-organization', authenticateJWT, (req: Request, res: Response) => {
+    const { organizationId } = req.body;
+    if (!organizationId) {
+      return res.status(400).json({ message: 'Organization ID is required' });
+    }
+    req.organizationId = Number(organizationId);
+    res.json({ message: 'Organization context set', organizationId });
+  });
+  
   // API routes prefix
   const apiRouter = express.Router();
   app.use("/api", apiRouter);

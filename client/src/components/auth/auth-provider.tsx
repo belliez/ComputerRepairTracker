@@ -1,348 +1,316 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  User as FirebaseUser, 
-  onAuthStateChanged, 
+import { useToast } from '@/hooks/use-toast';
+import { User, Organization } from '@shared/schema';
+import {
+  getAuth,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  GoogleAuthProvider, 
-  signInWithPopup,
   signOut as firebaseSignOut,
-  UserCredential
+  onAuthStateChanged,
+  signInWithPopup,
+  GoogleAuthProvider,
+  User as FirebaseUser,
+  updateProfile as firebaseUpdateProfile,
 } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { FirebaseError } from 'firebase/app';
+import '../../firebase-config';
 import { apiRequest } from '@/lib/queryClient';
-import { User, Organization } from '@shared/schema';
 
-// Define types for auth context
+type OrganizationWithRole = Organization & { role: 'owner' | 'member' | 'admin' };
+
 interface AuthContextType {
   user: User | null;
-  firebaseUser: FirebaseUser | null;
-  currentOrganization: Organization | null;
-  organizations: Organization[];
   isLoading: boolean;
   isSigningIn: boolean;
   isSigningUp: boolean;
   error: string | null;
-  signIn: (email: string, password: string) => Promise<UserCredential>;
-  signInWithGoogle: () => Promise<UserCredential>;
-  signUp: (email: string, password: string, displayName: string) => Promise<UserCredential>;
+  organizations: OrganizationWithRole[];
+  currentOrganization: Organization | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
-  createOrganization: (name: string) => Promise<Organization>;
-  switchOrganization: (organizationId: number) => void;
+  switchOrganization: (organizationId: number) => Promise<void>;
+  createOrganization: (name: string) => Promise<void>;
 }
 
-// Create auth context
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// Auth provider component
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
-  // State for authentication
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [isSigningIn, setIsSigningIn] = useState(false);
-  const [isSigningUp, setIsSigningUp] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [currentOrganizationId, setCurrentOrganizationId] = useState<number | null>(null);
-
-  // Listen for Firebase auth state changes
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setFirebaseUser(user);
-      if (user) {
-        // Reset state when user signs in
-        setError(null);
-      }
-    });
-
-    // Clean up subscription
-    return () => unsubscribe();
-  }, []);
-
-  // Fetch user data from API when Firebase user changes
-  const { 
-    data: userData,
-    isLoading: isUserLoading 
-  } = useQuery({
-    queryKey: ['user'],
-    queryFn: async () => {
-      if (!firebaseUser) return null;
-      
-      try {
-        const idToken = await firebaseUser.getIdToken();
-        const res = await fetch('/api/user', {
-          headers: {
-            'Authorization': `Bearer ${idToken}`
-          }
-        });
-        
-        if (!res.ok) {
-          throw new Error('Failed to fetch user data');
-        }
-        
-        return res.json();
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        return null;
-      }
-    },
-    enabled: !!firebaseUser,
-  });
-
-  // Fetch organizations for the current user
-  const { 
-    data: organizations = [],
-    isLoading: isOrgsLoading 
-  } = useQuery({
-    queryKey: ['organizations'],
-    queryFn: async () => {
-      if (!firebaseUser) return [];
-      
-      try {
-        const idToken = await firebaseUser.getIdToken();
-        const res = await fetch('/api/organizations', {
-          headers: {
-            'Authorization': `Bearer ${idToken}`
-          }
-        });
-        
-        if (!res.ok) {
-          throw new Error('Failed to fetch organizations');
-        }
-        
-        return res.json();
-      } catch (error) {
-        console.error('Error fetching organizations:', error);
-        return [];
-      }
-    },
-    enabled: !!firebaseUser,
-  });
-
-  // Get current organization
-  const currentOrganization = organizations.find((org: Organization) => org.id === currentOrganizationId) || 
-                             (organizations.length > 0 ? organizations[0] : null);
-  
-  // Effect to set default organization when orgs load
-  useEffect(() => {
-    if (organizations.length > 0 && !currentOrganizationId) {
-      setCurrentOrganizationId(organizations[0].id);
-    }
-  }, [organizations, currentOrganizationId]);
-
-  // Sign in with email/password
-  const signIn = async (email: string, password: string) => {
-    setIsSigningIn(true);
-    setError(null);
-    
-    try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      toast({
-        title: "Signed in successfully",
-        description: `Welcome back, ${email}!`,
-      });
-      return result;
-    } catch (error: any) {
-      console.error('Sign in error:', error);
-      const errorMessage = error.message || 'Failed to sign in';
-      setError(errorMessage);
-      toast({
-        title: "Sign in failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setIsSigningIn(false);
-    }
-  };
-
-  // Sign in with Google
-  const signInWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    setIsSigningIn(true);
-    setError(null);
-    
-    try {
-      const result = await signInWithPopup(auth, provider);
-      toast({
-        title: "Signed in with Google",
-        description: `Welcome, ${result.user.displayName || result.user.email}!`,
-      });
-      return result;
-    } catch (error: any) {
-      console.error('Google sign in error:', error);
-      const errorMessage = error.message || 'Failed to sign in with Google';
-      setError(errorMessage);
-      toast({
-        title: "Google sign in failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setIsSigningIn(false);
-    }
-  };
-
-  // Sign up with email/password
-  const signUp = async (email: string, password: string, displayName: string) => {
-    setIsSigningUp(true);
-    setError(null);
-    
-    try {
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      
-      // Update user profile with display name
-      await result.user.updateProfile({ displayName });
-      
-      toast({
-        title: "Signed up successfully",
-        description: `Welcome, ${displayName}!`,
-      });
-      
-      return result;
-    } catch (error: any) {
-      console.error('Sign up error:', error);
-      const errorMessage = error.message || 'Failed to sign up';
-      setError(errorMessage);
-      toast({
-        title: "Sign up failed",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      throw error;
-    } finally {
-      setIsSigningUp(false);
-    }
-  };
-
-  // Sign out
-  const signOut = async () => {
-    try {
-      await firebaseSignOut(auth);
-      // Clear all query cache
-      queryClient.clear();
-      
-      toast({
-        title: "Signed out",
-        description: "You have been signed out successfully.",
-      });
-    } catch (error: any) {
-      console.error('Sign out error:', error);
-      toast({
-        title: "Sign out failed",
-        description: error.message || 'Failed to sign out',
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
-  // Create organization mutation
-  const createOrganizationMutation = useMutation({
-    mutationFn: async (name: string) => {
-      if (!firebaseUser) {
-        throw new Error('You must be logged in to create an organization');
-      }
-      
-      const idToken = await firebaseUser.getIdToken();
-      const slug = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-      
-      const response = await apiRequest('POST', '/api/organizations', { 
-        name, 
-        slug
-      }, {
-        'Authorization': `Bearer ${idToken}`
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create organization');
-      }
-      
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['organizations'] });
-      setCurrentOrganizationId(data.id);
-      toast({
-        title: "Organization created",
-        description: `Successfully created ${data.name}`,
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to create organization",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
-
-  // Create organization helper
-  const createOrganization = async (name: string) => {
-    return createOrganizationMutation.mutateAsync(name);
-  };
-
-  // Switch organization
-  const switchOrganization = (organizationId: number) => {
-    setCurrentOrganizationId(organizationId);
-    // Invalidate all data that's org-specific
-    queryClient.invalidateQueries({ queryKey: ['customers'] });
-    queryClient.invalidateQueries({ queryKey: ['devices'] });
-    queryClient.invalidateQueries({ queryKey: ['repairs'] });
-    queryClient.invalidateQueries({ queryKey: ['technicians'] });
-    queryClient.invalidateQueries({ queryKey: ['inventory'] });
-    queryClient.invalidateQueries({ queryKey: ['quotes'] });
-    queryClient.invalidateQueries({ queryKey: ['invoices'] });
-    queryClient.invalidateQueries({ queryKey: ['settings'] });
-    
-    toast({
-      title: "Organization switched",
-      description: `Now viewing ${organizations.find(org => org.id === organizationId)?.name}`,
-    });
-  };
-
-  // Combine loading states
-  const isLoading = isUserLoading || isOrgsLoading;
-
-  // Get user from userData
-  const user = userData?.user || null;
-
-  // Auth context value
-  const value: AuthContextType = {
-    user,
-    firebaseUser,
-    currentOrganization,
-    organizations,
-    isLoading,
-    isSigningIn,
-    isSigningUp,
-    error,
-    signIn,
-    signInWithGoogle,
-    signUp,
-    signOut,
-    createOrganization,
-    switchOrganization,
-  };
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
-};
-
-// Custom hook to use auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { toast } = useToast();
+  const auth = getAuth();
+  const [user, setUser] = useState<User | null>(null);
+  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<OrganizationWithRole[]>([]);
+  const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
+
+  // Listen for Firebase auth state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setIsLoading(true);
+      
+      if (firebaseUser) {
+        setFirebaseUser(firebaseUser);
+        
+        try {
+          // Get user data from our backend
+          const idToken = await firebaseUser.getIdToken();
+          localStorage.setItem('firebase_token', idToken);
+          
+          // Fetch user data
+          const userResponse = await apiRequest('GET', '/api/me');
+          if (!userResponse.ok) {
+            throw new Error('Failed to get user data');
+          }
+          const userData = await userResponse.json();
+          setUser(userData);
+          
+          // Fetch user organizations
+          const orgsResponse = await apiRequest('GET', '/api/organizations');
+          if (!orgsResponse.ok) {
+            throw new Error('Failed to get organizations');
+          }
+          const organizationsData = await orgsResponse.json();
+          setOrganizations(organizationsData);
+          
+          // Set current organization (either from localStorage or first available)
+          const storedOrgId = localStorage.getItem('currentOrganizationId');
+          let selectedOrg: Organization | undefined;
+          
+          if (storedOrgId) {
+            selectedOrg = organizationsData.find((org: any) => org.id === parseInt(storedOrgId));
+          }
+          
+          if (!selectedOrg && organizationsData.length > 0) {
+            selectedOrg = organizationsData[0];
+            // Safely store the organization ID
+            if (selectedOrg && selectedOrg.id) {
+              localStorage.setItem('currentOrganizationId', selectedOrg.id.toString());
+            }
+          }
+          
+          if (selectedOrg) {
+            setCurrentOrganization(selectedOrg);
+            
+            // Set the organization context in the backend
+            await apiRequest('POST', '/api/set-organization', {
+              organizationId: selectedOrg.id
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load user data',
+            variant: 'destructive',
+          });
+          await firebaseSignOut(auth);
+          setUser(null);
+          setFirebaseUser(null);
+          localStorage.removeItem('firebase_token');
+        }
+      } else {
+        setUser(null);
+        setFirebaseUser(null);
+        setOrganizations([]);
+        setCurrentOrganization(null);
+        localStorage.removeItem('firebase_token');
+        localStorage.removeItem('currentOrganizationId');
+      }
+      
+      setIsLoading(false);
+    });
+    
+    return () => unsubscribe();
+  }, [auth, toast]);
+
+  const handleAuthError = (error: unknown) => {
+    console.error('Auth error:', error);
+    let errorMessage = 'Authentication failed';
+    
+    if (error instanceof FirebaseError) {
+      switch (error.code) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+          errorMessage = 'Invalid email or password';
+          break;
+        case 'auth/email-already-in-use':
+          errorMessage = 'Email already in use';
+          break;
+        case 'auth/weak-password':
+          errorMessage = 'Password is too weak';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email address';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your connection';
+          break;
+        default:
+          errorMessage = error.message;
+      }
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+    
+    setError(errorMessage);
+    toast({
+      title: 'Error',
+      description: errorMessage,
+      variant: 'destructive',
+    });
+  };
+
+  const signIn = async (email: string, password: string) => {
+    setIsSigningIn(true);
+    setError(null);
+    
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      setIsSigningIn(false);
+    } catch (error) {
+      setIsSigningIn(false);
+      handleAuthError(error);
+      throw error;
+    }
+  };
+
+  const signUp = async (email: string, password: string, name: string) => {
+    setIsSigningUp(true);
+    setError(null);
+    
+    try {
+      const credential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Update the user's display name
+      if (credential.user) {
+        await firebaseUpdateProfile(credential.user, { displayName: name });
+      }
+      
+      setIsSigningUp(false);
+    } catch (error) {
+      setIsSigningUp(false);
+      handleAuthError(error);
+      throw error;
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    setIsSigningIn(true);
+    setError(null);
+    
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      setIsSigningIn(false);
+    } catch (error) {
+      setIsSigningIn(false);
+      handleAuthError(error);
+      throw error;
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      await firebaseSignOut(auth);
+      localStorage.removeItem('firebase_token');
+      localStorage.removeItem('currentOrganizationId');
+    } catch (error) {
+      handleAuthError(error);
+    }
+  };
+
+  const switchOrganization = async (organizationId: number) => {
+    try {
+      const org = organizations.find(org => org.id === organizationId);
+      if (!org) {
+        throw new Error('Organization not found');
+      }
+      
+      setCurrentOrganization(org);
+      localStorage.setItem('currentOrganizationId', organizationId.toString());
+      
+      // Set the organization context in the backend
+      await apiRequest('POST', '/api/set-organization', {
+        organizationId
+      });
+      
+      // Reload organization-specific data
+      // This would be a good place to invalidate React Query caches for organization data
+      
+      toast({
+        title: 'Organization switched',
+        description: `You are now working in ${org.name}`,
+      });
+    } catch (error) {
+      console.error('Error switching organization:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to switch organization',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const createOrganization = async (name: string) => {
+    try {
+      const response = await apiRequest('POST', '/api/organizations', { name });
+      if (!response.ok) {
+        throw new Error('Failed to create organization');
+      }
+      
+      const newOrg = await response.json();
+      
+      setOrganizations(prev => [...prev, { ...newOrg, role: 'owner' }]);
+      setCurrentOrganization(newOrg);
+      localStorage.setItem('currentOrganizationId', newOrg.id.toString());
+      
+      // Set the organization context in the backend
+      await apiRequest('POST', '/api/set-organization', {
+        organizationId: newOrg.id
+      });
+      
+      toast({
+        title: 'Organization created',
+        description: `${name} has been created successfully`,
+      });
+    } catch (error) {
+      console.error('Error creating organization:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create organization',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const value = {
+    user,
+    isLoading,
+    isSigningIn,
+    isSigningUp,
+    error,
+    organizations,
+    currentOrganization,
+    signIn,
+    signUp,
+    signInWithGoogle,
+    signOut,
+    switchOrganization,
+    createOrganization,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
