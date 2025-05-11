@@ -1699,8 +1699,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isDevelopmentMode = process.env.NODE_ENV === 'development' && 
         authHeader && authHeader.startsWith('Bearer dev-token-');
       
-      // Use organizationId from request or use 1 for development mode
-      const organizationId = isDevelopmentMode ? 1 : req.organizationId;
+      // For new organizations during onboarding, get the organization ID from user organizations
+      let organizationId = isDevelopmentMode ? 1 : req.organizationId;
+      
+      // If organization ID is not set and we're not in development mode, try to find user's organization
+      if (!organizationId && !isDevelopmentMode && req.user) {
+        try {
+          // Find the user's organization
+          const [userOrg] = await db
+            .select()
+            .from(organizationUsers)
+            .where(eq(organizationUsers.userId, req.user.uid));
+            
+          if (userOrg) {
+            organizationId = userOrg.organizationId;
+            console.log(`Found organization ${organizationId} for user ${req.user.uid}`);
+            
+            // Set for this request
+            req.organizationId = organizationId;
+            (global as any).currentOrganizationId = organizationId;
+          }
+        } catch (orgError) {
+          console.error('Error finding user organization:', orgError);
+        }
+      }
       
       console.log(`Processing settings for organization: ${organizationId}, type: ${type}, isDevelopmentMode: ${isDevelopmentMode}`);
       console.log(`Received data:`, JSON.stringify(data, null, 2));
