@@ -4,33 +4,51 @@ import { db } from './db';
 import { users, organizations, organizationUsers } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { readFileSync, existsSync } from 'fs';
 
 // Flag to indicate if Firebase Admin SDK is initialized
 let firebaseInitialized = false;
 console.log('Initializing Firebase Admin with Project ID:', process.env.VITE_FIREBASE_PROJECT_ID);
 
 try {
-  // Check if required environment variables are available
-  if (
-    process.env.FIREBASE_ADMIN_PRIVATE_KEY &&
-    process.env.FIREBASE_ADMIN_CLIENT_EMAIL &&
-    process.env.VITE_FIREBASE_PROJECT_ID
-  ) {
-    // Initialize Firebase Admin SDK with the service account credentials
+  // Path to the service account file
+  const serviceAccountPath = './attached_assets/repairtrackerpro-eba5d-firebase-adminsdk-fbsvc-aa4e33f894.json';
+  
+  if (existsSync(serviceAccountPath)) {
+    // Read and parse the service account credentials
+    const serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
+    
+    // Initialize Firebase Admin with the service account
     admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.VITE_FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-        // The private key comes as a string with "\n" characters
-        // We need to replace them with actual newlines
-        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      }),
+      credential: admin.credential.cert(serviceAccount)
     });
     
     firebaseInitialized = true;
-    console.log('Firebase Admin SDK initialized successfully');
+    console.log('Firebase Admin SDK initialized successfully with service account');
   } else {
-    console.log('Missing Firebase Admin credentials, skipping initialization');
+    console.log('Service account file not found, checking environment variables');
+    
+    // Fall back to environment variables if file not found
+    if (
+      process.env.FIREBASE_ADMIN_PRIVATE_KEY &&
+      process.env.FIREBASE_ADMIN_CLIENT_EMAIL &&
+      process.env.VITE_FIREBASE_PROJECT_ID
+    ) {
+      const credentials = {
+        projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      };
+      
+      admin.initializeApp({
+        credential: admin.credential.cert(credentials),
+      });
+      
+      firebaseInitialized = true;
+      console.log('Firebase Admin SDK initialized successfully with env variables');
+    } else {
+      console.log('Missing Firebase Admin credentials, running in development mode');
+    }
   }
 } catch (error) {
   console.error('Error initializing Firebase Admin SDK:', error);

@@ -355,9 +355,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Special handling for development mode if Google sign-in fails
       // This is a fallback for when Google sign-in fails due to misconfiguration
-      if (error.code === 'auth/unauthorized-domain' || 
-          error.code === 'auth/operation-not-allowed' ||
-          error.code === 'auth/internal-error') {
+      if (error instanceof FirebaseError && 
+          (error.code === 'auth/unauthorized-domain' || 
+           error.code === 'auth/operation-not-allowed' ||
+           error.code === 'auth/internal-error')) {
         console.log('Google auth failed, using development auth as fallback');
         useDevelopmentAuth('dev@example.com', 'Development User (Google)');
         return;
