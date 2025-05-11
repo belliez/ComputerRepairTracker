@@ -927,7 +927,7 @@ const SettingsPage = () => {
                           <FormItem>
                             <FormLabel>Business Email</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="contact@yourcompany.com" />
+                              <Input {...field} value={field.value || ''} placeholder="contact@yourcompany.com" />
                             </FormControl>
                             <FormDescription>
                               This email will be used on invoices and customer communications
@@ -943,7 +943,7 @@ const SettingsPage = () => {
                           <FormItem>
                             <FormLabel>Business Phone</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="(555) 123-4567" />
+                              <Input {...field} value={field.value || ''} placeholder="(555) 123-4567" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -956,7 +956,7 @@ const SettingsPage = () => {
                           <FormItem>
                             <FormLabel>Business Address</FormLabel>
                             <FormControl>
-                              <Input {...field} placeholder="123 Main St, Anytown, ST 12345" />
+                              <Input {...field} value={field.value || ''} placeholder="123 Main St, Anytown, ST 12345" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>

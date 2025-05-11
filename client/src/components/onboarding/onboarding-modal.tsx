@@ -568,22 +568,29 @@ export function OnboardingModal({
   });
   
   const handleCompanyInfoComplete = (data) => {
+    // Ensure data values are not undefined or null
+    const company = {
+      name: data.name || '',
+      email: data.email || '',
+      phone: data.phone || '',
+      address: data.address || ''
+    };
+    
     // Update the persistent form data
     setFormData(prev => ({
       ...prev,
-      company: {
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        address: data.address
-      }
+      company
     }));
     
+    // Log what we're sending to the server
+    console.log('Sending company data to server:', {
+      ...company,
+      type: 'company'
+    });
+    
+    // Send to server
     saveSettingsMutation.mutate({
-      name: data.name,
-      email: data.email,
-      phone: data.phone,
-      address: data.address,
+      ...company,
       type: 'company'
     });
     

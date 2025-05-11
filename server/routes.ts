@@ -1768,11 +1768,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Create an updated settings object
           console.log('Company data received:', data);
+          
+          // Convert empty/null/undefined values to empty strings to avoid null in the database
+          const email = data.email === null || data.email === undefined ? '' : data.email;
+          const phone = data.phone === null || data.phone === undefined ? '' : data.phone;
+          const address = data.address === null || data.address === undefined ? '' : data.address;
+          
           const updatedSettings = {
             ...currentSettings,
-            email: data.email || null,
-            phone: data.phone || null,
-            address: data.address || null
+            email: email,
+            phone: phone,
+            address: address
           };
           console.log('Updated settings object:', updatedSettings);
           
