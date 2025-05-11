@@ -68,6 +68,7 @@ export const insertTechnicianSchema = createInsertSchema(technicians).omit({
 // Parts/Inventory
 export const inventoryItems = pgTable("inventory_items", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id"), // Added for multi-tenancy
   name: text("name").notNull(),
   description: text("description"),
   category: text("category").notNull(),
@@ -102,6 +103,7 @@ export const repairStatuses = [
 
 export const repairs = pgTable("repairs", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id"), // Added for multi-tenancy
   ticketNumber: text("ticket_number").notNull().unique(),
   customerId: integer("customer_id").notNull().references(() => customers.id),
   deviceId: integer("device_id").references(() => devices.id), // Made optional by removing .notNull()
@@ -167,6 +169,7 @@ export const insertRepairItemSchema = createInsertSchema(repairItems).omit({
 // Quotes
 export const quotes = pgTable("quotes", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id"), // Added for multi-tenancy
   repairId: integer("repair_id").notNull().references(() => repairs.id),
   quoteNumber: text("quote_number").notNull().unique(),
   dateCreated: timestamp("date_created").notNull().defaultNow(),
@@ -198,6 +201,7 @@ export const insertQuoteSchema = baseQuoteSchema.extend({
 // Invoices
 export const invoices = pgTable("invoices", {
   id: serial("id").primaryKey(),
+  organizationId: integer("organization_id"), // Added for multi-tenancy
   repairId: integer("repair_id").notNull().references(() => repairs.id),
   invoiceNumber: text("invoice_number").notNull().unique(),
   dateIssued: timestamp("date_issued").notNull().defaultNow(),
@@ -398,63 +402,63 @@ export const subscriptionPlans = pgTable("subscription_plans", {
 // Add organizationId to all tables that need tenant isolation
 export const customersRelations = relations(customers, ({ one }) => ({
   organization: one(organizations, {
-    fields: [customers.id],
+    fields: [customers.organizationId],
     references: [organizations.id],
   }),
 }));
 
 export const devicesRelations = relations(devices, ({ one }) => ({
   organization: one(organizations, {
-    fields: [devices.id],
+    fields: [devices.organizationId],
     references: [organizations.id],
   }),
 }));
 
 export const techniciansRelations = relations(technicians, ({ one }) => ({
   organization: one(organizations, {
-    fields: [technicians.id],
+    fields: [technicians.organizationId],
     references: [organizations.id],
   }),
 }));
 
 export const inventoryItemsRelations = relations(inventoryItems, ({ one }) => ({
   organization: one(organizations, {
-    fields: [inventoryItems.id],
+    fields: [inventoryItems.organizationId],
     references: [organizations.id],
   }),
 }));
 
 export const repairsRelations = relations(repairs, ({ one }) => ({
   organization: one(organizations, {
-    fields: [repairs.id],
+    fields: [repairs.organizationId],
     references: [organizations.id],
   }),
 }));
 
 export const quotesRelations = relations(quotes, ({ one }) => ({
   organization: one(organizations, {
-    fields: [quotes.id],
+    fields: [quotes.organizationId],
     references: [organizations.id],
   }),
 }));
 
 export const invoicesRelations = relations(invoices, ({ one }) => ({
   organization: one(organizations, {
-    fields: [invoices.id],
+    fields: [invoices.organizationId],
     references: [organizations.id],
   }),
 }));
 
 export const currenciesRelations = relations(currencies, ({ one }) => ({
   organization: one(organizations, {
-    fields: [currencies.code],
+    fields: [currencies.organizationId],
     references: [organizations.id],
   }),
 }));
 
 export const taxRatesRelations = relations(taxRates, ({ one }) => ({
   organization: one(organizations, {
-    fields: [taxRates.id],
+    fields: [taxRates.organizationId],
     references: [organizations.id],
   }),
 }));
