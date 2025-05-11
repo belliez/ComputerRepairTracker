@@ -55,11 +55,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // IMPORTANT: Intentionally adding these routes BEFORE any middleware to ensure they're accessible
   
   // Public routes (no auth required)
+  // Serve static files from the public directory
+  app.use('/public', express.static('public'));
+  
+  // Direct route to our simplified auth test page
+  app.get('/simple-auth', (req: Request, res: Response) => {
+    console.log('Serving simple auth page');
+    res.sendFile('simple-auth.html', { root: './public' });
+  });
+  
   // Auth page data route - always publicly accessible
   app.get('/api/auth-data', (req: Request, res: Response) => {
     console.log('Auth data endpoint called');
     res.status(200).json({
-      message: 'Auth data fetched successfully',
+      message: 'Auth data fetched successfully', 
       appName: 'RepairTrack',
       appDescription: 'Professional repair shop management system',
       enableGoogleAuth: true
