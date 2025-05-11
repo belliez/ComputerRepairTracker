@@ -13,7 +13,8 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, Building, ChevronDown, LogOut, Search, User as UserIcon } from "lucide-react";
+import { Bell, Building, ChevronDown, LogOut, Search, User as UserIcon, Bug as BugIcon } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface HeaderProps {
   onSidebarToggle: () => void;
@@ -23,6 +24,7 @@ interface HeaderProps {
 
 export default function Header({ onSidebarToggle, user, organization }: HeaderProps) {
   const { organizations, switchOrganization, signOut } = useAuth();
+  const { toast } = useToast();
   
   // Query to get urgent repairs (priority 1 or 2, not completed or cancelled)
   const { data: urgentRepairs = [] } = useQuery<any[]>({
@@ -137,10 +139,21 @@ export default function Header({ onSidebarToggle, user, organization }: HeaderPr
               <span>Organization Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => localStorage.removeItem('useDevelopmentAuth')}>
-              <UserIcon className="mr-2 h-4 w-4" />
-              <span>Disable Development Mode</span>
-            </DropdownMenuItem>
+            {/* Only show dev mode option if in dev mode */}
+            {localStorage.getItem('useDevelopmentAuth') === 'true' && (
+              <DropdownMenuItem onClick={() => {
+                localStorage.removeItem('useDevelopmentAuth');
+                toast({
+                  title: "Development Mode Disabled",
+                  description: "Reloading application..."
+                });
+                // Give time for toast to appear then reload
+                setTimeout(() => window.location.reload(), 1000);
+              }}>
+                <BugIcon className="mr-2 h-4 w-4" />
+                <span>Disable Development Mode</span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => signOut()}>
               <LogOut className="mr-2 h-4 w-4" />
               <span>Log Out</span>
