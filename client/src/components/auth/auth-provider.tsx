@@ -56,8 +56,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [organizations, setOrganizations] = useState<OrganizationWithRole[]>([]);
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null);
 
-  // Listen for Firebase auth state changes
+  // Listen for Firebase auth state changes and also check for development mode
   useEffect(() => {
+    // Special handling for development mode
+    const devMode = localStorage.getItem('dev_mode') === 'true';
+    const devUser = localStorage.getItem('dev_user');
+    
+    if (devMode && devUser) {
+      console.log('Development mode detected, using mock user');
+      const mockUser = JSON.parse(devUser);
+      setIsLoading(false);
+      
+      // Create a fully mock user with organization for development
+      const user = {
+        id: mockUser.id,
+        email: mockUser.email,
+        displayName: mockUser.displayName,
+        photoURL: null,
+        lastLoginAt: new Date(),
+      };
+      
+      const mockOrg = {
+        id: 1,
+        name: 'Development Organization',
+        slug: 'dev-org',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ownerId: mockUser.id,
+        logo: null,
+        stripeSubscriptionId: null,
+        subscriptionStatus: null,
+        trialEndsAt: null,
+        planId: null,
+        billingEmail: mockUser.email,
+        billingName: mockUser.displayName,
+        billingAddress: null,
+        deleted: false,
+        deletedAt: null,
+        role: 'owner' as const
+      };
+      
+      setUser(user as any);
+      setOrganizations([mockOrg as any]);
+      setCurrentOrganization(mockOrg as any);
+      localStorage.setItem('currentOrganizationId', '1');
+      
+      return () => {};  // No cleanup for dev mode
+    }
+    
+    // Normal Firebase auth flow
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setIsLoading(true);
       

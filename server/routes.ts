@@ -58,6 +58,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/organizations', authenticateJWT, createOrganization);
   app.post('/api/organizations/invite', authenticateJWT, addUserToOrganization);
   app.post('/api/organizations/accept-invite', authenticateJWT, acceptOrganizationInvite);
+  
+  // Development-only endpoints
+  if (process.env.NODE_ENV === 'development') {
+    app.post('/api/dev-login', (req: Request, res: Response) => {
+      console.log('Using development login endpoint');
+      // This is only for development, and just returns a 200 response
+      // The actual login bypass happens on the client side
+      res.status(200).json({ message: 'Development login successful' });
+    });
+  }
   app.post('/api/set-organization', authenticateJWT, (req: Request, res: Response) => {
     const { organizationId } = req.body;
     if (!organizationId) {

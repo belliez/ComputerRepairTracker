@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/components/auth/auth-provider';
 import { useLocation } from 'wouter';
-import { Loader2, Mail } from 'lucide-react';
+import { Loader2, Mail, BugPlay } from 'lucide-react';
 
 const AuthPage: React.FC = () => {
   const [, setLocation] = useLocation();
@@ -21,6 +21,10 @@ const AuthPage: React.FC = () => {
     isSigningIn, 
     isSigningUp 
   } = useAuth();
+  
+  // Development login function - only visible in development builds
+  // This is a direct method to bypass Firebase authentication
+  const isDevelopment = process.env.NODE_ENV === 'development' || import.meta.env.MODE === 'development';
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -67,6 +71,48 @@ const AuthPage: React.FC = () => {
       setLocation('/');
     } catch (error: any) {
       // Error handling is done in the auth provider
+    }
+  };
+  
+  // Handle direct development login (bypass Firebase)
+  const handleDevLogin = () => {
+    try {
+      // Call the development login endpoint
+      fetch('/api/dev-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: 'dev@example.com',
+          name: 'Development User'
+        }),
+      }).then(() => {
+        // Create direct implementation of dev auth flow in the client
+        
+        // Create a mock development user directly in localStorage
+        localStorage.setItem('dev_mode', 'true');
+        localStorage.setItem('dev_user', JSON.stringify({
+          id: 'dev-user-123',
+          email: 'dev@example.com',
+          displayName: 'Development User',
+        }));
+        
+        toast({
+          title: 'Development Mode',
+          description: 'Using development authentication',
+        });
+        
+        // Redirect to home page
+        setLocation('/');
+      });
+    } catch (error) {
+      console.error('Development login error:', error);
+      toast({
+        title: 'Error',
+        description: 'Development login failed',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -136,7 +182,7 @@ const AuthPage: React.FC = () => {
                     </Button>
                   </form>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex flex-col space-y-2">
                   <Button 
                     variant="outline" 
                     className="w-full" 
@@ -146,6 +192,17 @@ const AuthPage: React.FC = () => {
                     <Mail className="mr-2 h-4 w-4" />
                     Sign in with Google
                   </Button>
+                  
+                  {isDevelopment && (
+                    <Button 
+                      variant="secondary" 
+                      className="w-full" 
+                      onClick={handleDevLogin}
+                    >
+                      <BugPlay className="mr-2 h-4 w-4" />
+                      Development Login
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             </TabsContent>
@@ -203,7 +260,7 @@ const AuthPage: React.FC = () => {
                     </Button>
                   </form>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex flex-col space-y-2">
                   <Button 
                     variant="outline" 
                     className="w-full" 
@@ -213,6 +270,17 @@ const AuthPage: React.FC = () => {
                     <Mail className="mr-2 h-4 w-4" />
                     Sign up with Google
                   </Button>
+                  
+                  {isDevelopment && (
+                    <Button 
+                      variant="secondary" 
+                      className="w-full" 
+                      onClick={handleDevLogin}
+                    >
+                      <BugPlay className="mr-2 h-4 w-4" />
+                      Development Login
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             </TabsContent>
