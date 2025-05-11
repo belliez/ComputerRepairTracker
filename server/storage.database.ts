@@ -96,13 +96,19 @@ export class DatabaseStorage implements IStorage {
   }
   
   async restoreTechnician(id: number): Promise<Technician | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Restoring technician ${id} in organization: ${orgId}`);
+    
     const [restoredTechnician] = await db
       .update(technicians)
       .set({
         deleted: false,
         deletedAt: null
       })
-      .where(eq(technicians.id, id))
+      .where(and(
+        eq(technicians.id, id),
+        eq((technicians as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
     return restoredTechnician;
   }
@@ -460,6 +466,9 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTechnician(id: number): Promise<boolean> {
     try {
+      const orgId = (global as any).currentOrganizationId || 1;
+      console.log(`Deleting technician ${id} in organization: ${orgId}`);
+      
       // Check if technician is assigned to any repairs
       const technicianRepairs = await this.getRepairsByTechnician(id);
       
@@ -475,7 +484,10 @@ export class DatabaseStorage implements IStorage {
           deleted: true,
           deletedAt: new Date()
         })
-        .where(eq(technicians.id, id))
+        .where(and(
+          eq(technicians.id, id),
+          eq((technicians as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+        ))
         .returning();
         
       return !!updatedTechnician;
@@ -593,11 +605,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRepairsByTechnician(technicianId: number): Promise<Repair[]> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching repairs for technician ${technicianId} in organization: ${orgId}`);
+    
     return db.select()
       .from(repairs)
       .where(and(
         eq(repairs.technicianId, technicianId),
-        eq(repairs.deleted, false)
+        eq(repairs.deleted, false),
+        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
       ));
   }
 
