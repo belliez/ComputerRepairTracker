@@ -29,6 +29,15 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     
     // Safely access the settings property which might be undefined
     const settings = currentOrganization.settings || {};
+    
+    // Debug - log what we're seeing
+    console.log('Checking onboarding status:', { 
+      settings, 
+      onboardingCompleted: settings.onboardingCompleted,
+      organizationId: currentOrganization.id
+    });
+    
+    // Check if onboardingCompleted is explicitly true
     return settings.onboardingCompleted === true;
   }, [currentOrganization]);
   
