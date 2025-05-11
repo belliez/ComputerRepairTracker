@@ -17,15 +17,17 @@ import {
 } from "@shared/schema";
 import { runMultiTenancyMigration } from './migrations/001-add-multi-tenancy';
 import { runSettingsOrganizationMigration } from './migrations/002-add-settings-organization-id';
+import { fixOrganizationRelations } from './migrations/003-fix-organization-relations';
 
 // Initialize demo data
 export async function initializeDemo() {
   console.log('Initializing demo data...');
   
   try {
-    // Run multi-tenancy migration first
+    // Run all migrations in order
     await runMultiTenancyMigration();
     await runSettingsOrganizationMigration();
+    await fixOrganizationRelations();
     
     // Initialize development user and organization
     await initializeDevEnvironment();
