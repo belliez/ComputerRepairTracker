@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from '@/components/auth/auth-provider';
-import OnboardingModal from './onboarding-modal';
+import { OnboardingModal } from './onboarding-modal';
 
 interface OnboardingContextType {
   isOnboardingComplete: boolean;
@@ -27,7 +27,9 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const isOnboardingComplete = React.useMemo(() => {
     if (!currentOrganization) return false;
     
-    return currentOrganization.settings?.onboardingCompleted === true;
+    // Safely access the settings property which might be undefined
+    const settings = currentOrganization.settings || {};
+    return settings.onboardingCompleted === true;
   }, [currentOrganization]);
   
   // Show onboarding automatically if user is logged in but onboarding is not complete

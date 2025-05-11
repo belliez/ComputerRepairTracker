@@ -1569,6 +1569,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Organization settings endpoint for onboarding
+  apiRouter.post("/settings/organization", authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      const { type, ...data } = req.body;
+      const organizationId = req.organizationId;
+      
+      if (!organizationId) {
+        return res.status(403).json({ message: "No organization selected" });
+      }
+      
+      // Handle different types of settings
+      switch (type) {
+        case 'company':
+          await db.update(organizations)
+            .set({
+              name: data.name,
+              contactEmail: data.email,
+              phone: data.phone,
+              address: data.address,
+              updatedAt: new Date()
+            })
+            .where(eq(organizations.id, organizationId));
+          break;
+          
+        case 'tax':
+          // Delete existing tax rates
+          await db.delete(taxRates)
+            .where(eq(taxRates.organizationId, organizationId));
+            
+          // Add new tax rates
+          if (data.taxRates && Array.isArray(data.taxRates)) {
+            for (const tax of data.taxRates) {
+              await db.insert(taxRates).values({
+                name: tax.name,
+                rate: tax.rate,
+                isDefault: tax.isDefault,
+                organizationId
+              });
+            }
+          }
+          break;
+          
+        case 'currency':
+          // Delete existing currencies
+          await db.delete(currencies)
+            .where(eq(currencies.organizationId, organizationId));
+            
+          // Add new currency
+          if (data.currency) {
+            await db.insert(currencies).values({
+              code: data.currency.code,
+              symbol: data.currency.symbol,
+              name: data.currency.name,
+              isDefault: data.currency.isDefault,
+              organizationId
+            });
+          }
+          break;
+          
+        case 'technicians':
+          // Add new technicians
+          if (data.technicians && Array.isArray(data.technicians)) {
+            for (const tech of data.technicians) {
+              if (tech.name) {
+                await db.insert(technicians).values({
+                  name: tech.name,
+                  email: tech.email || null,
+                  phone: tech.phone || null,
+                  role: tech.role || null,
+                  isActive: tech.isActive !== false,
+                  organizationId
+                });
+              }
+            }
+          }
+          break;
+          
+        case 'onboarding':
+          // Update organization settings
+          const org = await db.select().from(organizations)
+            .where(eq(organizations.id, organizationId))
+            .limit(1);
+            
+          if (org.length > 0) {
+            const currentSettings = org[0].settings || {};
+            
+            await db.update(organizations)
+              .set({ 
+                settings: { 
+                  ...currentSettings, 
+                  onboardingCompleted: true 
+                },
+                updatedAt: new Date()
+              })
+              .where(eq(organizations.id, organizationId));
+          }
+          break;
+          
+        default:
+          return res.status(400).json({ message: "Invalid settings type" });
+      }
+      
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating organization settings:", error);
+      return res.status(500).json({ message: "Failed to update organization settings" });
+    }
+  });
+
   // Delete All Data endpoint
   // Trash management - view and restore deleted records
   apiRouter.get("/trash/customers", async (req: Request, res: Response) => {
