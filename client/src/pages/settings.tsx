@@ -243,7 +243,6 @@ const SettingsPage = () => {
     isLoading: isLoadingOrganization,
   } = useQuery<Organization>({
     queryKey: ['/api/organizations'],
-    enabled: activeTab === 'organization',
     select: (data) => {
       return Array.isArray(data) && data.length > 0 ? data[0] : null;
     }
