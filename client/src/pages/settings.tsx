@@ -264,8 +264,14 @@ const SettingsPage = () => {
     },
     onError: (error) => {
       console.error('❌ Error loading currencies:', error);
-      console.error('Error details:', JSON.stringify(error));
-    }
+      try {
+        console.error('Error details:', JSON.stringify(error));
+      } catch (e) {
+        console.error('Error could not be stringified:', error.message);
+      }
+    },
+    retry: 1,
+    refetchOnWindowFocus: false
   });
   
   const {
@@ -284,16 +290,41 @@ const SettingsPage = () => {
     },
     onError: (error) => {
       console.error('❌ Error loading tax rates:', error);
-      console.error('Error details:', JSON.stringify(error));
-    }
+      try {
+        console.error('Error details:', JSON.stringify(error));
+      } catch (e) {
+        console.error('Error could not be stringified:', error.message);
+      }
+    },
+    retry: 1,
+    refetchOnWindowFocus: false
   });
   
   const {
     data: technicians = [],
     isLoading: isLoadingTechnicians,
+    error: techniciansError
   } = useQuery<Technician[]>({
     queryKey: ['/api/technicians'],
     enabled: activeTab === 'technicians',
+    onSuccess: (data) => {
+      console.log('✅ Technicians loaded successfully:', data);
+      console.log('Technicians type:', typeof data);
+      console.log('Is Array:', Array.isArray(data));
+      if (Array.isArray(data)) {
+        console.log('Number of technicians:', data.length);
+      }
+    },
+    onError: (error) => {
+      console.error('❌ Error loading technicians:', error);
+      try {
+        console.error('Error details:', JSON.stringify(error));
+      } catch (e) {
+        console.error('Error could not be stringified:', error.message);
+      }
+    },
+    retry: 1,
+    refetchOnWindowFocus: false
   });
   
   // Trash management queries
