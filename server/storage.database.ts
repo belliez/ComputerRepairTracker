@@ -32,15 +32,31 @@ import { db } from "./db";
 export class DatabaseStorage implements IStorage {
   // Methods for deleted records management
   async getDeletedCustomers(): Promise<Customer[]> {
-    return db.select().from(customers).where(eq(customers.deleted, true));
+    const orgId = (global as any).currentOrganizationId || 2;
+    console.log(`Fetching deleted customers for organization: ${orgId}`);
+    
+    return db.select()
+      .from(customers)
+      .where(and(
+        eq(customers.deleted, true),
+        eq(customers.organizationId, orgId)
+      ));
   }
   
   async getDeletedDevices(): Promise<Device[]> {
-    return db.select().from(devices).where(eq(devices.deleted, true));
+    const orgId = (global as any).currentOrganizationId || 2;
+    console.log(`Fetching deleted devices for organization: ${orgId}`);
+    
+    return db.select()
+      .from(devices)
+      .where(and(
+        eq(devices.deleted, true),
+        eq(devices.organizationId, orgId)
+      ));
   }
   
   async getDeletedRepairs(): Promise<Repair[]> {
-    const orgId = (global as any).currentOrganizationId || 1;
+    const orgId = (global as any).currentOrganizationId || 2;
     console.log(`Fetching deleted repairs for organization: ${orgId}`);
     
     return db.select()

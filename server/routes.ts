@@ -2510,28 +2510,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.delete("/settings/delete-all-data", async (req: Request, res: Response) => {
     try {
-      // With our cascading delete implementations, we can simplify this
-      // by just deleting customers first, which will handle all dependencies
+      // Get the current organization context
+      const orgId = (global as any).currentOrganizationId || 2;
       
-      // Get all customers and delete them (this will cascade to devices, repairs, etc.)
-      const customers = await storage.getCustomers();
-      for (const customer of customers) {
-        await storage.deleteCustomer(customer.id);
+      if (!orgId) {
+        return res.status(400).json({ error: "No organization context found" });
       }
       
-      // Delete any remaining technicians
-      const technicians = await storage.getTechnicians();
-      for (const technician of technicians) {
-        await storage.deleteTechnician(technician.id);
-      }
+      console.log(`Starting data deletion for organization: ${orgId}`);
       
-      // Delete any remaining inventory items
-      const inventoryItems = await storage.getInventoryItems();
-      for (const item of inventoryItems) {
-        await storage.deleteInventoryItem(item.id);
+      // Delete data in the correct order to respect foreign key constraints
+      try {
+        // 1. First delete repair items
+        await db.execute(sql`
+          DELETE FROM repair_items 
+          WHERE repair_id IN (
+            SELECT id FROM repairs 
+            WHERE organization_id = ${orgId}
+          )
+        `);
+        
+        // 2. Delete quotes and invoices
+        await db.execute(sql`
+          DELETE FROM quotes 
+          WHERE organization_id = ${orgId}
+        `);
+        
+        await db.execute(sql`
+          DELETE FROM invoices 
+          WHERE organization_id = ${orgId}
+        `);
+        
+        // 3. Delete repairs
+        await db.execute(sql`
+          DELETE FROM repairs 
+          WHERE organization_id = ${orgId}
+        `);
+        
+        // 4. Delete devices
+        await db.execute(sql`
+          DELETE FROM devices 
+          WHERE organization_id = ${orgId}
+        `);
+        
+        // 5. Delete customers
+        await db.execute(sql`
+          DELETE FROM customers 
+          WHERE organization_id = ${orgId}
+        `);
+        
+        // 6. Delete technicians
+        await db.execute(sql`
+          DELETE FROM technicians 
+          WHERE organization_id = ${orgId}
+        `);
+        
+        // 7. Delete inventory items
+        await db.execute(sql`
+          DELETE FROM inventory_items 
+          WHERE organization_id = ${orgId}
+        `);
+        
+        // Success!
+        console.log(`Successfully deleted all data for organization: ${orgId}`);
+        res.status(200).json({ 
+          message: "All data has been deleted successfully",
+          organizationId: orgId
+        });
+      } catch (sqlError: any) {
+        console.error(`SQL Error while deleting data: ${sqlError.message}`);
+        return res.status(500).json({ 
+          error: sqlError.message || "Database error while deleting data",
+          details: sqlError
+        });
       }
-
-      res.status(200).json({ message: "All data has been deleted successfully" });
     } catch (error: any) {
       console.error("Error deleting all data:", error);
       res.status(500).json({ error: error.message || "Failed to delete all data" });
