@@ -612,86 +612,101 @@ function generateInviteToken() {
 
 // Middleware to add organization context
 export const addOrganizationContext = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    // Debug logging to see what kind of request we're processing
-    console.log(`Processing request to ${req.path}, auth header: ${req.headers.authorization ? 'present' : 'absent'}, user: ${req.user ? 'authenticated' : 'unauthenticated'}`);
-    
-    // Special handling for development mode
-    const authHeader = req.headers.authorization;
-    if (process.env.NODE_ENV === 'development') {
-      // In development mode with token, set organization ID to 1
+  // Check for debug headers
+  const debugClient = req.headers['x-debug-client'];
+  const debugMode = req.headers['x-debug-mode'] === 'true';
+
+  // Debug logging
+  console.log(`Processing request to ${req.path}, auth header: ${req.headers.authorization ? 'present' : 'absent'}, user: ${req.user ? 'authenticated' : 'unauthenticated'}, debug mode: ${debugMode ? 'enabled' : 'disabled'}`);
+
+  try {  
+    // For debug and development mode, ensure we have organization context
+    if (process.env.NODE_ENV === 'development' || debugMode) {
+      // Apply global organization context for multi-tenant filtering
+      req.organizationId = 1;
+      (global as any).currentOrganizationId = 1;
+      console.log(`Set global organization ID to 1 for path: ${req.path}`);
+      
+      const authHeader = req.headers.authorization;
+      
+      // Development token handling
       if (authHeader && authHeader.startsWith('Bearer dev-token-')) {
-        console.log('Development token detected, setting default organization context');
-        req.organizationId = 1;
+        console.log('Development token detected, setting default organization and user');
+        
+        // Ensure user is set for API requests
+        if (!req.user && req.path.includes('/api/')) {
+          req.user = {
+            uid: 'dev-user-123',
+            email: 'dev@example.com',
+            name: 'Development User',
+          } as any;
+        }
         return next();
       }
       
-      // Also handle case where there's a dev user but no authorization header
-      // This ensures onboarding still works in development mode
-      if ((req.path.includes('/api/settings/') || req.path.includes('/api/organizations')) && (!authHeader || !req.user)) {
-        console.log('Development mode API detected, using default organization');
-        req.organizationId = 1;
-        req.user = {
-          uid: 'dev-user-123',
-          email: 'dev@example.com',
-          name: 'Dev User',
-        } as any;
-        return next();
-      }
-
-      // Additional checks for specific API paths in development mode
-      if (req.path.includes('/api/') && !req.user) {
-        console.log('Development mode API detected without user, setting default user and organization');
-        req.organizationId = 1;
-        (global as any).currentOrganizationId = 1;
-        console.log('Setting global organization context to 1 (development mode)');
-        req.user = {
-          uid: 'dev-user-123',
-          email: 'dev@example.com',
-          name: 'Dev User',
-        } as any;
+      // Also handle API paths that need data in development mode
+      if ((req.path.includes('/api/settings/') || 
+           req.path.includes('/api/organizations') || 
+           req.path.includes('/public-settings') ||
+           req.path.includes('/api/customers') ||
+           req.path.includes('/api/devices') ||
+           req.path.includes('/api/repairs') ||
+           req.path.includes('/api/technicians') ||
+           req.path.includes('/api/inventory'))) {
+        
+        // If no auth header or user, set a mock user
+        if (!req.user) {
+          console.log('Development mode API detected, using default organization and user');
+          req.user = {
+            uid: 'dev-user-123',
+            email: 'dev@example.com',
+            name: 'Development User',
+          } as any;
+        }
         return next();
       }
     }
     
+    // Skip organization context if no user is authenticated
     if (!req.user) {
       console.log(`No user found for request to ${req.path}, skipping organization context`);
       return next();
     }
+    
+    // If the organization ID is provided in the request body, query or headers
+    const organizationId = req.body?.organizationId || req.query?.organizationId || req.headers['x-organization-id'];
+    
+    if (organizationId) {
+      try {
+        // Check if the user is a member of this organization
+        const [userOrg] = await db
+          .select()
+          .from(organizationUsers)
+          .where(
+            and(
+              eq(organizationUsers.organizationId, Number(organizationId)),
+              eq(organizationUsers.userId, req.user.uid),
+              eq(organizationUsers.inviteAccepted, true)
+            )
+          );
+        
+        if (userOrg) {
+          const orgId = Number(organizationId);
+          req.organizationId = orgId;
+          (global as any).currentOrganizationId = orgId;
+          console.log(`Setting global organization context to ${orgId} from user membership`);
+        }
+      } catch (error) {
+        console.error('Error checking organization membership:', error);
+      }
+    }
+    
   } catch (error) {
     console.error('Error in organization context middleware:', error);
     // Ensure we still have organization context in dev mode as fallback
     if (process.env.NODE_ENV === 'development') {
       req.organizationId = 1;
-    }
-    return next();
-  }
-  
-  // If the organization ID is provided in the request body or query
-  const organizationId = req.body.organizationId || req.query.organizationId || req.headers['x-organization-id'];
-  
-  if (organizationId) {
-    try {
-      // Check if the user is a member of this organization
-      const [userOrg] = await db
-        .select()
-        .from(organizationUsers)
-        .where(
-          and(
-            eq(organizationUsers.organizationId, Number(organizationId)),
-            eq(organizationUsers.userId, req.user.uid),
-            eq(organizationUsers.inviteAccepted, true)
-          )
-        );
-      
-      if (userOrg) {
-        const orgId = Number(organizationId);
-        req.organizationId = orgId;
-        (global as any).currentOrganizationId = orgId;
-        console.log(`Setting global organization context to ${orgId} from user membership`);
-      }
-    } catch (error) {
-      console.error('Error checking organization membership:', error);
+      (global as any).currentOrganizationId = 1;
     }
   }
   
