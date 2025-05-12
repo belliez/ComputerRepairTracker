@@ -241,7 +241,33 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
         
         console.log(`DEBUG: Making ${method} request to ${endpoint} with data:`, values);
         
-        const response = await apiRequest(method, endpoint, values);
+        // Enhanced error handling - we'll make the fetch request manually to better control the flow
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+          "X-Debug-Client": "RepairTrackerClient",
+        };
+        
+        // Add org ID header
+        const orgId = localStorage.getItem('currentOrganizationId');
+        if (orgId) {
+          headers["X-Organization-ID"] = orgId;
+        }
+        
+        // Add auth token if available
+        const token = localStorage.getItem("firebase_token");
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+        
+        console.log(`DEBUG: Using headers:`, headers);
+        
+        // Make the request
+        const response = await fetch(endpoint, {
+          method,
+          headers,
+          body: JSON.stringify(values),
+          credentials: "include"
+        });
         
         console.log(`DEBUG: API Response status:`, response.status);
         if (!response.ok) {
@@ -296,7 +322,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     console.log("DEBUG: Form onSubmit triggered with values:", values);
     
     try {
@@ -308,9 +334,29 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
       };
       
       console.log("DEBUG: Formatted values for submission:", formattedValues);
-      mutation.mutate(formattedValues);
+
+      // This is critical - the mutation will trigger the API call
+      await mutation.mutateAsync(formattedValues);
+      
+      // If we got here without errors, show success message
+      toast({
+        title: `Quote ${quoteId ? 'updated' : 'created'} successfully`,
+        description: `The quote has been ${quoteId ? 'updated' : 'created'} successfully.`,
+        variant: "success",
+      });
+      
+      // Close the dialog after successful submission
+      onClose();
+      
     } catch (error) {
       console.error("DEBUG: Error in onSubmit function:", error);
+      
+      // Show error toast
+      toast({
+        title: "Error saving quote",
+        description: error instanceof Error ? error.message : "An unknown error occurred",
+        variant: "destructive",
+      });
     }
   };
 
@@ -651,27 +697,8 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                   Cancel
                 </Button>
                 <Button 
-                  type="button"
+                  type="submit"
                   disabled={mutation.isPending}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    console.log("DEBUG: Manual form submission button clicked");
-                    
-                    // Log the form values
-                    console.log("FORM VALUES BEFORE SUBMIT:", form.getValues());
-                    
-                    // Check form validation
-                    if (!form.formState.isValid) {
-                      console.log("FORM VALIDATION ERRORS:", form.formState.errors);
-                    }
-                    
-                    // Use try-catch to catch any errors during submission
-                    try {
-                      form.handleSubmit(onSubmit)();
-                    } catch (error) {
-                      console.error("ERROR DURING FORM SUBMIT:", error);
-                    }
-                  }}
                 >
                   {mutation.isPending ? (
                     <span className="flex items-center">
