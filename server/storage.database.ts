@@ -1085,8 +1085,12 @@ export class DatabaseStorage implements IStorage {
       throw new Error(`Repair ${item.repairId} not found in current organization`);
     }
     
+    console.log("Validation passed, creating repair item");
+    
     // If validation passes, create the repair item
+    // Note: We don't need to add organizationId to repair items as they inherit it through the repairId relation
     const [newItem] = await db.insert(repairItems).values(item).returning();
+    console.log(`Repair item created successfully with ID: ${newItem.id}`);
     return newItem;
   }
 
@@ -1235,29 +1239,44 @@ export class DatabaseStorage implements IStorage {
     const orgId = (global as any).currentOrganizationId || 1;
     console.log(`Creating quote for repair ${quote.repairId} in organization: ${orgId}`);
     
-    // Verify that the repair belongs to the current organization before creating the quote
-    const repair = await db.select()
-      .from(repairs)
-      .where(and(
-        eq(repairs.id, quote.repairId),
-        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
-      ))
-      .limit(1);
+    try {
+      // Verify that the repair belongs to the current organization before creating the quote
+      console.log("Verifying repair belongs to organization...");
+      const repair = await db.select()
+        .from(repairs)
+        .where(and(
+          eq(repairs.id, quote.repairId),
+          eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+        ))
+        .limit(1);
+        
+      if (repair.length === 0) {
+        console.log(`Cannot create quote: Repair ${quote.repairId} not found in organization ${orgId}`);
+        throw new Error(`Repair ${quote.repairId} not found in current organization`);
+      }
       
-    if (repair.length === 0) {
-      console.log(`Cannot create quote: Repair ${quote.repairId} not found in organization ${orgId}`);
-      throw new Error(`Repair ${quote.repairId} not found in current organization`);
+      console.log("Repair validation passed, preparing quote data with organization context");
+      
+      // Add organization ID to the quote data
+      const quoteWithOrg = {
+        ...quote,
+        organizationId: orgId
+      };
+      
+      // If itemsData is very large, log its size but not its content
+      if (quoteWithOrg.itemsData) {
+        console.log(`Quote includes itemsData of length: ${quoteWithOrg.itemsData.length} characters`);
+      }
+      
+      // Create the quote with organization context
+      console.log("Inserting quote into database...");
+      const [newQuote] = await db.insert(quotes).values(quoteWithOrg as any).returning();
+      console.log(`Quote created successfully with ID: ${newQuote.id}`);
+      return newQuote;
+    } catch (error) {
+      console.error("Error in createQuote:", error);
+      throw error;
     }
-    
-    // Add organization ID to the quote data
-    const quoteWithOrg = {
-      ...quote,
-      organizationId: orgId
-    };
-    
-    // Create the quote with organization context
-    const [newQuote] = await db.insert(quotes).values(quoteWithOrg as any).returning();
-    return newQuote;
   }
 
   async updateQuote(id: number, quoteData: Partial<Quote>): Promise<Quote | undefined> {

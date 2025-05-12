@@ -1164,23 +1164,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/quotes", async (req: Request, res: Response) => {
     try {
-      console.log("Received quote data:", JSON.stringify(req.body));
+      console.log("Received quote data:", JSON.stringify(req.body, null, 2).substring(0, 200) + "...");
+      
       // First try to validate
       try {
+        console.log("Validating quote data with Zod schema...");
         const validatedData = insertQuoteSchema.parse(req.body);
-        console.log("Validated quote data:", JSON.stringify(validatedData));
+        console.log("Quote data validated successfully");
         
-        // Check for items data
+        // Check for items data but don't log the full data which could be very large
         if (validatedData.itemsData) {
-          console.log("Quote includes itemsData:", validatedData.itemsData);
           try {
             const parsedItems = JSON.parse(validatedData.itemsData);
-            console.log("Parsed itemsData successfully, contains", parsedItems.length, "items");
+            console.log(`Quote includes itemsData with ${parsedItems.length} items, data length: ${validatedData.itemsData.length} characters`);
           } catch (parseError) {
             console.error("Failed to parse itemsData:", parseError);
           }
         }
         
+        console.log("Calling storage.createQuote...");
         const quote = await storage.createQuote(validatedData);
         console.log("Quote created successfully with ID:", quote.id);
         res.status(201).json(quote);
@@ -1197,7 +1199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("Quote creation error:", error);
-      res.status(500).json({ error: "Failed to create quote" });
+      res.status(500).json({ error: "Failed to create quote", message: error instanceof Error ? error.message : String(error) });
     }
   });
 
