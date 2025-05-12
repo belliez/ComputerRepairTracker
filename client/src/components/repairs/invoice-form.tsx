@@ -116,14 +116,20 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
   let taxAmount = 0;
   let total = 0;
 
+  // Check if tax is enabled for the organization
+  const isTaxEnabled = organization?.settings?.enableTax !== false;
+  console.log("Invoice Form - Tax enabled for organization:", isTaxEnabled, organization?.settings);
+
   if (quoteToUse) {
     subtotal = quoteToUse.subtotal;
-    taxAmount = quoteToUse.tax || 0;
-    total = quoteToUse.total;
+    // If tax is disabled, override the quote tax amount
+    taxAmount = isTaxEnabled ? (quoteToUse.tax || 0) : 0;
+    total = subtotal + taxAmount;
   } else if (repairItems) {
     subtotal = repairItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
     const taxRate = 0.0825; // 8.25% tax - would come from settings in a real system
-    taxAmount = subtotal * taxRate;
+    // Only calculate tax if it's enabled for the organization
+    taxAmount = isTaxEnabled ? subtotal * taxRate : 0;
     total = subtotal + taxAmount;
   }
 
