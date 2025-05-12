@@ -95,10 +95,46 @@ export default function RepairInformation({
     }
   }, [repair, form]);
 
-  // Repair update mutation
+  // Repair update mutation with manual fetch
   const mutation = useMutation({
     mutationFn: async (data: z.infer<typeof formSchema>) => {
-      return apiRequest("PUT", `/api/repairs/${repair.id}`, data);
+      console.log("REPAIR INFO DEBUG: Updating repair with data:", data);
+      
+      // Prepare headers with organization context
+      const headers: Record<string, string> = {
+        "X-Debug-Client": "RepairTrackerClient",
+        "X-Organization-ID": localStorage.getItem('currentOrganizationId') || "2",
+        "Content-Type": "application/json",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+      };
+      
+      // Add auth token if available
+      const token = localStorage.getItem("firebase_token");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      console.log("REPAIR INFO DEBUG: Using headers:", headers);
+      
+      // Make the API request with fetch
+      const response = await fetch(`/api/repairs/${repair.id}`, {
+        method: 'PUT',
+        headers: headers,
+        body: JSON.stringify(data)
+      });
+      
+      console.log("REPAIR INFO DEBUG: Response status:", response.status);
+      
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error("REPAIR INFO DEBUG: Error response:", responseText);
+        throw new Error(`Failed to update repair: ${response.status}, ${responseText}`);
+      }
+      
+      const responseData = await response.json();
+      console.log("REPAIR INFO DEBUG: Response data:", responseData);
+      return responseData;
     },
     onSuccess: () => {
       // Invalidate and refetch repair data
@@ -106,16 +142,20 @@ export default function RepairInformation({
       queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repair.id}`] });
       queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repair.id}/details`] });
       
+      // Manual refetch after a short delay to ensure the UI updates
+      setTimeout(() => {
+        if (onRepairUpdated) {
+          onRepairUpdated();
+        }
+      }, 500);
+      
       toast({
         title: "Repair updated",
         description: "Repair information has been updated successfully",
       });
-      
-      if (onRepairUpdated) {
-        onRepairUpdated();
-      }
     },
     onError: (error) => {
+      console.error("REPAIR INFO DEBUG: Update error:", error);
       toast({
         title: "Error",
         description: `Failed to update repair: ${error.message}`,
