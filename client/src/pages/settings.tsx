@@ -248,31 +248,44 @@ const SettingsPage = () => {
     }
   });
   
-  const {
-    data: currencies = [],
-    isLoading: isLoadingCurrencies,
-    error: currenciesError
-  } = useQuery<Currency[]>({
-    queryKey: ['/api/settings/currencies'],
-    onSuccess: (data) => {
+  // Manual fetch with proper organization header for currencies
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
+  const [isLoadingCurrencies, setIsLoadingCurrencies] = useState(true);
+  const [currenciesError, setCurrenciesError] = useState<Error | null>(null);
+
+  // Function to fetch currencies with organization headers
+  const fetchCurrencies = async () => {
+    setIsLoadingCurrencies(true);
+    try {
+      const headers = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': '2', // Hardcoded ID for now
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache'
+      };
+      
+      console.log('SETTINGS DEBUG: Fetching currencies with headers:', headers);
+      const response = await fetch('/api/settings/currencies', { headers });
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching currencies: ${response.status}`);
+      }
+      
+      const data = await response.json();
       console.log('✅ Currencies loaded successfully:', data);
-      console.log('Currencies type:', typeof data);
-      console.log('Is Array:', Array.isArray(data));
-      if (Array.isArray(data)) {
-        console.log('Number of currencies:', data.length);
-      }
-    },
-    onError: (error) => {
+      setCurrencies(Array.isArray(data) ? data : []);
+    } catch (error) {
       console.error('❌ Error loading currencies:', error);
-      try {
-        console.error('Error details:', JSON.stringify(error));
-      } catch (e) {
-        console.error('Error could not be stringified:', error.message);
-      }
-    },
-    retry: 1,
-    refetchOnWindowFocus: false
-  });
+      setCurrenciesError(error instanceof Error ? error : new Error(String(error)));
+    } finally {
+      setIsLoadingCurrencies(false);
+    }
+  };
+
+  // Fetch currencies on component mount
+  useEffect(() => {
+    fetchCurrencies();
+  }, []);
   
   const {
     data: taxRates = [],
