@@ -984,16 +984,9 @@ export default function ViewRepair() {
               ) : (
                 <div className="text-center py-6">
                   <p className="text-muted-foreground">No quotes have been created yet.</p>
-                  <Button 
-                    variant="outline" 
-                    className="mt-2"
-                    onClick={() => {
-                      console.log("DEBUG: Setting showQuoteForm to true from Create First Quote button");
-                      setShowQuoteForm(true);
-                    }}
-                  >
-                    Create First Quote
-                  </Button>
+                  <Link to={`/repairs/${repairId}/quotes/create`}>
+                    <Button variant="outline" className="mt-2">Create First Quote</Button>
+                  </Link>
                 </div>
               )}
             </CardContent>
