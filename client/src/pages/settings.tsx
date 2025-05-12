@@ -694,7 +694,7 @@ const SettingsPage = () => {
         console.log('Adding auth token to create tax rate request');
       } else {
         console.warn('No authentication token found for creating tax rate');
-      };
+      }
       
       const response = await fetch('/api/settings/tax-rates', {
         method: 'POST',
