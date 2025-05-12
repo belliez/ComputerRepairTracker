@@ -241,14 +241,15 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
       // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
       const normalizedTaxRate = taxRate > 1 ? taxRate / 100 : taxRate;
       
-      const newTaxAmount = newSubtotal * normalizedTaxRate;
+      // Only calculate tax if it's enabled for the organization
+      const newTaxAmount = isTaxEnabled ? newSubtotal * normalizedTaxRate : 0;
       const newTotal = newSubtotal + newTaxAmount;
       
       form.setValue("subtotal", newSubtotal);
       form.setValue("tax", newTaxAmount);
       form.setValue("total", newTotal);
     }
-  }, [repairItems, form, taxRate]);
+  }, [repairItems, form, taxRate, isTaxEnabled]);
 
   // Create or update quote mutation
   const mutation = useMutation({
