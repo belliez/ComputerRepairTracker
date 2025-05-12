@@ -807,15 +807,7 @@ export class DatabaseStorage implements IStorage {
     console.log(`REPAIR FETCH DEBUG: Fetching all repairs for organization: ${orgId}`);
     
     try {
-      // Fetch repairs without organization filter first to debug
-      const allRepairs = await db.select()
-        .from(repairs)
-        .where(eq(repairs.deleted, false));
-      
-      console.log(`REPAIR FETCH DEBUG: Found ${allRepairs.length} total repairs without organization filter`);
-      console.log(`REPAIR FETCH DEBUG: Repair organization IDs present in DB: ${allRepairs.map(r => r.organizationId).join(', ')}`);
-      
-      // Now fetch with organization filter
+      // Use a more efficient query with an index scan on organizationId
       const filteredRepairs = await db.select()
         .from(repairs)
         .where(and(
@@ -823,17 +815,41 @@ export class DatabaseStorage implements IStorage {
           eq(repairs.organizationId, orgId)
         ));
       
-      console.log(`REPAIR FETCH DEBUG: Found ${filteredRepairs.length} repairs after applying organization filter for org ${orgId}`);
-      console.log(`REPAIR FETCH DEBUG: Repairs after filtering:`, filteredRepairs.map(r => ({
-        id: r.id,
-        organizationId: r.organizationId,
-        status: r.status,
-        customerId: r.customerId
-      })));
+      console.log(`REPAIR FETCH DEBUG: Found ${filteredRepairs.length} repairs for organization ${orgId}`);
       
       return filteredRepairs;
     } catch (error) {
       console.error(`REPAIR FETCH DEBUG: Error fetching repairs:`, error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Get repair status counts for dashboard
+   * More efficient SQL-based aggregation instead of client-side counting
+   */
+  async getRepairStatusCounts(): Promise<{ status: string; count: number }[]> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`REPAIR STATS DEBUG: Fetching repair status counts for organization: ${orgId}`);
+    
+    try {
+      // Use SQL COUNT and GROUP BY for efficient aggregation
+      const result = await db.execute(sql`
+        SELECT status, COUNT(*) as count
+        FROM ${repairs}
+        WHERE deleted = false AND organization_id = ${orgId}
+        GROUP BY status
+      `);
+      
+      console.log(`REPAIR STATS DEBUG: Status count results:`, result.rows);
+      
+      // Convert to expected format
+      return result.rows.map((row: any) => ({
+        status: row.status,
+        count: parseInt(row.count)
+      }));
+    } catch (error) {
+      console.error(`REPAIR STATS DEBUG: Error fetching repair status counts:`, error);
       throw error;
     }
   }
