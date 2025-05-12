@@ -683,6 +683,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Repairs
+  // New endpoint for dashboard repair status counts
+  apiRouter.get("/repair-status-counts", async (req: Request, res: Response) => {
+    try {
+      console.log("REPAIRS STATS DEBUG: Fetching repair status counts for dashboard");
+      
+      // Make sure we have an organization ID for this request
+      let orgId = (global as any).currentOrganizationId;
+      
+      // Verify req.organizationId exists from auth middleware
+      if (req.organizationId && typeof req.organizationId === 'number') {
+        orgId = req.organizationId;
+      } else if (req.headers['x-organization-id']) {
+        // Fallback to header if not set in context
+        const headerOrgId = parseInt(req.headers['x-organization-id'] as string, 10);
+        if (!isNaN(headerOrgId)) {
+          orgId = headerOrgId;
+        }
+      }
+      
+      if (!orgId) {
+        return res.status(400).json({ error: "Missing organization context" });
+      }
+      
+      // Save this organization ID for the request
+      (global as any).currentOrganizationId = orgId;
+      
+      // Use the optimized SQL aggregation method
+      const statusCounts = await storage.getRepairStatusCounts();
+      console.log(`Found status counts for organization ${orgId}:`, statusCounts);
+      
+      res.json(statusCounts);
+    } catch (error) {
+      console.error("Error fetching repair status counts:", error);
+      res.status(500).json({ error: "Failed to fetch repair status counts" });
+    }
+  });
+
   apiRouter.get("/repairs", async (req: Request, res: Response) => {
     try {
       // Log full details of the request for debugging

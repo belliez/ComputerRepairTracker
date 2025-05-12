@@ -20,6 +20,14 @@ export default function RepairStats({
   onCreateInvoice, 
   onOrderParts 
 }: RepairStatsProps) {
+  // Get repair status counts directly from an optimized SQL query endpoint
+  const { data: statusCountsData, isLoading: isLoadingStatusCounts } = useQuery<{status: string; count: number}[]>({
+    queryKey: ["/api/repair-status-counts"],
+    refetchOnWindowFocus: false,
+    staleTime: 30000, // Consider data stale after 30 seconds
+  });
+
+  // Still need repairs for technician assignment
   const { data: repairs, isLoading: isLoadingRepairs } = useQuery<Repair[]>({
     queryKey: ["/api/repairs"],
     refetchOnWindowFocus: false,
@@ -35,7 +43,7 @@ export default function RepairStats({
   const [showAllTechs, setShowAllTechs] = useState(false);
   const [location, navigate] = useLocation();
 
-  if (isLoadingRepairs || isLoadingTechnicians) {
+  if (isLoadingStatusCounts || isLoadingRepairs || isLoadingTechnicians) {
     return (
       <div className="col-span-1 space-y-6">
         <Card>
@@ -57,12 +65,20 @@ export default function RepairStats({
   const allRepairs = repairs || [];
   const allTechnicians = technicians || [];
 
-  // Count repairs by status
+  // Convert statusCountsData to a record for easier access
   const statusCounts: Record<string, number> = {};
   
+  // Initialize all statuses with zero count
   repairStatuses.forEach(status => {
-    statusCounts[status] = allRepairs.filter(repair => repair.status === status).length;
+    statusCounts[status] = 0;
   });
+  
+  // Update with the actual counts from the server
+  if (statusCountsData) {
+    statusCountsData.forEach(item => {
+      statusCounts[item.status] = item.count;
+    });
+  }
 
   // Calculate total for percentages
   const totalRepairs = allRepairs.length;

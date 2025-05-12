@@ -77,9 +77,16 @@ export default function Dashboard() {
 
   const [location, navigate] = useLocation();
   
-  // Dashboard stats card
+  // Dashboard stats card with optimized data fetching
   const DashboardStats = () => {
-    if (isLoadingRepairs) {
+    // Use more efficient status counts endpoint for the dashboard stats
+    const { data: statusCountsData, isLoading: isLoadingStatusCounts } = useQuery<{status: string; count: number}[]>({
+      queryKey: ["/api/repairs/status-counts"],
+      refetchOnWindowFocus: false,
+      staleTime: 30000, // Consider data stale after 30 seconds
+    });
+    
+    if (isLoadingRepairs || isLoadingStatusCounts) {
       return (
         <Card className="mb-6">
           <CardContent className="p-6">
@@ -95,12 +102,29 @@ export default function Dashboard() {
     }
 
     const allRepairs = repairs || [];
+    
+    // Create a counts object from statusCountsData
+    const statusCounts: Record<string, number> = {};
+    if (statusCountsData) {
+      statusCountsData.forEach(item => {
+        statusCounts[item.status] = item.count;
+      });
+    }
+    
+    // Calculate totals from the status counts
     const totalRepairs = allRepairs.length;
-    const activeRepairs = allRepairs.filter(r => 
-      !['completed', 'cancelled'].includes(r.status)
-    ).length;
+    
+    // Get active repairs (not completed or cancelled)
+    const activeRepairs = Object.entries(statusCounts)
+      .filter(([status]) => !['completed', 'cancelled'].includes(status))
+      .reduce((sum, [_, count]) => sum + count, 0);
+    
+    // Still need to calculate urgent repairs from the full repair data
+    // since priority information isn't in the status counts
     const urgentRepairs = allRepairs.filter(r => r.priorityLevel != null && r.priorityLevel <= 2).length;
-    const completedRepairs = allRepairs.filter(r => r.status === 'completed').length;
+    
+    // Get completed repairs directly from status counts
+    const completedRepairs = statusCounts['completed'] || 0;
 
     return (
       <Card className="mb-6">
