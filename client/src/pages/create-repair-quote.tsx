@@ -371,7 +371,7 @@ export default function CreateRepairQuote() {
         total,
         status: "draft", // Default status
         currencyCode: data.currencyCode,
-        taxRateId: data.taxRateId || 1,
+        taxRateId: data.taxRateId || (taxRates && taxRates.length > 0 ? taxRates[0].id : null),
         // Store the complete items data
         itemsData: itemsJson,
       };
