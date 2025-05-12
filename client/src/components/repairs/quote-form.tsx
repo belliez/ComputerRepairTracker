@@ -231,17 +231,48 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   // Create or update quote mutation
   const mutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
+      console.log(`DEBUG: Mutation executing ${quoteId ? 'update' : 'create'} operation`);
+      
       // With the schema updated to use z.coerce.date(), we can simplify this
       // Just pass the values as-is - the server-side zod schema will handle the conversion
-      if (quoteId) {
-        // Update existing quote
-        return apiRequest("PUT", `/api/quotes/${quoteId}`, values);
-      } else {
-        // Create new quote
-        return apiRequest("POST", "/api/quotes", values);
+      try {
+        const endpoint = quoteId ? `/api/quotes/${quoteId}` : "/api/quotes";
+        const method = quoteId ? "PUT" : "POST";
+        
+        console.log(`DEBUG: Making ${method} request to ${endpoint} with data:`, values);
+        
+        const response = await apiRequest(method, endpoint, values);
+        
+        console.log(`DEBUG: API Response status:`, response.status);
+        if (!response.ok) {
+          console.error(`DEBUG: API error: ${response.status}`);
+          const errorText = await response.text();
+          console.error(`DEBUG: Error response:`, errorText);
+          throw new Error(`API returned ${response.status}: ${errorText}`);
+        }
+        
+        const responseText = await response.text();
+        console.log(`DEBUG: API response text:`, responseText);
+        
+        if (responseText) {
+          try {
+            return JSON.parse(responseText);
+          } catch (e) {
+            console.log(`DEBUG: Response is not JSON, returning text`);
+            return responseText;
+          }
+        }
+        
+        return { success: true };
+      } catch (error) {
+        console.error(`DEBUG: Error in mutation:`, error);
+        throw error;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log(`DEBUG: Mutation succeeded with result:`, data);
+      
+      // Invalidate queries to refresh the data
       queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
       queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
       
@@ -255,6 +286,8 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
       onClose();
     },
     onError: (error) => {
+      console.error(`DEBUG: Mutation failed with error:`, error);
+      
       toast({
         title: "Error",
         description: `Failed to ${quoteId ? "update" : "create"} quote: ${error.message}`,
@@ -264,17 +297,21 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log("Form submission values:", values);
+    console.log("DEBUG: Form onSubmit triggered with values:", values);
     
-    // Ensure dates are in ISO string format
-    const formattedValues = {
-      ...values,
-      dateCreated: values.dateCreated ? new Date(values.dateCreated).toISOString() : new Date().toISOString(),
-      expirationDate: values.expirationDate ? new Date(values.expirationDate).toISOString() : null,
-    };
-    
-    console.log("Formatted values for submission:", formattedValues);
-    mutation.mutate(formattedValues);
+    try {
+      // Ensure dates are in ISO string format
+      const formattedValues = {
+        ...values,
+        dateCreated: values.dateCreated ? new Date(values.dateCreated).toISOString() : new Date().toISOString(),
+        expirationDate: values.expirationDate ? new Date(values.expirationDate).toISOString() : null,
+      };
+      
+      console.log("DEBUG: Formatted values for submission:", formattedValues);
+      mutation.mutate(formattedValues);
+    } catch (error) {
+      console.error("DEBUG: Error in onSubmit function:", error);
+    }
   };
 
   const isLoading = isLoadingItems || isLoadingQuote || mutation.isPending;
@@ -614,8 +651,12 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                   Cancel
                 </Button>
                 <Button 
-                  type="submit"
+                  type="button"
                   disabled={mutation.isPending}
+                  onClick={() => {
+                    console.log("DEBUG: Manual form submission button clicked");
+                    form.handleSubmit(onSubmit)();
+                  }}
                 >
                   {mutation.isPending ? (
                     <span className="flex items-center">
