@@ -56,7 +56,8 @@ export default function RepairInformation({
     technicianId: z.number().optional().nullable(),
     priorityLevel: z.coerce.number().min(1).max(5),
     isUnderWarranty: z.boolean().default(false),
-    estimatedCompletionDate: z.string().optional(),
+    estimatedCompletionDate: z.string().optional().nullable(),
+    actualCompletionDate: z.string().optional().nullable(),
     diagnosticNotes: z.string().optional().nullable(),
   });
 
@@ -168,17 +169,26 @@ export default function RepairInformation({
     // Clean up any date fields that might cause issues
     const sanitizedData = { ...data };
     
-    // Handle empty date fields
+    // Handle empty date fields - explicitly type cast to fix TS errors
     if (sanitizedData.estimatedCompletionDate === '') {
       sanitizedData.estimatedCompletionDate = null;
     }
     
-    if (sanitizedData.actualCompletionDate === '') {
-      sanitizedData.actualCompletionDate = null;
-    }
+    // We need to strip out any properties that aren't in the schema
+    // This prevents issues with actualCompletionDate if it's not in the model
+    const finalData = {
+      status: sanitizedData.status,
+      issue: sanitizedData.issue,
+      notes: sanitizedData.notes,
+      technicianId: sanitizedData.technicianId,
+      priorityLevel: sanitizedData.priorityLevel,
+      isUnderWarranty: sanitizedData.isUnderWarranty,
+      estimatedCompletionDate: sanitizedData.estimatedCompletionDate,
+      diagnosticNotes: sanitizedData.diagnosticNotes
+    };
     
-    console.log("REPAIR INFO DEBUG: Sanitized form data:", sanitizedData);
-    mutation.mutate(sanitizedData);
+    console.log("REPAIR INFO DEBUG: Sanitized form data:", finalData);
+    mutation.mutate(finalData);
   };
 
   const handleSave = () => {
@@ -346,10 +356,13 @@ export default function RepairInformation({
               <FormLabel>Priority</FormLabel>
               <FormControl>
                 <RadioGroup
-                  value={field.value.toString()}
+                  value={field.value?.toString() || "3"}
                   onValueChange={(value) => {
                     console.log("Selected priority value:", value);
-                    field.onChange(parseInt(value));
+                    // Ensure we're passing a number, not a string
+                    const numericValue = parseInt(value, 10);
+                    field.onChange(numericValue);
+                    console.log("Converted priority value:", numericValue, typeof numericValue);
                   }}
                   className="flex space-x-2"
                 >
