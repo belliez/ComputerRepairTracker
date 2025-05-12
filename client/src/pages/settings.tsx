@@ -516,6 +516,7 @@ const SettingsPage = () => {
       email: '',
       phone: '',
       address: '',
+      enableTax: true, // Default to enabled
     }
   });
 
@@ -523,11 +524,15 @@ const SettingsPage = () => {
   useEffect(() => {
     if (organization) {
       console.log('Resetting organization form with data:', organization);
+      // Default to enabled if not explicitly set to false
+      const enableTax = organization.settings?.enableTax !== false;
+      
       organizationForm.reset({
         name: organization.name || '',
         email: (organization.settings?.email as string) || '',
         phone: (organization.settings?.phone as string) || '',
         address: (organization.settings?.address as string) || '',
+        enableTax: enableTax,
       });
     }
   }, [organization]);
@@ -1370,6 +1375,16 @@ const SettingsPage = () => {
                       <h3 className="text-sm font-medium text-gray-500">Address</h3>
                       <p className="text-base">
                         {(organization.settings?.address && organization.settings.address !== "null") ? organization.settings.address : "No address set"}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 border-t pt-4">
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Tax Settings</h3>
+                    <div className="flex items-center">
+                      <div className={`mr-2 w-3 h-3 rounded-full ${organization.settings?.enableTax !== false ? 'bg-green-500' : 'bg-red-500'}`} />
+                      <p className="text-base">
+                        {organization.settings?.enableTax !== false ? 'Tax calculation is enabled' : 'Tax calculation is disabled'}
                       </p>
                     </div>
                   </div>
