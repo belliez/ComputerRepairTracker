@@ -48,6 +48,7 @@ const organizationSchema = z.object({
   email: z.string().email({ message: "Valid email is required" }).optional().nullable(),
   phone: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
+  enableTax: z.boolean().default(true), // Default to enabled
 });
 
 const currencySchema = z.object({
@@ -1226,14 +1227,17 @@ const SettingsPage = () => {
                       const email = settings.email || '';
                       const phone = settings.phone || '';
                       const address = settings.address || '';
+                      // Default to enabled if the setting isn't explicitly set to false
+                      const enableTax = settings.enableTax !== false;
                       
-                      console.log('Settings data extracted:', { email, phone, address });
+                      console.log('Settings data extracted:', { email, phone, address, enableTax });
                       
                       organizationForm.reset({
                         name: organization.name || '',
                         email: email,
                         phone: phone,
                         address: address,
+                        enableTax: enableTax,
                       });
                     }
                   }}>
@@ -1302,6 +1306,26 @@ const SettingsPage = () => {
                               <Input {...field} value={field.value || ''} placeholder="123 Main St, Anytown, ST 12345" />
                             </FormControl>
                             <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={organizationForm.control}
+                        name="enableTax"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>Enable Tax Calculations</FormLabel>
+                              <FormDescription>
+                                Toggle off if your business is not VAT/tax registered
+                              </FormDescription>
+                            </div>
                           </FormItem>
                         )}
                       />
