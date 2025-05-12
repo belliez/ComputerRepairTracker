@@ -347,12 +347,14 @@ export default function CreateRepairQuote() {
   const createQuoteMutation = useMutation({
     mutationFn: async (data: z.infer<typeof quoteSchema>) => {
       // Store the actual items rather than just IDs
-      console.log("Preparing quote data for submission...");
+      console.log("MUTATION DEBUG: createQuoteMutation triggered");
+      console.log("MUTATION DEBUG: Quote data received:", data);
+      
       const itemsToStore = form.getValues("items") || [];
       
       // Log the size of the data being sent
       const itemsJson = JSON.stringify(itemsToStore);
-      console.log(`Items data size: ${itemsJson.length} characters, ${itemsToStore.length} items`);
+      console.log(`MUTATION DEBUG: Items data size: ${itemsJson.length} characters, ${itemsToStore.length} items`);
       
       const payload = {
         ...data,
@@ -781,8 +783,27 @@ export default function CreateRepairQuote() {
               <Button variant="outline" type="button">Cancel</Button>
             </Link>
             <Button 
-              type="submit" 
+              type="button" 
               disabled={isEditing ? updateQuoteMutation.isPending : createQuoteMutation.isPending}
+              onClick={(e) => {
+                e.preventDefault();
+                console.log("CREATE QUOTE BUTTON CLICKED");
+                console.log("Form values:", form.getValues());
+                console.log("Form validation state:", form.formState);
+                
+                // Check for validation errors
+                if (!form.formState.isValid) {
+                  console.log("Form validation errors:", form.formState.errors);
+                }
+                
+                // Try to submit the form with explicit error handling
+                try {
+                  form.handleSubmit(onSubmit)(e);
+                  console.log("Form handleSubmit called successfully");
+                } catch (error) {
+                  console.error("ERROR DURING FORM SUBMIT:", error);
+                }
+              }}
             >
               {isEditing 
                 ? (updateQuoteMutation.isPending ? "Updating..." : "Update Quote") 
