@@ -2292,7 +2292,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Invalid settings type" });
       }
       
-      return res.json({ success: true });
+      // Return the organization ID along with success status
+      return res.json({ 
+        success: true,
+        organizationId: organizationId
+      });
     } catch (error) {
       console.error("Error updating organization settings:", error);
       return res.status(500).json({ 

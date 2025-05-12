@@ -546,12 +546,45 @@ export function OnboardingModal({
   // Save organization settings
   const saveSettingsMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await apiRequest('POST', '/api/settings/organization', data);
-      return response.json();
+      try {
+        const response = await apiRequest('POST', '/api/settings/organization', data);
+        
+        // Handle successful response
+        if (response.ok) {
+          const responseData = await response.json();
+          console.log('Settings saved successfully:', responseData);
+          return responseData;
+        } else {
+          // Handle error responses
+          const errorText = await response.text();
+          console.error('API error:', response.status, errorText);
+          throw new Error(errorText || `API error: ${response.status}`);
+        }
+      } catch (error) {
+        console.error('Exception in saveSettingsMutation:', error);
+        throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      toast({
+        title: 'Settings saved',
+        description: 'Your organization settings have been updated.'
+      });
+      
+      // Refresh organization data
       queryClient.invalidateQueries({ queryKey: ['/api/user'] });
-      refreshCurrentOrganization();
+      queryClient.invalidateQueries({ queryKey: ['/api/organizations'] });
+      
+      // If the organization was just created, update the organization context
+      if (data?.organizationId) {
+        console.log('Setting organization context to new organization:', data.organizationId);
+        localStorage.setItem('currentOrganizationId', data.organizationId.toString());
+      }
+      
+      // Refresh current organization
+      if (refreshCurrentOrganization) {
+        refreshCurrentOrganization();
+      }
     },
     onError: (error: any) => {
       console.error('Failed to save settings:', error);

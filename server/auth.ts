@@ -713,9 +713,63 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
     }
     
     // If the organization ID is provided in the request body, query or headers
-    const organizationId = req.body?.organizationId || req.query?.organizationId || req.headers['x-organization-id'];
+    const requestedOrgId = req.body?.organizationId || req.query?.organizationId || req.headers['x-organization-id'];
     
-    if (organizationId) {
+    // Check if the user has any organizations first
+    const userOrgs = await db
+      .select()
+      .from(organizationUsers)
+      .where(
+        and(
+          eq(organizationUsers.userId, req.user.uid),
+          eq(organizationUsers.inviteAccepted, true)
+        )
+      );
+    
+    // If the user is trying to create an organization and has none, allow it
+    if (req.path === '/api/settings/organization' && req.method === 'POST' && userOrgs.length === 0) {
+      console.log('User is creating their first organization, bypassing organization context check');
+      
+      // Create a new organization right away if one doesn't exist
+      if (req.body?.name) {
+        try {
+          // Insert the new organization
+          const [newOrg] = await db
+            .insert(organizations)
+            .values({
+              name: req.body.name,
+              slug: req.body.name.toLowerCase().replace(/\s+/g, '-'),
+              ownerId: req.user.uid,
+              settings: req.body.settings || {}
+            })
+            .returning();
+          
+          // Link the user to the organization
+          await db
+            .insert(organizationUsers)
+            .values({
+              userId: req.user.uid,
+              organizationId: newOrg.id,
+              role: 'owner',
+              inviteAccepted: true
+            });
+          
+          console.log(`Created new organization '${newOrg.name}' with ID ${newOrg.id} for user ${req.user.uid}`);
+          
+          // Set the context to the new organization
+          req.organizationId = newOrg.id;
+          (global as any).currentOrganizationId = newOrg.id;
+          console.log(`Setting organization context to new organization ${newOrg.id}`);
+          
+          return next();
+        } catch (error) {
+          console.error('Error creating new organization:', error);
+        }
+      }
+    }
+    
+    // For normal requests, validate organization membership
+    if (requestedOrgId) {
       try {
         // Check if the user is a member of this organization
         const [userOrg] = await db
@@ -723,17 +777,19 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
           .from(organizationUsers)
           .where(
             and(
-              eq(organizationUsers.organizationId, Number(organizationId)),
+              eq(organizationUsers.organizationId, Number(requestedOrgId)),
               eq(organizationUsers.userId, req.user.uid),
               eq(organizationUsers.inviteAccepted, true)
             )
           );
         
         if (userOrg) {
-          const orgId = Number(organizationId);
+          const orgId = Number(requestedOrgId);
           req.organizationId = orgId;
           (global as any).currentOrganizationId = orgId;
           console.log(`Setting global organization context to ${orgId} from user membership`);
+        } else {
+          console.log(`User ${req.user.uid} not a member of organization ${requestedOrgId}`);
         }
       } catch (error) {
         console.error('Error checking organization membership:', error);
