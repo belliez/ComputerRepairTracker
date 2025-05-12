@@ -19,9 +19,9 @@ import { runMultiTenancyMigration } from './migrations/001-add-multi-tenancy';
 import { runSettingsOrganizationMigration } from './migrations/002-add-settings-organization-id';
 import { fixOrganizationRelations } from './migrations/003-fix-organization-relations';
 
-// Initialize demo data
+// Initialize database structure and migrations
 export async function initializeDemo() {
-  console.log('Initializing demo data...');
+  console.log('Initializing database structure...');
   
   try {
     // Run all migrations in order
@@ -29,21 +29,11 @@ export async function initializeDemo() {
     await runSettingsOrganizationMigration();
     await fixOrganizationRelations();
     
-    // Initialize development user and organization
-    await initializeDevEnvironment();
-    
-    // Initialize currencies and tax rates regardless of other data
+    // Initialize currencies and tax rates - basic setup data
     await initializeSettingsData();
     
-    // Check if we already have data
-    const existingCustomers = await db.select().from(customers);
-    if (existingCustomers.length > 0) {
-      console.log('Demo data already exists. Skipping initialization.');
-      return;
-    }
-    
-    // Create sample data (only executed if no customers exist)
-    await createSampleData();
+    // Skip the creation of development user and sample data
+    console.log('Skipping development user and demo data creation as requested.');
     
   } catch (error) {
     console.error('Error initializing database:', error);
