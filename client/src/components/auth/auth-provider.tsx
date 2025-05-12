@@ -162,28 +162,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (!orgsResponse.ok) {
             throw new Error('Failed to get organizations');
           }
-          const organizationsData = await orgsResponse.json();
+          let organizationsData = await orgsResponse.json();
           
           // If the user has no organizations, create one automatically
           if (organizationsData.length === 0 && firebaseUser) {
             console.log('No organizations found for user, creating a default one');
             try {
-              const orgResponse = await apiRequest('POST', '/api/settings/organization', {
-                name: `${firebaseUser.displayName || 'My'}'s Repair Shop`,
-                email: firebaseUser.email || '',
-                phone: '',
-                address: '',
-                logo: '',
-                settings: {
-                  onboardingCompleted: false
-                }
+              // Use the /api/organizations endpoint to create a new organization
+              const orgResponse = await apiRequest('POST', '/api/organizations', {
+                name: `${firebaseUser.displayName || firebaseUser.email || 'My'}'s Repair Shop`
               });
               
               if (!orgResponse.ok) {
-                console.error('Failed to create default organization', await orgResponse.text());
+                const errorText = await orgResponse.text();
+                console.error('Failed to create default organization', errorText);
+                
+                // As a fallback, try the settings endpoint
+                console.log('Trying fallback organization creation via settings endpoint');
+                const fallbackResponse = await apiRequest('POST', '/api/settings/organization', {
+                  name: `${firebaseUser.displayName || firebaseUser.email || 'My'}'s Repair Shop`,
+                  email: firebaseUser.email || '',
+                  phone: '',
+                  address: '',
+                  logo: '',
+                  type: 'company',
+                  settings: {
+                    onboardingCompleted: false
+                  }
+                });
+                
+                if (!fallbackResponse.ok) {
+                  console.error('Fallback organization creation failed', await fallbackResponse.text());
+                } else {
+                  const fallbackOrg = await fallbackResponse.json();
+                  console.log('Organization created via fallback:', fallbackOrg);
+                  
+                  // If we got an organization ID back, fetch the organizations again
+                  if (fallbackOrg?.organizationId) {
+                    console.log('Setting organization context to:', fallbackOrg.organizationId);
+                    localStorage.setItem('currentOrganizationId', fallbackOrg.organizationId.toString());
+                    
+                    // Refresh organizations list
+                    const refreshResponse = await apiRequest('GET', '/api/organizations');
+                    if (refreshResponse.ok) {
+                      const refreshedOrgs = await refreshResponse.json();
+                      if (refreshedOrgs.length > 0) {
+                        // Instead of reassigning, replace the contents to keep the reference
+                        organizationsData.splice(0, organizationsData.length, ...refreshedOrgs);
+                      }
+                    }
+                  }
+                }
               } else {
                 const newOrg = await orgResponse.json();
                 console.log('Default organization created:', newOrg);
+                
+                // If we have an organization ID, store it
+                if (newOrg?.id) {
+                  localStorage.setItem('currentOrganizationId', newOrg.id.toString());
+                }
+                
                 organizationsData.push(newOrg);
               }
             } catch (orgError) {

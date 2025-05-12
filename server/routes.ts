@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { initializeDemo } from "./init-db";
 import { db } from "./db";
-import { and, eq } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import { sendEmail, generateQuoteEmail, generateInvoiceEmail, EmailData } from "./email";
 import Stripe from "stripe";
 import {
