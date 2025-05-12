@@ -78,6 +78,13 @@ export const getQueryFn: <T>(options: {
     // Add special header for debugging
     headers["X-Debug-Client"] = "RepairTrackerClient";
     
+    // Add organization ID from localStorage if available
+    const orgId = localStorage.getItem('currentOrganizationId');
+    if (orgId) {
+      console.log(`Adding organization ID ${orgId} to query request`);
+      headers["X-Organization-ID"] = orgId;
+    }
+    
     // Add Authorization header with appropriate token
     if (firebaseToken) {
       console.log('Adding auth header with token for query');
