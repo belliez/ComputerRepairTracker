@@ -27,6 +27,10 @@ export default function Customers() {
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const { toast } = useToast();
 
+  // Debug initialization rendering
+  console.log("CUSTOMERS PAGE DEBUG: Component rendering, before useQuery");
+  
+  // Standard API query for customers
   const { data: customers, isLoading, refetch, error } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
     onSuccess: (data) => {
@@ -39,6 +43,11 @@ export default function Customers() {
       console.error("CUSTOMERS DEBUG: Error loading customers:", err);
     }
   });
+  
+  // Debug after query
+  console.log("CUSTOMERS PAGE DEBUG: After useQuery. Customers data:", customers);
+  console.log("CUSTOMERS PAGE DEBUG: isLoading:", isLoading);
+  console.log("CUSTOMERS PAGE DEBUG: error:", error);
 
   const filteredCustomers = (customers || []).filter(customer => {
     const searchLower = searchTerm.toLowerCase();
