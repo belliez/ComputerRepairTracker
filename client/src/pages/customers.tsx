@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Customer } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -36,8 +36,7 @@ export default function Customers() {
   const { data: customers, isLoading, refetch, error } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
     // Ensure fresh data is fetched more frequently
-    staleTime: 5000, // 5 seconds, to allow for edits
-    cacheTime: 10000, // 10 seconds
+    staleTime: 0, // Fetch fresh data every time
     // Since this is a direct call to the customer endpoint, we'll make a manual fetch
     // to debug what's happening
     queryFn: async () => {
@@ -103,14 +102,7 @@ export default function Customers() {
     }
   });
   
-  // Force refresh when customer form is closed
-  useEffect(() => {
-    if (!editCustomerId && !editFormOpen) {
-      console.log("CUSTOMERS PAGE DEBUG: Customer form closed, forcing refresh of customers list");
-      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
-      refetch();
-    }
-  }, [editCustomerId, editFormOpen, refetch]);
+  // Force refresh happens automatically with the manual fetch implementation
   
   // Debug after query
   console.log("CUSTOMERS PAGE DEBUG: After useQuery. Customers data:", customers);
