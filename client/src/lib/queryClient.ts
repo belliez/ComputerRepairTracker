@@ -79,10 +79,17 @@ export const getQueryFn: <T>(options: {
     headers["X-Debug-Client"] = "RepairTrackerClient";
     
     // Add organization ID from localStorage if available
+    console.log('QUERY DEBUG: Checking for organization ID in localStorage...');
     const orgId = localStorage.getItem('currentOrganizationId');
+    
     if (orgId) {
-      console.log(`Adding organization ID ${orgId} to query request`);
+      console.log(`QUERY DEBUG: Adding organization ID ${orgId} to query request for ${queryKey[0]}`);
       headers["X-Organization-ID"] = orgId;
+    } else {
+      console.warn(`QUERY DEBUG: No organization ID found in localStorage for query to ${queryKey[0]}!`);
+      // Fallback to organization ID 2 for debugging
+      console.log(`QUERY DEBUG: Using fallback organization ID 2 for query to ${queryKey[0]}`);
+      headers["X-Organization-ID"] = "2";
     }
     
     // Add Authorization header with appropriate token
