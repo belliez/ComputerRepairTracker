@@ -168,7 +168,18 @@ export const getQueryFn: <T>(options: {
       // Standard query handling
       console.log(`QUERY DEBUG: Making request to ${url} with headers:`, JSON.stringify(headers));
       
+      // For customers specifically, add extra logging
+      if (url === '/api/customers') {
+        console.log('CUSTOMERS FETCH DEBUG: Starting customer data fetch with the following headers:');
+        Object.entries(headers).forEach(([key, value]) => {
+          // Mask token value for security
+          const displayValue = key === 'Authorization' ? 'Bearer [TOKEN]' : value;
+          console.log(`CUSTOMERS FETCH DEBUG: Header ${key}: ${displayValue}`);
+        });
+      }
+      
       try {
+        console.log(`QUERY DEBUG: Attempting fetch to ${url}...`);
         const res = await fetch(url, {
           credentials: "include",
           headers: headers
@@ -185,7 +196,20 @@ export const getQueryFn: <T>(options: {
         const responseText = await res.text();
         console.log(`QUERY DEBUG: Raw response from ${url}:`, responseText);
         
+        // Extra debugging for customers endpoint
+        if (url === '/api/customers') {
+          console.log('CUSTOMERS FETCH DEBUG: Got response text:', responseText);
+          console.log('CUSTOMERS FETCH DEBUG: Response status:', res.status);
+          console.log('CUSTOMERS FETCH DEBUG: Response headers:', 
+            [...res.headers.entries()].reduce((obj, [key, val]) => {
+              obj[key] = val;
+              return obj;
+            }, {})
+          );
+        }
+        
         if (!res.ok) {
+          console.error(`QUERY DEBUG: Query to ${url} failed with status ${res.status}: ${responseText || res.statusText}`);
           throw new Error(`${res.status}: ${responseText || res.statusText}`);
         }
         
@@ -195,6 +219,17 @@ export const getQueryFn: <T>(options: {
           try {
             data = JSON.parse(responseText);
             console.log(`QUERY DEBUG: Query to ${url} response data:`, data);
+            
+            // Specific debug for customer data
+            if (url === '/api/customers') {
+              console.log('CUSTOMERS FETCH DEBUG: Parsed customers data:');
+              console.log('CUSTOMERS FETCH DEBUG: Type:', typeof data);
+              console.log('CUSTOMERS FETCH DEBUG: Is array?', Array.isArray(data));
+              console.log('CUSTOMERS FETCH DEBUG: Length:', Array.isArray(data) ? data.length : 'N/A');
+              if (Array.isArray(data) && data.length > 0) {
+                console.log('CUSTOMERS FETCH DEBUG: First customer:', data[0]);
+              }
+            }
           } catch (parseError) {
             console.error(`QUERY DEBUG: Error parsing JSON from ${url}:`, parseError);
             throw new Error(`Failed to parse response: ${parseError.message}`);
