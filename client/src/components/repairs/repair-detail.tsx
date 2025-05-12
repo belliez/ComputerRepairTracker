@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { RepairWithRelations } from "@/types";
@@ -103,9 +103,13 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: repair, isLoading: isLoadingRepair } = useQuery<RepairWithRelations>({
+  const { data: repair, isLoading: isLoadingRepair, refetch: refetchRepair } = useQuery<RepairWithRelations>({
     queryKey: [`/api/repairs/${repairId}/details`],
     staleTime: 0,
+    retry: 3,
+    retryDelay: 1000,
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000, // Automatically refetch every 5 seconds when stale
     queryFn: async () => {
       console.log("REPAIR DETAIL DEBUG: Starting manual fetch for repair details");
       
@@ -678,12 +682,87 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
 
   const isLoading = isLoadingRepair || isLoadingItems;
   
-  if (isLoading) {
+  // Log loading states and repair data to help debug
+  useEffect(() => {
+    console.log("REPAIR DETAIL DEBUG: Loading state:", { isLoadingRepair, isLoadingItems, repairId });
+    console.log("REPAIR DETAIL DEBUG: Current repair data:", repair);
+  }, [isLoadingRepair, isLoadingItems, repair, repairId]);
+  
+  // If loading for more than 10 seconds, try to refresh the data
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        console.log("REPAIR DETAIL DEBUG: Loading timeout reached, forcing refresh");
+        queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/items`] });
+      }, 10000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, repairId, queryClient]);
+  
+  // Custom fetch function to directly fetch repair details if needed
+  const fetchRepairManually = useCallback(async () => {
+    try {
+      console.log("REPAIR DETAIL DEBUG: Manually fetching repair details");
+      const headers: Record<string, string> = {
+        "X-Debug-Client": "RepairTrackerClient",
+        "X-Organization-ID": "2",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+      };
+      
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(`/api/repairs/${repairId}/details`, { headers });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch repair details: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("REPAIR DETAIL DEBUG: Manual fetch succeeded:", data);
+      queryClient.setQueryData([`/api/repairs/${repairId}/details`], data);
+      return data;
+    } catch (err) {
+      console.error("REPAIR DETAIL DEBUG: Manual fetch failed:", err);
+      return null;
+    }
+  }, [repairId, queryClient]);
+  
+  // If we've been loading for more than 5 seconds, try a manual fetch
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        fetchRepairManually();
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, fetchRepairManually]);
+  
+  if (isLoading && !repair) {
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-3 sm:p-6">
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+          <div className="flex flex-col justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-4"></div>
+            <div className="text-center">
+              <p className="text-gray-500">Loading repair details...</p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="mt-4"
+                onClick={() => {
+                  console.log("REPAIR DETAIL DEBUG: Manual refresh requested");
+                  fetchRepairManually();
+                }}
+              >
+                Refresh Data
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
