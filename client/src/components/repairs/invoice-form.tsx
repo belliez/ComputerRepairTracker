@@ -24,106 +24,112 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import EditableLineItems from "./editable-line-items";
-
-interface Organization {
-  id: number;
-  name: string;
-  settings?: {
-    email?: string;
-    phone?: string;
-    address?: string;
-    enableTax?: boolean;
-  };
-}
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 interface InvoiceFormProps {
-  repairId?: number | null;
+  repairId: number;
+  quoteId?: number;
   invoiceId?: number;
   isOpen: boolean;
   onClose: () => void;
 }
 
-export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: InvoiceFormProps) {
+export default function InvoiceForm({
+  repairId,
+  quoteId,
+  invoiceId,
+  isOpen,
+  onClose,
+}: InvoiceFormProps) {
   const { toast } = useToast();
-  const [convertFromQuoteId, setConvertFromQuoteId] = useState<number | null>(null);
 
-  // Get existing invoice if editing
-  const { data: existingInvoice, isLoading: isLoadingInvoice } = useQuery({
-    queryKey: [`/api/invoices/${invoiceId}`],
-    enabled: !!invoiceId,
-  });
-
-  // Get repair items for both new and edit modes
+  // Fetch the repair items
   const { data: repairItems, isLoading: isLoadingItems } = useQuery<RepairItem[]>({
     queryKey: [`/api/repairs/${repairId}/items`],
     enabled: !!repairId,
   });
 
-  // Get quotes for this repair to use data from approved quote - available for both new and edit modes
-  const { data: quotes, isLoading: isLoadingQuotes } = useQuery<Quote[]>({
-    queryKey: [`/api/quotes`, { repairId }],
-    enabled: !!repairId,
+  // If we have a quoteId, fetch the quote to use its values
+  const { data: approvedQuote, isLoading: isLoadingQuote } = useQuery<Quote>({
+    queryKey: [`/api/quotes/${quoteId}`],
+    enabled: !!quoteId,
   });
 
-  // Check if we're converting from a quote
-  useEffect(() => {
-    if (isOpen && !invoiceId) {
-      // Check if we have a quote ID in session storage
-      const storedQuoteId = sessionStorage.getItem('convertFromQuoteId');
-      if (storedQuoteId) {
-        const quoteId = parseInt(storedQuoteId);
-        if (!isNaN(quoteId)) {
-          setConvertFromQuoteId(quoteId);
-          // Clear the session storage to avoid reusing it on future opens
-          sessionStorage.removeItem('convertFromQuoteId');
-        }
-      }
-    }
-  }, [isOpen, invoiceId]);
+  // If we're editing an existing invoice
+  const { data: existingInvoice, isLoading: isLoadingInvoice } = useQuery<Invoice>({
+    queryKey: [`/api/invoices/${invoiceId}`],
+    enabled: !!invoiceId,
+  });
 
-  // Get a specific quote if we're converting from one
-  const { data: convertQuote } = useQuery({
-    queryKey: [`/api/quotes/${convertFromQuoteId}`],
-    enabled: !!convertFromQuoteId,
+  // Define interfaces for our data structures
+  interface Currency {
+    code: string;
+    name: string;
+    symbol: string;
+    isDefault: boolean;
+  }
+
+  interface TaxRate {
+    id: number;
+    name: string;
+    rate: number;
+    isDefault: boolean;
+  }
+
+  interface Organization {
+    id: number;
+    name: string;
+    settings?: {
+      email?: string;
+      phone?: string;
+      address?: string;
+      enableTax?: boolean;
+    };
+  }
+
+  interface Invoice {
+    id: number;
+    repairId: number;
+    quoteId: number | null;
+    invoiceNumber: string;
+    dateCreated: string;
+    dueDate: string | null;
+    subtotal: number;
+    tax: number;
+    total: number;
+    status: string;
+    notes: string | null;
+    currencyCode: string;
+    taxRateId: number;
+    paymentDate: string | null;
+    paymentMethod: string | null;
+  }
+
+  // Get currencies and tax rates
+  const { data: currencies, isLoading: isLoadingCurrencies } = useQuery<Currency[]>({
+    queryKey: ['/api/public-settings/currencies'],
   });
   
-  // Get the latest approved quote if available and we're not converting from a specific one
-  const approvedQuote = !convertFromQuoteId ? 
-    quotes?.find(q => q.status === "approved") : 
-    null;
-    
+  const { data: defaultCurrency, isLoading: isLoadingDefaultCurrency } = useQuery<Currency>({
+    queryKey: ['/api/public-settings/currencies/default'],
+  });
+  
+  const { data: taxRates, isLoading: isLoadingTaxRates } = useQuery<TaxRate[]>({
+    queryKey: ['/api/public-settings/tax-rates'],
+  });
+  
+  const { data: defaultTaxRate, isLoading: isLoadingDefaultTaxRate } = useQuery<TaxRate>({
+    queryKey: ['/api/public-settings/tax-rates/default'],
+  });
+  
   // Get organization data to check if tax is enabled
   const { data: organization, isLoading: isLoadingOrganization } = useQuery<Organization>({
     queryKey: ['/api/organizations'],
     select: (data) => Array.isArray(data) ? data[0] : data,
-  });
-  
-  // Get currencies and tax rates
-  const { data: currencies, isLoading: isLoadingCurrencies } = useQuery<any[]>({
-    queryKey: ['/api/public-settings/currencies'],
-  });
-  
-  const { data: defaultCurrency, isLoading: isLoadingDefaultCurrency } = useQuery<any>({
-    queryKey: ['/api/public-settings/currencies/default'],
-  });
-  
-  const { data: taxRates, isLoading: isLoadingTaxRates } = useQuery<any[]>({
-    queryKey: ['/api/public-settings/tax-rates'],
-  });
-  
-  const { data: defaultTaxRate, isLoading: isLoadingDefaultTaxRate } = useQuery<any>({
-    queryKey: ['/api/public-settings/tax-rates/default'],
   });
   
   // State for selected currency and tax rate
@@ -133,190 +139,161 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
   // Set defaults when data loads
   useEffect(() => {
     if (defaultCurrency && !selectedCurrencyCode) {
+      console.log("INVOICE FORM DEBUG: Setting default currency code to", defaultCurrency.code, "with symbol", defaultCurrency.symbol);
       setSelectedCurrencyCode(defaultCurrency.code);
     }
     if (defaultTaxRate && !selectedTaxRateId) {
+      console.log("INVOICE FORM DEBUG: Setting default tax rate ID to", defaultTaxRate.id, "with rate", defaultTaxRate.rate);
       setSelectedTaxRateId(defaultTaxRate.id);
     }
   }, [defaultCurrency, defaultTaxRate, selectedCurrencyCode, selectedTaxRateId]);
+
+  // Get the selected currency
+  const selectedCurrency = selectedCurrencyCode
+    ? currencies?.find(currency => currency.code === selectedCurrencyCode)
+    : defaultCurrency;
   
   // Get the selected tax rate
   const selectedTaxRate = selectedTaxRateId 
     ? taxRates?.find(rate => rate.id === selectedTaxRateId)
     : defaultTaxRate;
     
-  // Get the selected currency
-  const selectedCurrency = selectedCurrencyCode
-    ? currencies?.find(curr => curr.code === selectedCurrencyCode)
-    : defaultCurrency;
-    
-  // Pick the quote to use - prioritize the one we're converting from
-  const quoteToUse = convertQuote || approvedQuote;
+  // Debug logs for currency and tax rate data
+  useEffect(() => {
+    console.log("INVOICE FORM DEBUG: Default currency data:", defaultCurrency);
+    console.log("INVOICE FORM DEBUG: Selected currency code:", selectedCurrencyCode);
+    console.log("INVOICE FORM DEBUG: All currencies:", currencies);
+    console.log("INVOICE FORM DEBUG: Selected currency object:", selectedCurrency);
+  }, [defaultCurrency, selectedCurrencyCode, currencies, selectedCurrency]);
 
-  // Calculate values - either from quote or from repair items
-  let subtotal = 0;
-  let taxAmount = 0;
-  let total = 0;
+  // When editing, load the existing invoice's settings
+  useEffect(() => {
+    if (existingInvoice) {
+      if (existingInvoice.currencyCode) {
+        setSelectedCurrencyCode(existingInvoice.currencyCode);
+      }
+      if (existingInvoice.taxRateId) {
+        setSelectedTaxRateId(existingInvoice.taxRateId);
+      }
+    }
+  }, [existingInvoice]);
 
+  // Calculate values from items or approved quote
+  const subtotal = approvedQuote?.subtotal || repairItems?.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0) || 0;
+  const taxRate = selectedTaxRate?.rate || 0;
+  
+  // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
+  const normalizedTaxRate = taxRate > 1 ? taxRate / 100 : taxRate;
+  
   // Check if tax is enabled for the organization
   const isTaxEnabled = organization?.settings?.enableTax !== false;
   console.log("Invoice Form - Tax enabled for organization:", isTaxEnabled, organization?.settings);
-
-  if (quoteToUse) {
-    subtotal = quoteToUse.subtotal;
-    // If tax is disabled, override the quote tax amount
-    taxAmount = isTaxEnabled ? (quoteToUse.tax || 0) : 0;
-    total = subtotal + taxAmount;
-  } else if (repairItems) {
-    subtotal = repairItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-    
-    // Get tax rate from settings
-    const taxRate = selectedTaxRate?.rate || 0;
-    
-    // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
-    const normalizedTaxRate = taxRate > 1 ? taxRate / 100 : taxRate;
-    
-    // Only calculate tax if it's enabled for the organization
-    taxAmount = isTaxEnabled ? subtotal * normalizedTaxRate : 0;
-    total = subtotal + taxAmount;
-  }
+  
+  // Only calculate tax if it's enabled for the organization
+  const taxAmount = isTaxEnabled 
+    ? approvedQuote?.tax || (subtotal * normalizedTaxRate) 
+    : 0;
+  const total = approvedQuote?.total || subtotal + taxAmount;
 
   // Form validation schema
-  const formSchema = insertInvoiceSchema.extend({
+  const formSchema = z.object({
     repairId: z.number(),
+    quoteId: z.number().nullable().optional(),
     invoiceNumber: z.string(),
-    dateIssued: z.string(),
+    dateCreated: z.string(),
+    dueDate: z.string().nullable().optional(),
     subtotal: z.number(),
-    tax: z.number().optional(),
+    tax: z.number(),
     total: z.number(),
     status: z.string(),
-    paymentMethod: z.string().optional(),
-    notes: z.string().optional(),
+    notes: z.string().nullable().optional(),
     currencyCode: z.string(),
     taxRateId: z.number(),
+    paymentDate: z.string().nullable().optional(),
+    paymentMethod: z.string().nullable().optional(),
   });
 
   // Form initialization
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      repairId: repairId || 0,
-      invoiceNumber: `INV-${Math.floor(5000 + Math.random() * 5000)}`, // Placeholder
-      dateIssued: new Date().toISOString().split('T')[0],
+      repairId,
+      quoteId: quoteId || null,
+      invoiceNumber: `INV-${Math.floor(1000 + Math.random() * 9000)}`, // Placeholder
+      dateCreated: new Date().toISOString().split('T')[0],
+      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // +30 days
       subtotal,
       tax: taxAmount,
       total,
       status: "unpaid",
-      paymentMethod: "none",
-      notes: approvedQuote?.notes || "",
-      currencyCode: quoteToUse?.currencyCode || (selectedCurrency?.code || defaultCurrency?.code || "GBP"),
-      taxRateId: quoteToUse?.taxRateId || (selectedTaxRate?.id || defaultTaxRate?.id || 1),
+      notes: "",
+      currencyCode: selectedCurrencyCode || (defaultCurrency?.code || "GBP"),
+      taxRateId: selectedTaxRateId || (defaultTaxRate?.id || 1),
+      paymentDate: null,
+      paymentMethod: null,
     },
   });
 
   // Update form with existing invoice data if editing
   useEffect(() => {
     if (existingInvoice) {
-      const { id, datePaid, ...invoiceData } = existingInvoice;
-      
       // Format dates for input fields
-      const dateIssued = new Date(invoiceData.dateIssued).toISOString().split('T')[0];
+      const dateCreated = new Date(existingInvoice.dateCreated).toISOString().split('T')[0];
+      const dueDate = existingInvoice.dueDate 
+        ? new Date(existingInvoice.dueDate).toISOString().split('T')[0]
+        : null;
+      const paymentDate = existingInvoice.paymentDate
+        ? new Date(existingInvoice.paymentDate).toISOString().split('T')[0]
+        : null;
       
       form.reset({
-        ...invoiceData,
-        dateIssued,
+        repairId: existingInvoice.repairId,
+        quoteId: existingInvoice.quoteId,
+        invoiceNumber: existingInvoice.invoiceNumber,
+        dateCreated,
+        dueDate,
+        subtotal: existingInvoice.subtotal,
+        tax: existingInvoice.tax,
+        total: existingInvoice.total,
+        status: existingInvoice.status,
+        notes: existingInvoice.notes || "",
+        currencyCode: existingInvoice.currencyCode || (defaultCurrency?.code || "GBP"),
+        taxRateId: existingInvoice.taxRateId || (defaultTaxRate?.id || 1),
+        paymentDate,
+        paymentMethod: existingInvoice.paymentMethod,
       });
     }
-  }, [existingInvoice, form]);
+  }, [existingInvoice, form, defaultCurrency, defaultTaxRate]);
 
-  // Update form when data changes
-  useEffect(() => {
-    if (!existingInvoice) {
-      // Generate invoice number with timestamp to ensure uniqueness
-      const now = new Date();
-      const year = now.getFullYear().toString().substring(2);
-      const month = (now.getMonth() + 1).toString().padStart(2, '0');
-      const day = now.getDate().toString().padStart(2, '0');
-      const hours = now.getHours().toString().padStart(2, '0');
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      const seconds = now.getSeconds().toString().padStart(2, '0');
-      const invoiceNumber = `INV-${year}${month}${day}-${hours}${minutes}${seconds}`;
-
-      form.setValue("invoiceNumber", invoiceNumber);
-      
-      if (quoteToUse) {
-        console.log("Using quote data for invoice:", quoteToUse);
-        form.setValue("subtotal", quoteToUse.subtotal);
-        form.setValue("tax", quoteToUse.tax || 0);
-        form.setValue("total", quoteToUse.total);
-        
-        // Also update currency and tax rate from quote if available
-        if (quoteToUse.currencyCode) {
-          form.setValue("currencyCode", quoteToUse.currencyCode);
-          setSelectedCurrencyCode(quoteToUse.currencyCode);
-        }
-        
-        if (quoteToUse.taxRateId) {
-          form.setValue("taxRateId", quoteToUse.taxRateId);
-          setSelectedTaxRateId(quoteToUse.taxRateId);
-        }
-        form.setValue("notes", quoteToUse.notes || "");
-        
-        // Check if the quote has item data we can use
-        if (quoteToUse.itemsData) {
-          try {
-            const items = JSON.parse(quoteToUse.itemsData);
-            console.log("Successfully parsed items from quote itemsData:", items);
-            form.setValue("itemsData", quoteToUse.itemsData);
-          } catch (error) {
-            console.error("Failed to parse quote itemsData:", error);
-          }
-        } else if (quoteToUse.itemIds && quoteToUse.itemIds.length > 0) {
-          // Handle legacy itemIds format
-          console.log("Using legacy itemIds from quote:", quoteToUse.itemIds);
-          form.setValue("itemIds", quoteToUse.itemIds);
-        }
-      } else if (repairItems) {
-        form.setValue("subtotal", subtotal);
-        form.setValue("tax", taxAmount);
-        form.setValue("total", total);
-      }
-    }
-  }, [quoteToUse, repairItems, subtotal, taxAmount, total, existingInvoice, form]);
-
-  // Create or update invoice mutation
+  // Mutation for creating or updating invoice
   const mutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
-      // Format data
-      const invoiceData = {
-        ...values,
-        dateIssued: new Date(values.dateIssued).toISOString(),
-      };
-      
-      if (invoiceId) {
-        // Update existing invoice
-        return apiRequest("PUT", `/api/invoices/${invoiceId}`, invoiceData);
-      } else {
-        // Create new invoice
-        return apiRequest("POST", "/api/invoices", invoiceData);
+      try {
+        const endpoint = invoiceId ? `/api/invoices/${invoiceId}` : "/api/invoices";
+        const method = invoiceId ? "PUT" : "POST";
+        
+        console.log(`DEBUG: Making ${method} request to ${endpoint} with data:`, values);
+        
+        const response = await apiRequest(method, endpoint, values);
+        
+        if (!response.ok) {
+          console.error(`DEBUG: API error: ${response.status}`);
+          const errorText = await response.text();
+          console.error(`DEBUG: Error response:`, errorText);
+          throw new Error(`API returned ${response.status}: ${errorText}`);
+        }
+        
+        const responseData = await response.json();
+        return responseData;
+      } catch (error) {
+        console.error(`DEBUG: Error in mutation:`, error);
+        throw error;
       }
     },
-    onSuccess: async () => {
-      // Invalidate queries first
+    onSuccess: (data) => {
+      // Invalidate queries to refresh the data
       queryClient.invalidateQueries({ queryKey: ["/api/invoices"] });
-      
-      if (repairId) {
-        // Invalidate and immediately force refetch the repair details
-        await queryClient.invalidateQueries({ 
-          queryKey: [`/api/repairs/${repairId}/details`]
-        });
-        
-        // Force an immediate refetch of the repair details
-        await queryClient.refetchQueries({ 
-          queryKey: [`/api/repairs/${repairId}/details`],
-          exact: true
-        });
-      }
+      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
       
       toast({
         title: invoiceId ? "Invoice updated" : "Invoice created",
@@ -337,26 +314,42 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    mutation.mutate(values);
+    try {
+      // Ensure dates are in ISO string format
+      const formattedValues = {
+        ...values,
+        dateCreated: values.dateCreated ? new Date(values.dateCreated).toISOString() : new Date().toISOString(),
+        dueDate: values.dueDate ? new Date(values.dueDate).toISOString() : null,
+        paymentDate: values.paymentDate ? new Date(values.paymentDate).toISOString() : null,
+      };
+      
+      mutation.mutate(formattedValues);
+    } catch (error) {
+      console.error("DEBUG: Error in onSubmit function:", error);
+    }
   };
 
-  const isLoading = isLoadingItems || isLoadingInvoice || isLoadingQuotes || mutation.isPending;
+  const isLoading = isLoadingItems || isLoadingQuote || isLoadingInvoice || mutation.isPending;
 
+  const isUnpaidInvoice = existingInvoice?.status === "unpaid";
+  const isPaidInvoice = existingInvoice?.status === "paid";
+  
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-3 sm:p-6">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto p-3 sm:p-6">
         <DialogHeader>
           <DialogTitle>{invoiceId ? "Edit Invoice" : "Create Invoice"}</DialogTitle>
           <DialogDescription>
             {invoiceId
               ? "Update the invoice information below"
-              : "Create an invoice for this repair"}
+              : "Create an invoice for the repair"}
           </DialogDescription>
         </DialogHeader>
 
         {isLoading && !mutation.isPending ? (
           <div className="flex justify-center items-center p-8">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+            <span className="ml-3">Loading data...</span>
           </div>
         ) : (
           <Form {...form}>
@@ -378,14 +371,38 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
 
                 <FormField
                   control={form.control}
-                  name="dateIssued"
+                  name="dateCreated"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Date Issued</FormLabel>
+                      <FormLabel>Date Created</FormLabel>
                       <FormControl>
                         <Input 
                           type="date" 
                           {...field} 
+                          value={field.value?.split('T')[0] || ''} 
+                          disabled={!!approvedQuote}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="dueDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Due Date</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          {...field} 
+                          value={field.value?.split('T')[0] || ''} 
+                          disabled={!!approvedQuote || isPaidInvoice}
+                          onChange={(e) => {
+                            field.onChange(e.target.value || null);
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -402,16 +419,127 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
                       <Select
                         onValueChange={field.onChange}
                         defaultValue={field.value}
+                        value={field.value}
+                        disabled={isPaidInvoice}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a status" />
+                            <SelectValue placeholder="Select status" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="unpaid">Unpaid</SelectItem>
-                          <SelectItem value="partial">Partial Payment</SelectItem>
-                          <SelectItem value="paid">Paid</SelectItem>
+                          <SelectItem value="unpaid">
+                            <div className="flex items-center">
+                              <Badge variant="outline" className="mr-2 bg-red-50 text-red-700 border-red-200">Unpaid</Badge>
+                              <span>Unpaid</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="paid">
+                            <div className="flex items-center">
+                              <Badge variant="outline" className="mr-2 bg-green-50 text-green-700 border-green-200">Paid</Badge>
+                              <span>Paid</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="cancelled">
+                            <div className="flex items-center">
+                              <Badge variant="outline" className="mr-2 bg-gray-50 text-gray-700 border-gray-200">Cancelled</Badge>
+                              <span>Cancelled</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {isUnpaidInvoice && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="paymentDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Date</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="date" 
+                              {...field} 
+                              value={field.value?.split('T')[0] || ''} 
+                              onChange={(e) => {
+                                field.onChange(e.target.value || null);
+                              }}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="paymentMethod"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Payment Method</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            defaultValue={field.value || ''}
+                            value={field.value || ''}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select payment method" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="cash">Cash</SelectItem>
+                              <SelectItem value="card">Card</SelectItem>
+                              <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                              <SelectItem value="check">Check</SelectItem>
+                              <SelectItem value="paypal">PayPal</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="currencyCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Currency</FormLabel>
+                      <Select
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedCurrencyCode(value);
+                        }}
+                        defaultValue={field.value}
+                        value={field.value}
+                        disabled={!!approvedQuote || isPaidInvoice}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select currency" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {currencies?.map((currency) => (
+                            <SelectItem key={currency.code} value={currency.code}>
+                              <div className="flex items-center">
+                                <span className="mr-2">{currency.symbol}</span>
+                                <span>{currency.name} ({currency.code})</span>
+                                {currency.isDefault && (
+                                  <Badge className="ml-2" variant="outline">Default</Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -421,331 +549,165 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
 
                 <FormField
                   control={form.control}
-                  name="paymentMethod"
+                  name="taxRateId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Payment Method</FormLabel>
+                      <FormLabel className="flex">
+                        <span>Tax Rate</span>
+                        {!isTaxEnabled && (
+                          <Badge variant="outline" className="ml-2 bg-yellow-50 text-yellow-700 border-yellow-200">Tax Disabled</Badge>
+                        )}
+                      </FormLabel>
                       <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        onValueChange={(value) => {
+                          const numberValue = Number(value);
+                          field.onChange(numberValue);
+                          setSelectedTaxRateId(numberValue);
+                        }}
+                        defaultValue={field.value?.toString()}
+                        value={field.value?.toString()}
+                        disabled={!!approvedQuote || isPaidInvoice || !isTaxEnabled}
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select payment method" />
+                            <SelectValue placeholder="Select tax rate" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="none">Not Paid Yet</SelectItem>
-                          <SelectItem value="Credit Card">Credit Card</SelectItem>
-                          <SelectItem value="Debit Card">Debit Card</SelectItem>
-                          <SelectItem value="Cash">Cash</SelectItem>
-                          <SelectItem value="Check">Check</SelectItem>
-                          <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                          <SelectItem value="PayPal">PayPal</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
+                          {taxRates?.map((rate) => (
+                            <SelectItem key={rate.id} value={rate.id.toString()}>
+                              <div className="flex items-center">
+                                <span>{rate.name} ({rate.rate}%)</span>
+                                {rate.isDefault && (
+                                  <Badge className="ml-2" variant="outline">Default</Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
+                      <FormDescription>
+                        {isTaxEnabled 
+                          ? "Select the appropriate tax rate for this invoice" 
+                          : "Tax is disabled in organization settings"}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
 
-              {/* Display editable line items */}
-              {quoteToUse && quoteToUse.itemsData ? (
-                // If we have converted from a quote with itemsData, use that
-                <EditableLineItems 
-                  items={(() => {
-                    try {
-                      // Try to parse the items from the quote's itemsData
-                      const parsedItems = JSON.parse(quoteToUse.itemsData);
-                      console.log("Using items from quote itemsData:", parsedItems);
-                      return parsedItems.map((item: any) => ({
-                        description: item.description,
-                        itemType: item.itemType || "part",
-                        unitPrice: item.unitPrice,
-                        quantity: item.quantity,
-                        total: item.unitPrice * item.quantity
-                      }));
-                    } catch (e) {
-                      console.error("Error parsing quote items:", e);
-                      return [];
-                    }
-                  })()}
-                  onChange={(updatedItems) => {
-                    // Calculate new totals
-                    const taxRate = selectedTaxRate?.rate || 0;
-                    
-                    // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
-                    const normalizedTaxRate = taxRate > 1 ? taxRate / 100 : taxRate;
-                    
-                    const newSubtotal = updatedItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-                    // Only calculate tax if it's enabled for the organization
-                    const newTaxAmount = isTaxEnabled ? newSubtotal * normalizedTaxRate : 0;
-                    const newTotal = newSubtotal + newTaxAmount;
-                    
-                    form.setValue("subtotal", newSubtotal);
-                    form.setValue("tax", newTaxAmount);
-                    form.setValue("total", newTotal);
-                    
-                    // Update the itemsData field
-                    form.setValue("itemsData", JSON.stringify(updatedItems));
-                  }}
-                  readOnly={false}
-                />
-              ) : repairItems ? (
-                // Fall back to repair items if no quote is being converted
-                <EditableLineItems 
-                  items={repairItems.map(item => ({
-                    id: item.id,
-                    description: item.description,
-                    itemType: item.itemType as "part" | "service",
-                    unitPrice: item.unitPrice,
-                    quantity: item.quantity,
-                    total: item.unitPrice * item.quantity
-                  }))}
-                  onChange={(updatedItems) => {
-                    // Calculate new totals
-                    const taxRate = selectedTaxRate?.rate || 0;
-                    
-                    // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
-                    const normalizedTaxRate = taxRate > 1 ? taxRate / 100 : taxRate;
-                    
-                    const newSubtotal = updatedItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-                    // Only calculate tax if it's enabled for the organization
-                    const newTaxAmount = isTaxEnabled ? newSubtotal * normalizedTaxRate : 0;
-                    const newTotal = newSubtotal + newTaxAmount;
-                    
-                    form.setValue("subtotal", newSubtotal);
-                    form.setValue("tax", newTaxAmount);
-                    form.setValue("total", newTotal);
-                    
-                    // Update the itemsData field
-                    form.setValue("itemsData", JSON.stringify(updatedItems));
-                  }}
-                  readOnly={false}
-                />
-              ) : null}
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
-                    <FormField
-                      control={form.control}
-                      name="currencyCode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Currency</FormLabel>
-                          <Select
-                            onValueChange={(value) => {
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="subtotal"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subtotal</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center">
+                          <CurrencySymbol currencyCode={selectedCurrencyCode} />
+                          <Input
+                            {...field}
+                            value={field.value.toFixed(2)}
+                            disabled={!!approvedQuote}
+                            type="number"
+                            step="0.01"
+                            onChange={(e) => {
+                              const value = parseFloat(e.target.value);
                               field.onChange(value);
-                              setSelectedCurrencyCode(value);
+                              
+                              // Recalculate tax and total
+                              const newTax = isTaxEnabled ? value * normalizedTaxRate : 0;
+                              const newTotal = value + newTax;
+                              
+                              form.setValue("tax", newTax);
+                              form.setValue("total", newTotal);
                             }}
-                            defaultValue={field.value}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select currency" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {currencies?.map((currency) => (
-                                <SelectItem 
-                                  key={currency.code} 
-                                  value={currency.code}
-                                >
-                                  {currency.code} - {currency.name} ({currency.symbol})
-                                  {currency.isDefault && " (Default)"}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="taxRateId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Tax Rate</FormLabel>
-                          <Select
-                            onValueChange={(value) => {
-                              const numValue = parseInt(value);
-                              field.onChange(numValue);
-                              setSelectedTaxRateId(numValue);
-                            }}
-                            defaultValue={field.value?.toString()}
-                            value={field.value?.toString()}
-                            disabled={!isTaxEnabled}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder={isTaxEnabled ? "Select tax rate" : "Tax disabled"} />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {isTaxEnabled ? (
-                                taxRates?.map((taxRate) => (
-                                  <SelectItem 
-                                    key={taxRate.id} 
-                                    value={taxRate.id.toString()}
-                                  >
-                                    {taxRate.name} ({(taxRate.rate * 100).toFixed(2)}%)
-                                    {taxRate.isDefault && " (Default)"}
-                                  </SelectItem>
-                                ))
-                              ) : (
-                                <SelectItem value="0">Tax calculation disabled</SelectItem>
-                              )}
-                            </SelectContent>
-                          </Select>
-                          {!isTaxEnabled && (
-                            <FormDescription>
-                              Tax calculation is disabled for this organization
-                            </FormDescription>
-                          )}
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Notes</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Add any notes for the invoice..."
-                            className="h-32"
-                            {...field} 
-                            value={field.value || ''}
                           />
-                        </FormControl>
-                        <FormDescription>
-                          Include payment terms or any other relevant information
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="subtotal"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Subtotal</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
-                            <span className="mr-1">{selectedCurrency?.symbol || "£"}</span>
-                            <Input
-                              {...field}
-                              value={field.value.toFixed(2)}
-                              disabled={!!approvedQuote}
-                              type="number"
-                              step="0.01"
-                              onChange={(e) => {
-                                const value = parseFloat(e.target.value);
-                                field.onChange(value);
-                                // Update total when subtotal changes
-                                const currentTax = form.getValues("tax") || 0;
-                                form.setValue("total", value + currentTax);
-                              }}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name="tax"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tax</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center">
+                          <CurrencySymbol currencyCode={selectedCurrencyCode} />
+                          <Input
+                            {...field}
+                            value={field.value.toFixed(2)}
+                            disabled={true} // Tax is always calculated
+                            type="number"
+                            step="0.01"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                  <FormField
-                    control={form.control}
-                    name="tax"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tax {!isTaxEnabled && "(Disabled)"}</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
-                            <span className="mr-1">{selectedCurrency?.symbol || "£"}</span>
-                            <Input
-                              {...field}
-                              value={(field.value || 0).toFixed(2)}
-                              type="number"
-                              step="0.01"
-                              disabled={!isTaxEnabled || !!approvedQuote}
-                              onChange={(e) => {
-                                // If tax is disabled, tax is always 0
-                                const value = isTaxEnabled ? parseFloat(e.target.value) : 0;
-                                field.onChange(value);
-                                // Update total when tax changes
-                                const currentSubtotal = form.getValues("subtotal");
-                                form.setValue("total", currentSubtotal + value);
-                              }}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name="total"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Total</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center">
+                          <CurrencySymbol currencyCode={selectedCurrencyCode} />
+                          <Input
+                            {...field}
+                            value={field.value.toFixed(2)}
+                            disabled={true} // Total is always calculated
+                            type="number"
+                            step="0.01"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                  <FormField
-                    control={form.control}
-                    name="total"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Total</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
-                            <span className="mr-1">{selectedCurrency?.symbol || "£"}</span>
-                            <Input
-                              {...field}
-                              value={field.value.toFixed(2)}
-                              className="font-bold"
-                              type="number"
-                              step="0.01"
-                              disabled={!!approvedQuote}
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Any special notes or payment terms for this invoice?"
+                          className="min-h-[100px]"
+                          {...field}
+                          value={field.value || ''}
+                          disabled={isPaidInvoice}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={onClose}
-                >
+                <Button type="button" variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button 
-                  type="submit"
-                  disabled={mutation.isPending}
-                >
-                  {mutation.isPending ? (
-                    <span className="flex items-center">
-                      <i className="fas fa-spinner fa-spin mr-2"></i> Saving...
-                    </span>
-                  ) : invoiceId ? (
-                    "Update Invoice"
-                  ) : (
-                    "Create Invoice"
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading && (
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
                   )}
+                  {invoiceId ? "Update Invoice" : "Create Invoice"}
                 </Button>
               </DialogFooter>
             </form>
