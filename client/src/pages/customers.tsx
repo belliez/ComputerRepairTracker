@@ -31,8 +31,59 @@ export default function Customers() {
   console.log("CUSTOMERS PAGE DEBUG: Component rendering, before useQuery");
   
   // Standard API query for customers
+  console.log("DEBUG: About to run useQuery for customers");
+  
   const { data: customers, isLoading, refetch, error } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
+    // Since this is a direct call to the customer endpoint, we'll make a manual fetch
+    // to debug what's happening
+    queryFn: async () => {
+      console.log("MANUAL QUERY FN: Starting manual fetch for customers");
+      
+      // Get auth token
+      const firebaseToken = localStorage.getItem('firebase_token');
+      const orgId = localStorage.getItem('currentOrganizationId') || '2';
+      
+      // Setup headers
+      const headers: Record<string, string> = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': orgId,
+      };
+      
+      if (firebaseToken) {
+        headers['Authorization'] = `Bearer ${firebaseToken}`;
+      }
+      
+      console.log("MANUAL QUERY FN: Making fetch with headers:", headers);
+      
+      try {
+        const res = await fetch('/api/customers', {
+          credentials: "include",
+          headers: headers
+        });
+        
+        console.log("MANUAL QUERY FN: Response status:", res.status);
+        const text = await res.text();
+        console.log("MANUAL QUERY FN: Response text:", text);
+        
+        if (!res.ok) {
+          throw new Error(`${res.status}: ${text || res.statusText}`);
+        }
+        
+        // Parse JSON response
+        try {
+          const data = JSON.parse(text);
+          console.log("MANUAL QUERY FN: Parsed customers data:", data);
+          return data;
+        } catch (e) {
+          console.error("MANUAL QUERY FN: Error parsing JSON:", e);
+          throw new Error("Failed to parse JSON response");
+        }
+      } catch (error) {
+        console.error("MANUAL QUERY FN: Error fetching customers:", error);
+        throw error;
+      }
+    },
     onSuccess: (data) => {
       console.log("CUSTOMERS DEBUG: Successfully loaded customers:", data?.length || 0);
       if (data?.length) {
