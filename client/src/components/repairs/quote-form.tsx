@@ -167,7 +167,12 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
   const normalizedTaxRate = taxRate > 1 ? taxRate / 100 : taxRate;
   
-  const taxAmount = subtotal * normalizedTaxRate;
+  // Check if tax is enabled for the organization
+  const isTaxEnabled = organization?.settings?.enableTax !== false;
+  console.log("Quote Form - Tax enabled for organization:", isTaxEnabled, organization?.settings);
+  
+  // Only calculate tax if it's enabled for the organization
+  const taxAmount = isTaxEnabled ? subtotal * normalizedTaxRate : 0;
   const total = subtotal + taxAmount;
 
   // Form validation schema - client side only

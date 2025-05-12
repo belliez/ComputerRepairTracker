@@ -35,6 +35,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import EditableLineItems from "./editable-line-items";
 
+interface Organization {
+  id: number;
+  name: string;
+  settings?: {
+    email?: string;
+    phone?: string;
+    address?: string;
+    enableTax?: boolean;
+  };
+}
+
 interface InvoiceFormProps {
   repairId?: number | null;
   invoiceId?: number;
@@ -90,6 +101,12 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
   const approvedQuote = !convertFromQuoteId ? 
     quotes?.find(q => q.status === "approved") : 
     null;
+    
+  // Get organization data to check if tax is enabled
+  const { data: organization, isLoading: isLoadingOrganization } = useQuery<Organization>({
+    queryKey: ['/api/organizations'],
+    select: (data) => Array.isArray(data) ? data[0] : data,
+  });
     
   // Pick the quote to use - prioritize the one we're converting from
   const quoteToUse = convertQuote || approvedQuote;
