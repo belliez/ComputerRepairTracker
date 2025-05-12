@@ -131,12 +131,34 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   // Set defaults when data loads
   useEffect(() => {
     if (defaultCurrency && !selectedCurrencyCode) {
+      console.log("QUOTE FORM DEBUG: Setting default currency code to", defaultCurrency.code, "with symbol", defaultCurrency.symbol);
       setSelectedCurrencyCode(defaultCurrency.code);
     }
     if (defaultTaxRate && !selectedTaxRateId) {
+      console.log("QUOTE FORM DEBUG: Setting default tax rate ID to", defaultTaxRate.id, "with rate", defaultTaxRate.rate);
       setSelectedTaxRateId(defaultTaxRate.id);
     }
   }, [defaultCurrency, defaultTaxRate, selectedCurrencyCode, selectedTaxRateId]);
+  
+  // Debug logs for currency and tax rate data
+  useEffect(() => {
+    console.log("QUOTE FORM DEBUG: Default currency data:", defaultCurrency);
+    console.log("QUOTE FORM DEBUG: Selected currency code:", selectedCurrencyCode);
+    console.log("QUOTE FORM DEBUG: All currencies:", currencies);
+    console.log("QUOTE FORM DEBUG: Selected currency object:", selectedCurrency);
+  }, [defaultCurrency, selectedCurrencyCode, currencies, selectedCurrency]);
+  
+  // Helper function to display the correct currency symbol
+  const CurrencySymbol = () => {
+    const symbol = selectedCurrency?.symbol || 
+                  (defaultCurrency?.symbol || '$');
+    console.log("CURRENCY SYMBOL DEBUG:", { 
+      selectedSymbol: selectedCurrency?.symbol, 
+      defaultSymbol: defaultCurrency?.symbol, 
+      using: symbol 
+    });
+    return <span className="mr-1">{symbol}</span>;
+  };
   
   // When editing, load the existing quote's settings
   useEffect(() => {
