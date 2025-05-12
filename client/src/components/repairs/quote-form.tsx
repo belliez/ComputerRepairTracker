@@ -7,6 +7,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertQuoteSchema, RepairItem } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CurrencySymbol } from "@/components/currency-symbol";
 import {
   Dialog,
   DialogContent,
@@ -140,26 +141,6 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
     }
   }, [defaultCurrency, defaultTaxRate, selectedCurrencyCode, selectedTaxRateId]);
   
-  // Debug logs for currency and tax rate data
-  useEffect(() => {
-    console.log("QUOTE FORM DEBUG: Default currency data:", defaultCurrency);
-    console.log("QUOTE FORM DEBUG: Selected currency code:", selectedCurrencyCode);
-    console.log("QUOTE FORM DEBUG: All currencies:", currencies);
-    console.log("QUOTE FORM DEBUG: Selected currency object:", selectedCurrency);
-  }, [defaultCurrency, selectedCurrencyCode, currencies, selectedCurrency]);
-  
-  // Helper function to display the correct currency symbol
-  const CurrencySymbol = () => {
-    const symbol = selectedCurrency?.symbol || 
-                  (defaultCurrency?.symbol || '$');
-    console.log("CURRENCY SYMBOL DEBUG:", { 
-      selectedSymbol: selectedCurrency?.symbol, 
-      defaultSymbol: defaultCurrency?.symbol, 
-      using: symbol 
-    });
-    return <span className="mr-1">{symbol}</span>;
-  };
-  
   // When editing, load the existing quote's settings
   useEffect(() => {
     if (existingQuote) {
@@ -181,6 +162,14 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   const selectedCurrency = selectedCurrencyCode
     ? currencies?.find(currency => currency.code === selectedCurrencyCode)
     : defaultCurrency;
+    
+  // Debug logs for currency and tax rate data
+  useEffect(() => {
+    console.log("QUOTE FORM DEBUG: Default currency data:", defaultCurrency);
+    console.log("QUOTE FORM DEBUG: Selected currency code:", selectedCurrencyCode);
+    console.log("QUOTE FORM DEBUG: All currencies:", currencies);
+    console.log("QUOTE FORM DEBUG: Selected currency object:", selectedCurrency);
+  }, [defaultCurrency, selectedCurrencyCode, currencies, selectedCurrency]);
   
   // Calculate values from repair items
   const subtotal = repairItems?.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0) || 0;
