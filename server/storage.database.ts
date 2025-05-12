@@ -356,17 +356,40 @@ export class DatabaseStorage implements IStorage {
   // Customer methods
   async getCustomers(): Promise<Customer[]> {
     // Get organization context from request
-    const orgId = (global as any).currentOrganizationId || 1; // Default to org 1 in dev mode
-    console.log(`Fetching customers for organization: ${orgId}`);
+    const orgId = (global as any).currentOrganizationId || 2; // Default to org 2 if not set
+    console.log(`CUSTOMERS DB DEBUG: Fetching customers for organization: ${orgId}`);
     
-    return db.select()
-      .from(customers)
-      .where(
-        and(
-          eq(customers.deleted, false),
-          eq(customers.organizationId, orgId)
-        )
-      );
+    try {
+      // First, fetch all customers without organization filter to debug
+      const allCustomers = await db.select()
+        .from(customers)
+        .where(eq(customers.deleted, false));
+      
+      console.log(`CUSTOMERS DB DEBUG: Found ${allCustomers.length} total customers without organization filter`);
+      console.log(`CUSTOMERS DB DEBUG: Customer organization IDs present in DB: ${allCustomers.map(r => r.organizationId).join(', ')}`);
+      
+      // Now fetch with organization filter
+      const filteredCustomers = await db.select()
+        .from(customers)
+        .where(
+          and(
+            eq(customers.deleted, false),
+            eq(customers.organizationId, orgId)
+          )
+        );
+      
+      console.log(`CUSTOMERS DB DEBUG: Found ${filteredCustomers.length} customers after applying organization filter for org ${orgId}`);
+      if (filteredCustomers.length > 0) {
+        console.log(`CUSTOMERS DB DEBUG: First customer after filtering:`, JSON.stringify(filteredCustomers[0]));
+      } else {
+        console.log(`CUSTOMERS DB DEBUG: No customers found for organization ${orgId}`);
+      }
+      
+      return filteredCustomers;
+    } catch (error) {
+      console.error(`CUSTOMERS DB DEBUG: Error fetching customers:`, error);
+      throw error;
+    }
   }
 
   async getCustomer(id: number): Promise<Customer | undefined> {

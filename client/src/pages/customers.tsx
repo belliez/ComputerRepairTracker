@@ -87,7 +87,48 @@ export default function Customers() {
           <h1 className="text-2xl font-semibold text-gray-800">Customers</h1>
           <p className="text-sm text-gray-500">Manage your customer database</p>
         </div>
-        <div className="mt-4 md:mt-0">
+        <div className="mt-4 md:mt-0 flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              console.log("DEBUG: Manually fetching customers data");
+              try {
+                // Make a direct fetch to /api/customers to test
+                const firebaseToken = localStorage.getItem('firebase_token');
+                const orgId = localStorage.getItem('currentOrganizationId');
+                
+                fetch('/api/customers', {
+                  headers: {
+                    'Authorization': `Bearer ${firebaseToken}`,
+                    'X-Organization-ID': orgId || '2',
+                    'X-Debug-Client': 'RepairTrackerClient'
+                  }
+                })
+                .then(res => {
+                  console.log("DEBUG: Direct fetch response status:", res.status);
+                  return res.text();
+                })
+                .then(text => {
+                  console.log("DEBUG: Direct fetch response:", text);
+                  try {
+                    if (text) {
+                      const data = JSON.parse(text);
+                      console.log("DEBUG: Parsed customers data:", data);
+                    }
+                  } catch (e) {
+                    console.log("DEBUG: Failed to parse JSON:", e);
+                  }
+                })
+                .catch(err => {
+                  console.error("DEBUG: Direct fetch error:", err);
+                });
+              } catch (e) {
+                console.error("DEBUG: Error in manual fetch:", e);
+              }
+            }}
+          >
+            Debug Fetch
+          </Button>
           <Button
             onClick={handleAddCustomer}
             className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"

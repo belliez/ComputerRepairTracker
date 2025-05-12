@@ -284,9 +284,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customers
   apiRouter.get("/customers", async (req: Request, res: Response) => {
     try {
+      console.log("CUSTOMERS DEBUG: Request URL: /customers, Path: /customers, BaseURL: /api, OriginalURL: /api/customers");
+      console.log(`CUSTOMERS DEBUG: Organization ID Header: ${req.headers['x-organization-id']}`);
+      console.log(`CUSTOMERS DEBUG: Authorization Header: ${req.headers.authorization ? 'present' : 'missing'}`);
+      console.log(`CUSTOMERS DEBUG: Debug client header: ${req.headers['x-debug-client']}`);
+      
+      // Make sure we have an organization ID for this request
+      let orgId = (global as any).currentOrganizationId;
+      
+      // Verify req.organizationId exists from auth middleware
+      if (req.organizationId && typeof req.organizationId === 'number') {
+        orgId = req.organizationId;
+        console.log(`CUSTOMERS DEBUG: Using organization ID from request context: ${orgId}`);
+      } else if (req.headers['x-organization-id']) {
+        // Fallback to header if not set in context
+        const headerOrgId = parseInt(req.headers['x-organization-id'] as string, 10);
+        if (!isNaN(headerOrgId)) {
+          orgId = headerOrgId;
+          console.log(`CUSTOMERS DEBUG: Using organization ID from header: ${orgId}`);
+        }
+      }
+      
+      if (!orgId) {
+        return res.status(400).json({ error: "Missing organization context" });
+      }
+      
+      // Save this organization ID for the request
+      (global as any).currentOrganizationId = orgId;
+      
       const customers = await storage.getCustomers();
+      console.log(`CUSTOMERS DEBUG: Found ${customers.length} customers for organization: ${orgId}`);
+      if (customers.length > 0) {
+        console.log(`CUSTOMERS DEBUG: First customer:`, JSON.stringify(customers[0]));
+      }
+      
       res.json(customers);
     } catch (error) {
+      console.error("Error fetching customers:", error);
       res.status(500).json({ error: "Failed to fetch customers" });
     }
   });
