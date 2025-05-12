@@ -1034,6 +1034,56 @@ const SettingsPage = () => {
     setShowCurrencyDialog(true);
   };
   
+  // Handle setting a currency as default
+  const handleSetDefaultCurrency = async (currencyCode: string) => {
+    try {
+      // Get the auth token
+      const authToken = getAuthToken();
+      
+      const headers: Record<string, string> = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': '2', // Hardcoded ID for now
+        'Content-Type': 'application/json'
+      };
+      
+      // Add authorization header if token exists
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+        console.log('Adding auth token to currency default update request');
+      } else {
+        console.warn('No authentication token found for currency update');
+      }
+      
+      console.log(`Setting currency ${currencyCode} as default`);
+      
+      const response = await fetch(`/api/settings/currencies/${currencyCode}`, {
+        method: 'PUT',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ isDefault: true })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error setting default currency: ${response.status}`);
+      }
+      
+      // Refetch the currencies to update the UI
+      fetchCurrencies();
+      
+      toast({
+        title: "Default currency updated",
+        description: `${currencyCode} is now the default currency`,
+      });
+    } catch (error) {
+      console.error('Error setting default currency:', error);
+      toast({
+        title: "Error setting default currency",
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive",
+      });
+    }
+  };
+  
   const handleEditTaxRate = (taxRate: any) => {
     setEditingTaxRate(taxRate);
     taxRateForm.reset({
@@ -1431,6 +1481,16 @@ const SettingsPage = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end space-x-2">
+                            {!currency.isDefault && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSetDefaultCurrency(currency.code)}
+                                className="text-blue-500 border-blue-500 hover:bg-blue-50"
+                              >
+                                Set Default
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="sm"
