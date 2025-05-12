@@ -334,7 +334,10 @@ export default function RepairInformation({
               <FormControl>
                 <RadioGroup
                   value={field.value.toString()}
-                  onValueChange={(value) => field.onChange(parseInt(value))}
+                  onValueChange={(value) => {
+                    console.log("Selected priority value:", value);
+                    field.onChange(parseInt(value));
+                  }}
                   className="flex space-x-2"
                 >
                   <FormItem className="flex items-center space-x-1 space-y-0">

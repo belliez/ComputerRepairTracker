@@ -864,16 +864,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid ID format" });
       }
 
+      console.log("DEBUG - Repair update request body:", req.body);
+      
+      // Process priorityLevel to ensure it's a number
+      let repairData = { ...req.body };
+      
+      // Convert priority to number if it's a string
+      if (repairData.priorityLevel !== undefined) {
+        if (typeof repairData.priorityLevel === 'string') {
+          // Convert named priorities to numbers
+          switch (repairData.priorityLevel.toLowerCase()) {
+            case 'urgent':
+              repairData.priorityLevel = 1;
+              break;
+            case 'high':
+              repairData.priorityLevel = 2;
+              break;
+            case 'normal':
+              repairData.priorityLevel = 3;
+              break;
+            case 'low':
+              repairData.priorityLevel = 4;
+              break;
+            case 'very low':
+              repairData.priorityLevel = 5;
+              break;
+            default:
+              // Try to parse it as a number
+              const numPriority = parseInt(repairData.priorityLevel);
+              if (!isNaN(numPriority) && numPriority >= 1 && numPriority <= 5) {
+                repairData.priorityLevel = numPriority;
+              } else {
+                // Default to normal if parsing fails
+                repairData.priorityLevel = 3;
+              }
+          }
+        }
+        
+        // Ensure priorityLevel is within valid range
+        repairData.priorityLevel = Math.max(1, Math.min(5, repairData.priorityLevel));
+      }
+      
+      console.log("DEBUG - Processed repair data:", repairData);
+      
       // Allow partial updates for repair
-      const validatedData = insertRepairSchema.partial().parse(req.body);
+      const validatedData = insertRepairSchema.partial().parse(repairData);
       
       // Ensure the status is properly typed
       if (validatedData.status) {
-        const repairData = {
+        const finalRepairData = {
           ...validatedData,
           status: validatedData.status as (typeof repairStatuses)[number]
         };
-        const updatedRepair = await storage.updateRepair(id, repairData);
+        
+        console.log("DEBUG - Final repair data with status:", finalRepairData);
+        
+        const updatedRepair = await storage.updateRepair(id, finalRepairData);
         
         if (!updatedRepair) {
           return res.status(404).json({ error: "Repair not found" });
@@ -881,6 +927,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         res.json(updatedRepair);
       } else {
+        console.log("DEBUG - Final repair data without status:", validatedData);
+        
         const updatedRepair = await storage.updateRepair(id, validatedData);
         
         if (!updatedRepair) {
@@ -890,6 +938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json(updatedRepair);
       }
     } catch (error) {
+      console.error("ERROR updating repair:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid repair data", details: error.errors });
       }
