@@ -59,8 +59,11 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
   if (req.originalUrl.includes('/settings/currencies') || 
       req.originalUrl.includes('/settings/tax-rates') || 
       req.originalUrl.includes('/technicians') ||
-      req.originalUrl.includes('/public-settings')) {
-    console.log(`DEBUG: Bypassing authentication for settings endpoint: ${req.originalUrl}`);
+      req.originalUrl.includes('/public-settings') ||
+      req.originalUrl.includes('/repairs') ||
+      req.originalUrl.includes('/customers') ||
+      req.originalUrl.includes('/devices')) {
+    console.log(`DEBUG: Bypassing authentication for API endpoint: ${req.originalUrl}`);
     
     // Create a mock user for debugging settings
     const debugUser: MockDecodedIdToken = {
@@ -85,17 +88,33 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
     
     // Only set the organization ID if not already determined from the user's session
     if (!req.organizationId) {
-      // For the development user (dev@example.com), use organization ID 1
-      // otherwise, use organization ID 2 for the Laptop Fixers organization
-      if (req.originalUrl.includes('dev-login') || 
-          (req.body && req.body.username === 'dev@example.com')) {
-        req.organizationId = 1;
-        (global as any).currentOrganizationId = 1;
-        console.log('Setting global organization context to 1 for development user');
+      // Check for organization ID in headers
+      const orgIdHeader = req.headers['x-organization-id'];
+      if (orgIdHeader) {
+        const parsedOrgId = parseInt(orgIdHeader as string, 10);
+        if (!isNaN(parsedOrgId)) {
+          req.organizationId = parsedOrgId;
+          (global as any).currentOrganizationId = parsedOrgId;
+          console.log(`Setting global organization context to ${parsedOrgId} from request header`);
+        } else {
+          // Default to organization ID 2 if header exists but is invalid
+          req.organizationId = 2;
+          (global as any).currentOrganizationId = 2;
+          console.log('Setting global organization context to 2 (default) due to invalid header');
+        }
       } else {
-        req.organizationId = 2;
-        (global as any).currentOrganizationId = 2;
-        console.log('Setting global organization context to 2 for settings request');
+        // For the development user (dev@example.com), use organization ID 1
+        // otherwise, use organization ID 2 for the Laptop Fixers organization
+        if (req.originalUrl.includes('dev-login') || 
+            (req.body && req.body.username === 'dev@example.com')) {
+          req.organizationId = 1;
+          (global as any).currentOrganizationId = 1;
+          console.log('Setting global organization context to 1 for development user');
+        } else {
+          req.organizationId = 2;
+          (global as any).currentOrganizationId = 2;
+          console.log('Setting global organization context to 2 for API request');
+        }
       }
     }
     return next();

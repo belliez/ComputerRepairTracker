@@ -157,6 +157,47 @@ export default function Dashboard() {
         </div>
         <div className="flex gap-2 mt-2 sm:mt-0">
           <Button 
+            variant="outline"
+            onClick={() => {
+              console.log("DEBUG: Manually fetching repairs data");
+              try {
+                // Make a direct fetch to /api/repairs to test
+                const firebaseToken = localStorage.getItem('firebase_token');
+                const orgId = localStorage.getItem('currentOrganizationId');
+                
+                fetch('/api/repairs', {
+                  headers: {
+                    'Authorization': `Bearer ${firebaseToken}`,
+                    'X-Organization-ID': orgId || '2',
+                    'X-Debug-Client': 'RepairTrackerClient'
+                  }
+                })
+                .then(res => {
+                  console.log("DEBUG: Direct fetch response status:", res.status);
+                  return res.text();
+                })
+                .then(text => {
+                  console.log("DEBUG: Direct fetch response:", text);
+                  try {
+                    if (text) {
+                      const data = JSON.parse(text);
+                      console.log("DEBUG: Parsed repairs data:", data);
+                    }
+                  } catch (e) {
+                    console.log("DEBUG: Failed to parse JSON:", e);
+                  }
+                })
+                .catch(err => {
+                  console.error("DEBUG: Direct fetch error:", err);
+                });
+              } catch (e) {
+                console.error("DEBUG: Error in manual fetch:", e);
+              }
+            }}
+          >
+            Debug Fetch
+          </Button>
+          <Button 
             variant="default"
             className="flex items-center gap-1"
             onClick={handleNewRepair}

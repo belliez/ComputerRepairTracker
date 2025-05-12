@@ -159,22 +159,48 @@ export const getQueryFn: <T>(options: {
       }
       
       // Standard query handling
-      const res = await fetch(url, {
-        credentials: "include",
-        headers: headers
-      });
+      console.log(`QUERY DEBUG: Making request to ${url} with headers:`, JSON.stringify(headers));
+      
+      try {
+        const res = await fetch(url, {
+          credentials: "include",
+          headers: headers
+        });
 
-      console.log(`QUERY DEBUG: Query to ${url} returned status ${res.status}`);
+        console.log(`QUERY DEBUG: Query to ${url} returned status ${res.status}`);
 
-      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-        console.log(`QUERY DEBUG: Query to ${url} returned 401, returning null as configured`);
-        return null;
+        if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+          console.log(`QUERY DEBUG: Query to ${url} returned 401, returning null as configured`);
+          return null;
+        }
+
+        // Log the entire response for debugging
+        const responseText = await res.text();
+        console.log(`QUERY DEBUG: Raw response from ${url}:`, responseText);
+        
+        if (!res.ok) {
+          throw new Error(`${res.status}: ${responseText || res.statusText}`);
+        }
+        
+        // Parse the response text if it exists
+        let data = null;
+        if (responseText && responseText.trim()) {
+          try {
+            data = JSON.parse(responseText);
+            console.log(`QUERY DEBUG: Query to ${url} response data:`, data);
+          } catch (parseError) {
+            console.error(`QUERY DEBUG: Error parsing JSON from ${url}:`, parseError);
+            throw new Error(`Failed to parse response: ${parseError.message}`);
+          }
+        } else {
+          console.log(`QUERY DEBUG: Empty response from ${url}`);
+        }
+        
+        return data;
+      } catch (error) {
+        console.error(`QUERY DEBUG: Error in fetch for ${url}:`, error);
+        throw error;
       }
-
-      await throwIfResNotOk(res);
-      const data = await res.json();
-      console.log(`QUERY DEBUG: Query to ${url} response data:`, data);
-      return data;
     } catch (error) {
       console.error(`QUERY DEBUG: Error processing query to ${url}:`, error);
       throw error;

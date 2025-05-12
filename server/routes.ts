@@ -651,13 +651,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Repairs
   apiRouter.get("/repairs", async (req: Request, res: Response) => {
     try {
+      // Log full details of the request for debugging
+      console.log("REPAIRS DEBUG: Request URL: /repairs, Path: /repairs, BaseURL: /api, OriginalURL: /api/repairs");
+      console.log(`REPAIRS DEBUG: Organization ID Header: ${req.headers['x-organization-id']}`);
+      console.log(`REPAIRS DEBUG: Authorization Header: ${req.headers.authorization ? 'present' : 'missing'}`);
+      console.log(`REPAIRS DEBUG: Debug client header: ${req.headers['x-debug-client']}`);
+      
+      // Make sure we have an organization ID for this request
+      let orgId = (global as any).currentOrganizationId;
+      
+      // Verify req.organizationId exists from auth middleware
+      if (req.organizationId && typeof req.organizationId === 'number') {
+        orgId = req.organizationId;
+        console.log(`REPAIRS DEBUG: Using organization ID from request context: ${orgId}`);
+      } else if (req.headers['x-organization-id']) {
+        // Fallback to header if not set in context
+        const headerOrgId = parseInt(req.headers['x-organization-id'] as string, 10);
+        if (!isNaN(headerOrgId)) {
+          orgId = headerOrgId;
+          console.log(`REPAIRS DEBUG: Using organization ID from header: ${orgId}`);
+        }
+      }
+      
+      if (!orgId) {
+        return res.status(400).json({ error: "Missing organization context" });
+      }
+      
+      // Save this organization ID for the request
+      (global as any).currentOrganizationId = orgId;
+      
+      // Parse query parameters
       const customerId = req.query.customerId ? parseInt(req.query.customerId as string) : undefined;
       const technicianId = req.query.technicianId ? parseInt(req.query.technicianId as string) : undefined;
       const status = req.query.status as string;
       const priority = req.query.priority as string;
-      const orgId = (global as any).currentOrganizationId;
       
-      console.log(`GET /repairs with query params: ${JSON.stringify({ customerId, technicianId, status, priority })} for organization: ${orgId}`);
+      console.log(`REPAIRS DEBUG: GET /repairs with query params: ${JSON.stringify({ customerId, technicianId, status, priority })} for organization: ${orgId}`);
       
       // Filter by customer first if specified
       if (customerId) {
