@@ -679,10 +679,21 @@ const SettingsPage = () => {
     mutationFn: async (data: z.infer<typeof taxRateSchema>) => {
       console.log('Creating tax rate:', data);
       
-      const headers = {
+      // Get the auth token
+      const authToken = getAuthToken();
+      
+      const headers: Record<string, string> = {
         'X-Debug-Client': 'RepairTrackerClient',
         'X-Organization-ID': '2', // Hardcoded ID for now
         'Content-Type': 'application/json'
+      };
+      
+      // Add authorization header if token exists
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+        console.log('Adding auth token to create tax rate request');
+      } else {
+        console.warn('No authentication token found for creating tax rate');
       };
       
       const response = await fetch('/api/settings/tax-rates', {
@@ -718,16 +729,49 @@ const SettingsPage = () => {
   });
   
   const updateTaxRateMutation = useMutation({
-    mutationFn: (data: any) => 
-      apiRequest('PUT', `/api/settings/tax-rates/${data.id}`, {
-        countryCode: data.countryCode,
-        regionCode: data.regionCode,
-        name: data.name,
-        rate: data.rate,
-        isDefault: data.isDefault,
-      }),
+    mutationFn: async (data: any) => {
+      console.log('Updating tax rate:', data);
+      
+      // Get the auth token
+      const authToken = getAuthToken();
+      
+      const headers: Record<string, string> = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': '2', // Hardcoded ID for now
+        'Content-Type': 'application/json'
+      };
+      
+      // Add authorization header if token exists
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+        console.log('Adding auth token to tax rate update request');
+      } else {
+        console.warn('No authentication token found for tax rate update');
+      }
+      
+      const response = await fetch(`/api/settings/tax-rates/${data.id}`, {
+        method: 'PUT',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          countryCode: data.countryCode,
+          regionCode: data.regionCode,
+          name: data.name,
+          rate: data.rate,
+          isDefault: data.isDefault,
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error updating tax rate: ${response.status}`);
+      }
+      
+      return response.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/settings/tax-rates'] });
+      // Directly refetch data instead of only invalidating queries
+      fetchTaxRates();
+      
       setShowTaxRateDialog(false);
       setEditingTaxRate(null);
       taxRateForm.reset();
