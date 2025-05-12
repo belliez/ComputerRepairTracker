@@ -247,12 +247,23 @@ const SettingsPage = () => {
   const fetchOrganization = async () => {
     setIsLoadingOrganization(true);
     try {
-      const headers = {
+      // Get the auth token 
+      const authToken = getAuthToken();
+      
+      const headers: Record<string, string> = {
         'X-Debug-Client': 'RepairTrackerClient',
         'X-Organization-ID': '2', // Hardcoded ID for now
         'Pragma': 'no-cache',
         'Cache-Control': 'no-cache'
       };
+      
+      // Add authorization header if token exists
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+        console.log('Adding auth token to organization fetch request');
+      } else {
+        console.warn('No authentication token found for organization fetch');
+      }
       
       console.log('SETTINGS DEBUG: Fetching organization with headers:', headers);
       const response = await fetch('/api/organizations', { 
@@ -525,11 +536,22 @@ const SettingsPage = () => {
     mutationFn: async (data: z.infer<typeof organizationSchema>) => {
       console.log('Submitting organization update:', data);
       
-      const headers = {
+      // Get the auth token
+      const authToken = getAuthToken();
+      
+      const headers: Record<string, string> = {
         'X-Debug-Client': 'RepairTrackerClient',
         'X-Organization-ID': '2', // Hardcoded ID for now
         'Content-Type': 'application/json'
       };
+      
+      // Add authorization header if token exists
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+        console.log('Adding auth token to organization update request');
+      } else {
+        console.warn('No authentication token found, organization update may fail');
+      }
       
       const response = await fetch('/api/settings/organization', {
         method: 'POST',
@@ -2453,5 +2475,28 @@ const SettingsPage = () => {
     </div>
   );
 };
+
+// Helper function to get the current auth token
+function getAuthToken(): string | null {
+  try {
+    // Try to get the token from localStorage
+    const token = localStorage.getItem('firebase_token');
+    if (token) {
+      return token;
+    }
+    
+    // If not found, try to get it from sessionStorage
+    const sessionToken = sessionStorage.getItem('firebase_token');
+    if (sessionToken) {
+      return sessionToken;
+    }
+    
+    console.warn('No authentication token found');
+    return null;
+  } catch (error) {
+    console.error('Error getting auth token:', error);
+    return null;
+  }
+}
 
 export default SettingsPage;
