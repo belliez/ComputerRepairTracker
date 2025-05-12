@@ -336,11 +336,12 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
     // First set the quote ID
     setEditingQuoteId(quoteId);
     
-    // Then set the form to show with a small delay to ensure state updates properly
-    setTimeout(() => {
-      setShowQuoteForm(true);
-      console.log("DEBUG: Edit quote - showQuoteForm state set to true");
-    }, 50);
+    // Make sure we're on the quotes tab
+    setActiveTab("quotes");
+    
+    // Then show the form immediately - no need for timeout
+    setShowQuoteForm(true);
+    console.log("DEBUG: Edit quote - showQuoteForm state set to true directly");
   };
 
   const handleDeleteQuote = (quoteId: number) => {
