@@ -73,9 +73,19 @@ export default function RepairList({
   };
 
   const queryPath = `/api/repairs${buildQueryParams()}`;
+  console.log("REPAIRS DEBUG: Fetching repairs with path:", queryPath);
   
-  const { data: repairs, isLoading } = useQuery<Repair[]>({
+  const { data: repairs, isLoading, error } = useQuery<Repair[]>({
     queryKey: [queryPath],
+    onSuccess: (data) => {
+      console.log("REPAIRS DEBUG: Successfully loaded repairs:", data?.length || 0);
+      if (data?.length) {
+        console.log("REPAIRS DEBUG: Sample repair:", data[0]);
+      }
+    },
+    onError: (err) => {
+      console.error("REPAIRS DEBUG: Error loading repairs:", err);
+    }
   });
 
   if (isLoading) {

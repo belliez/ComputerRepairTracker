@@ -781,27 +781,38 @@ export class DatabaseStorage implements IStorage {
   // Repair methods
   async getRepairs(): Promise<Repair[]> {
     const orgId = (global as any).currentOrganizationId || 1;
-    console.log(`Fetching all repairs for organization: ${orgId}`);
+    console.log(`REPAIR FETCH DEBUG: Fetching all repairs for organization: ${orgId}`);
     
-    // Fetch repairs without organization filter first to debug
-    const allRepairs = await db.select()
-      .from(repairs)
-      .where(eq(repairs.deleted, false));
-    
-    console.log(`DEBUG: Found ${allRepairs.length} total repairs without organization filter`);
-    console.log(`DEBUG: Repair organization IDs: ${allRepairs.map(r => (r as any).organizationId).join(', ')}`);
-    
-    // Now fetch with organization filter
-    const filteredRepairs = await db.select()
-      .from(repairs)
-      .where(and(
-        eq(repairs.deleted, false),
-        eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
-      ));
-    
-    console.log(`DEBUG: Found ${filteredRepairs.length} repairs after applying organization filter for org ${orgId}`);
-    
-    return filteredRepairs;
+    try {
+      // Fetch repairs without organization filter first to debug
+      const allRepairs = await db.select()
+        .from(repairs)
+        .where(eq(repairs.deleted, false));
+      
+      console.log(`REPAIR FETCH DEBUG: Found ${allRepairs.length} total repairs without organization filter`);
+      console.log(`REPAIR FETCH DEBUG: Repair organization IDs present in DB: ${allRepairs.map(r => r.organizationId).join(', ')}`);
+      
+      // Now fetch with organization filter
+      const filteredRepairs = await db.select()
+        .from(repairs)
+        .where(and(
+          eq(repairs.deleted, false),
+          eq(repairs.organizationId, orgId)
+        ));
+      
+      console.log(`REPAIR FETCH DEBUG: Found ${filteredRepairs.length} repairs after applying organization filter for org ${orgId}`);
+      console.log(`REPAIR FETCH DEBUG: Repairs after filtering:`, filteredRepairs.map(r => ({
+        id: r.id,
+        organizationId: r.organizationId,
+        status: r.status,
+        customerId: r.customerId
+      })));
+      
+      return filteredRepairs;
+    } catch (error) {
+      console.error(`REPAIR FETCH DEBUG: Error fetching repairs:`, error);
+      throw error;
+    }
   }
 
   async getRepair(id: number): Promise<Repair | undefined> {
