@@ -566,10 +566,31 @@ const SettingsPage = () => {
   });
   
   const createCurrencyMutation = useMutation({
-    mutationFn: (data: z.infer<typeof currencySchema>) => 
-      apiRequest('POST', '/api/settings/currencies', data),
+    mutationFn: async (data: z.infer<typeof currencySchema>) => {
+      console.log('Creating currency:', data);
+      
+      const headers = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': '2', // Hardcoded ID for now
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await fetch('/api/settings/currencies', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error creating currency: ${response.status}`);
+      }
+      
+      return response.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
+      // Refetch currency data directly
+      fetchCurrencies();
       setShowCurrencyDialog(false);
       currencyForm.reset();
       toast({
@@ -633,10 +654,31 @@ const SettingsPage = () => {
   });
   
   const createTaxRateMutation = useMutation({
-    mutationFn: (data: z.infer<typeof taxRateSchema>) => 
-      apiRequest('POST', '/api/settings/tax-rates', data),
+    mutationFn: async (data: z.infer<typeof taxRateSchema>) => {
+      console.log('Creating tax rate:', data);
+      
+      const headers = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': '2', // Hardcoded ID for now
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await fetch('/api/settings/tax-rates', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error creating tax rate: ${response.status}`);
+      }
+      
+      return response.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/settings/tax-rates'] });
+      // Refetch data directly
+      fetchTaxRates();
       setShowTaxRateDialog(false);
       taxRateForm.reset();
       toast({
@@ -703,10 +745,31 @@ const SettingsPage = () => {
   
   // Technician mutations
   const createTechnicianMutation = useMutation({
-    mutationFn: (data: z.infer<typeof technicianSchema>) => 
-      apiRequest('POST', '/api/technicians', data),
+    mutationFn: async (data: z.infer<typeof technicianSchema>) => {
+      console.log('Creating technician:', data);
+      
+      const headers = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': '2', // Hardcoded ID for now
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await fetch('/api/technicians', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify(data)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error creating technician: ${response.status}`);
+      }
+      
+      return response.json();
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/technicians'] });
+      // Refetch data directly
+      fetchTechnicians();
       setShowTechnicianDialog(false);
       technicianForm.reset();
       toast({
