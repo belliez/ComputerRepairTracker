@@ -783,12 +783,25 @@ export class DatabaseStorage implements IStorage {
     const orgId = (global as any).currentOrganizationId || 1;
     console.log(`Fetching all repairs for organization: ${orgId}`);
     
-    return db.select()
+    // Fetch repairs without organization filter first to debug
+    const allRepairs = await db.select()
+      .from(repairs)
+      .where(eq(repairs.deleted, false));
+    
+    console.log(`DEBUG: Found ${allRepairs.length} total repairs without organization filter`);
+    console.log(`DEBUG: Repair organization IDs: ${allRepairs.map(r => (r as any).organizationId).join(', ')}`);
+    
+    // Now fetch with organization filter
+    const filteredRepairs = await db.select()
       .from(repairs)
       .where(and(
         eq(repairs.deleted, false),
         eq((repairs as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
       ));
+    
+    console.log(`DEBUG: Found ${filteredRepairs.length} repairs after applying organization filter for org ${orgId}`);
+    
+    return filteredRepairs;
   }
 
   async getRepair(id: number): Promise<Repair | undefined> {

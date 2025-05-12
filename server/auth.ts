@@ -670,6 +670,9 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
       (global as any).currentOrganizationId = orgId;
       console.log(`Development token detected - setting organization ID to ${orgId}`);
       
+      // Log all headers to debug
+      console.log('All request headers:', JSON.stringify(req.headers));
+      
       return next();
     }
     
