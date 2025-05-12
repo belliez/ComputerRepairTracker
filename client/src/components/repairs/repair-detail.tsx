@@ -103,6 +103,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   const [currentInvoice, setCurrentInvoice] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { formatCurrency } = useCurrency();
 
   const { data: repair, isLoading: isLoadingRepair, refetch: refetchRepair } = useQuery<RepairWithRelations>({
     queryKey: [`/api/repairs/${repairId}/details`],
@@ -1375,17 +1376,17 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <div className="text-sm font-medium text-gray-500">Subtotal</div>
-                              <div className="text-lg">${quote.subtotal.toFixed(2)}</div>
+                              <div className="text-lg">{formatCurrency(quote.subtotal)}</div>
                             </div>
                             <div>
                               <div className="text-sm font-medium text-gray-500">Tax</div>
-                              <div className="text-lg">${quote.tax?.toFixed(2) || "0.00"}</div>
+                              <div className="text-lg">{formatCurrency(quote.tax || 0)}</div>
                             </div>
                           </div>
 
                           <div>
                             <div className="text-sm font-medium text-gray-500">Total</div>
-                            <div className="text-2xl font-bold">${quote.total.toFixed(2)}</div>
+                            <div className="text-2xl font-bold">{formatCurrency(quote.total)}</div>
                           </div>
 
                           {quote.notes && (
@@ -1527,17 +1528,17 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <div className="text-sm font-medium text-gray-500">Subtotal</div>
-                              <div className="text-lg">${invoice.subtotal.toFixed(2)}</div>
+                              <div className="text-lg">{formatCurrency(invoice.subtotal)}</div>
                             </div>
                             <div>
                               <div className="text-sm font-medium text-gray-500">Tax</div>
-                              <div className="text-lg">${invoice.tax?.toFixed(2) || "0.00"}</div>
+                              <div className="text-lg">{formatCurrency(invoice.tax || 0)}</div>
                             </div>
                           </div>
 
                           <div>
                             <div className="text-sm font-medium text-gray-500">Total</div>
-                            <div className="text-2xl font-bold">${invoice.total.toFixed(2)}</div>
+                            <div className="text-2xl font-bold">{formatCurrency(invoice.total)}</div>
                           </div>
 
                           {invoice.paymentMethod && invoice.paymentMethod !== 'none' && (
