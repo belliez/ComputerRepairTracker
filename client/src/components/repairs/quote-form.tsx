@@ -307,6 +307,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
         description: quoteId
           ? "The quote has been updated successfully"
           : "The quote has been created successfully",
+        variant: "default",
       });
       
       onClose();
@@ -342,7 +343,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
       toast({
         title: `Quote ${quoteId ? 'updated' : 'created'} successfully`,
         description: `The quote has been ${quoteId ? 'updated' : 'created'} successfully.`,
-        variant: "success",
+        variant: "default",
       });
       
       // Close the dialog after successful submission

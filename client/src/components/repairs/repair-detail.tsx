@@ -322,11 +322,14 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
     // First clear any existing quote ID
     setEditingQuoteId(undefined);
     
+    // Set active tab to quotes to ensure the form is visible in correct context
+    setActiveTab("quotes");
+    
     // Then set the form to show with a small delay to ensure state updates properly
     setTimeout(() => {
       setShowQuoteForm(true);
       console.log("DEBUG: showQuoteForm state set to true");
-    }, 50);
+    }, 100);
   };
 
   const handleEditQuote = (quoteId: number) => {
@@ -1647,9 +1650,10 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
 
       {/* Quote Form */}
       {console.log("DEBUG: Quote form condition, showQuoteForm =", showQuoteForm)}
+      {console.log("DEBUG: showQuoteForm state =", showQuoteForm)}
       {showQuoteForm && (
         <>
-        {console.log("DEBUG: Rendering QuoteForm component")}
+        {console.log("DEBUG: Rendering QuoteForm component with repairId =", repairId, "and quoteId =", editingQuoteId)}
         <QuoteForm 
           repairId={repairId}
           quoteId={editingQuoteId}
