@@ -334,12 +334,41 @@ export default function RepairList({
                           if (customer) {
                             return `${customer.firstName} ${customer.lastName}`;
                           } else {
-                            // Force a query for this specific customer to ensure we have the data
-                            queryClient.prefetchQuery({
-                              queryKey: ["/api/customers"],
-                              staleTime: 0
-                            });
-                            return `Customer #${repair.customerId}`;
+                            // Force a specific query for this customer data
+                            const fetchCustomer = async () => {
+                              try {
+                                console.log(`REPAIR LIST DEBUG: Fetching specific customer #${repair.customerId}`);
+                                const headers = {
+                                  "X-Debug-Client": "RepairTrackerClient",
+                                  "X-Organization-ID": "2",
+                                  "Pragma": "no-cache",
+                                  "Cache-Control": "no-cache"
+                                };
+                                
+                                const token = localStorage.getItem("authToken");
+                                if (token) {
+                                  headers["Authorization"] = `Bearer ${token}`;
+                                }
+                                
+                                const response = await fetch(`/api/customers/${repair.customerId}`, { headers });
+                                if (response.ok) {
+                                  const customerData = await response.json();
+                                  console.log(`REPAIR LIST DEBUG: Specific customer data fetched:`, customerData);
+                                  // Update the cache with this customer
+                                  const existingCustomers = queryClient.getQueryData<any[]>(["/api/customers"]) || [];
+                                  queryClient.setQueryData(["/api/customers"], 
+                                    existingCustomers.filter(c => c.id !== customerData.id).concat([customerData])
+                                  );
+                                }
+                              } catch (err) {
+                                console.error(`REPAIR LIST DEBUG: Error fetching customer #${repair.customerId}:`, err);
+                              }
+                            };
+                            
+                            // Trigger fetch but don't wait for it
+                            fetchCustomer();
+                            
+                            return `Loading customer #${repair.customerId}...`;
                           }
                         })()}
                       </div>
@@ -355,12 +384,41 @@ export default function RepairList({
                         if (device) {
                           return `${device.brand} ${device.model}`;
                         } else {
-                          // Force a query for devices to ensure we have the data
-                          queryClient.prefetchQuery({
-                            queryKey: ["/api/devices"],
-                            staleTime: 0
-                          });
-                          return `Device #${repair.deviceId}`;
+                          // Force a specific query for this device data
+                          const fetchDevice = async () => {
+                            try {
+                              console.log(`REPAIR LIST DEBUG: Fetching specific device #${repair.deviceId}`);
+                              const headers = {
+                                "X-Debug-Client": "RepairTrackerClient",
+                                "X-Organization-ID": "2",
+                                "Pragma": "no-cache",
+                                "Cache-Control": "no-cache"
+                              };
+                              
+                              const token = localStorage.getItem("authToken");
+                              if (token) {
+                                headers["Authorization"] = `Bearer ${token}`;
+                              }
+                              
+                              const response = await fetch(`/api/devices/${repair.deviceId}`, { headers });
+                              if (response.ok) {
+                                const deviceData = await response.json();
+                                console.log(`REPAIR LIST DEBUG: Specific device data fetched:`, deviceData);
+                                // Update the cache with this device
+                                const existingDevices = queryClient.getQueryData<any[]>(["/api/devices"]) || [];
+                                queryClient.setQueryData(["/api/devices"], 
+                                  existingDevices.filter(d => d.id !== deviceData.id).concat([deviceData])
+                                );
+                              }
+                            } catch (err) {
+                              console.error(`REPAIR LIST DEBUG: Error fetching device #${repair.deviceId}:`, err);
+                            }
+                          };
+                          
+                          // Trigger fetch but don't wait for it
+                          fetchDevice();
+                          
+                          return `Loading device #${repair.deviceId}...`;
                         }
                       })()}
                     </div>
