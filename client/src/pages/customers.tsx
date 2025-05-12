@@ -35,6 +35,9 @@ export default function Customers() {
   
   const { data: customers, isLoading, refetch, error } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
+    // Ensure fresh data is fetched more frequently
+    staleTime: 5000, // 5 seconds, to allow for edits
+    cacheTime: 10000, // 10 seconds
     // Since this is a direct call to the customer endpoint, we'll make a manual fetch
     // to debug what's happening
     queryFn: async () => {
@@ -48,6 +51,9 @@ export default function Customers() {
       const headers: Record<string, string> = {
         'X-Debug-Client': 'RepairTrackerClient',
         'X-Organization-ID': orgId,
+        // Add cache-busting headers
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache'
       };
       
       if (firebaseToken) {
@@ -57,7 +63,9 @@ export default function Customers() {
       console.log("MANUAL QUERY FN: Making fetch with headers:", headers);
       
       try {
-        const res = await fetch('/api/customers', {
+        // Add timestamp to URL to prevent caching
+        const timestamp = new Date().getTime();
+        const res = await fetch(`/api/customers?_=${timestamp}`, {
           credentials: "include",
           headers: headers
         });
@@ -94,6 +102,15 @@ export default function Customers() {
       console.error("CUSTOMERS DEBUG: Error loading customers:", err);
     }
   });
+  
+  // Force refresh when customer form is closed
+  useEffect(() => {
+    if (!editCustomerId && !editFormOpen) {
+      console.log("CUSTOMERS PAGE DEBUG: Customer form closed, forcing refresh of customers list");
+      queryClient.invalidateQueries({ queryKey: ["/api/customers"] });
+      refetch();
+    }
+  }, [editCustomerId, editFormOpen, refetch]);
   
   // Debug after query
   console.log("CUSTOMERS PAGE DEBUG: After useQuery. Customers data:", customers);

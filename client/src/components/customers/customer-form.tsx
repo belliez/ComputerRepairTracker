@@ -66,9 +66,11 @@ export default function CustomerForm({
   }, []);
 
   // Get existing customer if editing
-  const { data: existingCustomer, isLoading } = useQuery({
+  const { data: existingCustomer, isLoading, refetch: refetchCustomer } = useQuery({
     queryKey: [`/api/customers/${customerId}`],
     enabled: !!customerId,
+    // Ensure fresh data is fetched each time
+    staleTime: 0,
     // Custom query function to manually fetch customer details
     queryFn: async () => {
       console.log("CUSTOMER EDIT DEBUG: Starting manual fetch for customer details", customerId);
@@ -81,6 +83,9 @@ export default function CustomerForm({
       const headers: Record<string, string> = {
         'X-Debug-Client': 'RepairTrackerClient',
         'X-Organization-ID': orgId,
+        // Add cache-busting parameter
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache'
       };
       
       if (firebaseToken) {
@@ -90,7 +95,9 @@ export default function CustomerForm({
       console.log("CUSTOMER EDIT DEBUG: Making fetch with headers:", headers);
       
       try {
-        const res = await fetch(`/api/customers/${customerId}`, {
+        // Add timestamp to URL to prevent caching
+        const timestamp = new Date().getTime();
+        const res = await fetch(`/api/customers/${customerId}?_=${timestamp}`, {
           credentials: "include",
           headers: headers
         });
@@ -118,6 +125,17 @@ export default function CustomerForm({
       }
     }
   });
+  
+  // Force a refresh when the form is opened
+  useEffect(() => {
+    if (isOpen && customerId) {
+      console.log("CUSTOMER EDIT DEBUG: Form opened, forcing refresh of customer data");
+      // Force invalidate the cache for this customer
+      queryClient.invalidateQueries({ queryKey: [`/api/customers/${customerId}`] });
+      // Refetch the data
+      refetchCustomer();
+    }
+  }, [isOpen, customerId, refetchCustomer]);
 
   // Form validation schema
   const formSchema = insertCustomerSchema.extend({
