@@ -150,7 +150,7 @@ export default function ViewRepair() {
     }
   });
 
-  // Fetch repair items separately for better real-time updates
+  // Fetch repair items separately for better real-time updates using manual fetch approach
   const { 
     data: repairItems = [], 
     isLoading: isLoadingItems,
@@ -159,6 +159,36 @@ export default function ViewRepair() {
     queryKey: [`/api/repairs/${repairId}/items`],
     enabled: !!repairId,
     staleTime: 0, // Consider data always stale to ensure fresh data
+    queryFn: async () => {
+      console.log("VIEW REPAIR DEBUG: Fetching repair items for repair ID:", repairId);
+      const headers: Record<string, string> = {
+        "X-Debug-Client": "RepairTrackerClient",
+        "X-Organization-ID": localStorage.getItem('currentOrganizationId') || "2",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+      };
+      
+      // Add auth token if available
+      const token = localStorage.getItem("firebase_token");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch(`/api/repairs/${repairId}/items`, { headers });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch repair items: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      try {
+        const data = JSON.parse(text);
+        console.log("VIEW REPAIR DEBUG: Parsed repair items data:", data);
+        return data;
+      } catch (err) {
+        console.error("VIEW REPAIR DEBUG: Failed to parse repair items data:", err);
+        return [];
+      }
+    }
   });
   
   // Force refresh data when tab changes, especially for quotes/invoices tabs
