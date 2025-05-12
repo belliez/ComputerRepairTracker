@@ -356,18 +356,38 @@ export default function CreateRepairQuote() {
       const itemsJson = JSON.stringify(itemsToStore);
       console.log(`MUTATION DEBUG: Items data size: ${itemsJson.length} characters, ${itemsToStore.length} items`);
       
+      // Convert validUntil to the expected expirationDate format on the server
+      const validUntil = data.validUntil ? new Date(data.validUntil).toISOString() : null;
+      
+      // Create the payload with all the required fields for the server
       const payload = {
-        ...data,
-        // Add calculated totals
+        repairId: data.repairId,
+        quoteNumber: data.quoteNumber,
+        notes: data.notes || "",
+        dateCreated: new Date().toISOString(), // Use current date for creation
+        expirationDate: validUntil, // Use the converted validUntil date
         subtotal,
-        taxAmount,
-        total, // Using "total" instead of "totalAmount" to match backend
-        // Store the complete items data in JSON format
+        tax: taxAmount, 
+        total,
+        status: "draft", // Default status
+        currencyCode: data.currencyCode,
+        taxRateId: data.taxRateId || 1,
+        // Store the complete items data
         itemsData: itemsJson,
       };
       
-      console.log("Sending quote creation request to server...");
-      return apiRequest("POST", "/api/quotes", payload);
+      console.log("MUTATION DEBUG: Final payload being sent:", payload);
+      
+      try {
+        const response = await apiRequest("POST", "/api/quotes", payload);
+        console.log("MUTATION DEBUG: API response status:", response.status);
+        const responseBody = await response.json();
+        console.log("MUTATION DEBUG: API response body:", responseBody);
+        return responseBody;
+      } catch (error) {
+        console.error("MUTATION DEBUG: API call failed:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       console.log("Quote created successfully, updating UI...");
@@ -788,20 +808,23 @@ export default function CreateRepairQuote() {
               onClick={(e) => {
                 e.preventDefault();
                 console.log("CREATE QUOTE BUTTON CLICKED");
-                console.log("Form values:", form.getValues());
-                console.log("Form validation state:", form.formState);
                 
-                // Check for validation errors
-                if (!form.formState.isValid) {
-                  console.log("Form validation errors:", form.formState.errors);
-                }
-                
-                // Try to submit the form with explicit error handling
+                // Direct method: manually submit form data
                 try {
-                  form.handleSubmit(onSubmit)(e);
-                  console.log("Form handleSubmit called successfully");
+                  // Get the current form values
+                  const formValues = form.getValues();
+                  console.log("Form values collected:", formValues);
+                  
+                  // Directly call the mutation with form values
+                  if (isEditing && quoteId) {
+                    console.log("Calling updateQuoteMutation directly");
+                    updateQuoteMutation.mutate(formValues);
+                  } else {
+                    console.log("Calling createQuoteMutation directly");
+                    createQuoteMutation.mutate(formValues);
+                  }
                 } catch (error) {
-                  console.error("ERROR DURING FORM SUBMIT:", error);
+                  console.error("ERROR DURING MANUAL SUBMIT:", error);
                 }
               }}
             >
