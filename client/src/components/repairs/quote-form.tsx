@@ -524,7 +524,11 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {isLoadingTaxRates ? (
+                          {!isTaxEnabled ? (
+                            <SelectItem value={String(defaultTaxRate?.id || 1)}>
+                              Tax calculation disabled
+                            </SelectItem>
+                          ) : isLoadingTaxRates ? (
                             <div className="flex justify-center p-2">
                               <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
                             </div>
@@ -532,6 +536,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                             taxRates.map((taxRate) => (
                               <SelectItem key={taxRate.id} value={String(taxRate.id)}>
                                 {taxRate.name} ({taxRate.rate > 1 ? taxRate.rate.toFixed(2) : (taxRate.rate * 100).toFixed(2)}%)
+                                {taxRate.isDefault && " (Default)"}
                               </SelectItem>
                             ))
                           ) : (
@@ -540,7 +545,9 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        Select the appropriate tax rate
+                        {isTaxEnabled 
+                          ? "Select the appropriate tax rate" 
+                          : "Tax calculation is disabled for this organization"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -626,7 +633,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                     name="tax"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Tax ({taxRate > 1 ? taxRate.toFixed(2) : (taxRate * 100).toFixed(2)}%)</FormLabel>
+                        <FormLabel>Tax {!isTaxEnabled ? "(Disabled)" : `(${taxRate > 1 ? taxRate.toFixed(2) : (taxRate * 100).toFixed(2)}%)`}</FormLabel>
                         <FormControl>
                           <div className="flex items-center">
                             <span className="mr-1">{selectedCurrency?.symbol || '$'}</span>
