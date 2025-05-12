@@ -54,8 +54,8 @@ export default function Dashboard() {
   };
 
   const handleEditRepair = (repairId: number) => {
-    setSelectedRepairId(repairId);
-    setShowIntakeForm(true);
+    // Navigate to the edit-repair page
+    navigate(`/repairs/edit/${repairId}`);
   };
 
   const handleNewRepair = () => {
