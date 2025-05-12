@@ -653,9 +653,24 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                 <Button 
                   type="button"
                   disabled={mutation.isPending}
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
                     console.log("DEBUG: Manual form submission button clicked");
-                    form.handleSubmit(onSubmit)();
+                    
+                    // Log the form values
+                    console.log("FORM VALUES BEFORE SUBMIT:", form.getValues());
+                    
+                    // Check form validation
+                    if (!form.formState.isValid) {
+                      console.log("FORM VALIDATION ERRORS:", form.formState.errors);
+                    }
+                    
+                    // Use try-catch to catch any errors during submission
+                    try {
+                      form.handleSubmit(onSubmit)();
+                    } catch (error) {
+                      console.error("ERROR DURING FORM SUBMIT:", error);
+                    }
                   }}
                 >
                   {mutation.isPending ? (
