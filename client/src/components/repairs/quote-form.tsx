@@ -332,14 +332,24 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
         ...values,
         dateCreated: values.dateCreated ? new Date(values.dateCreated).toISOString() : new Date().toISOString(),
         expirationDate: values.expirationDate ? new Date(values.expirationDate).toISOString() : null,
+        // Explicitly include repairId to ensure it's not lost
+        repairId: repairId
       };
       
       console.log("DEBUG: Formatted values for submission:", formattedValues);
 
       // This is critical - the mutation will trigger the API call
-      await mutation.mutateAsync(formattedValues);
+      console.log("DEBUG: About to call mutation.mutateAsync");
+      const result = await mutation.mutateAsync(formattedValues);
+      console.log("DEBUG: mutation.mutateAsync completed successfully, result:", result);
+      
+      // Always refresh data after successful mutation
+      console.log("DEBUG: Invalidating queries to refresh data");
+      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
+      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
       
       // If we got here without errors, show success message
+      console.log("DEBUG: Showing success toast");
       toast({
         title: `Quote ${quoteId ? 'updated' : 'created'} successfully`,
         description: `The quote has been ${quoteId ? 'updated' : 'created'} successfully.`,
@@ -347,6 +357,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
       });
       
       // Close the dialog after successful submission
+      console.log("DEBUG: Calling onClose to close dialog");
       onClose();
       
     } catch (error) {
@@ -372,10 +383,18 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   });
 
   console.log("DEBUG: QuoteForm about to render dialog, isOpen =", isOpen);
+  
+  // Force the dialog to always be open when the component is rendered
+  // This ensures the dialog is visible regardless of the isOpen prop
+  // We control the visibility through the parent component's conditional rendering
+  
+  useEffect(() => {
+    console.log("DEBUG: QuoteForm isOpen effect triggered with value:", isOpen);
+  }, [isOpen]);
     
   return (
     <Dialog 
-      open={isOpen} 
+      open={true} 
       onOpenChange={(open) => {
         console.log("DEBUG: Dialog onOpenChange called with open =", open);
         if (!open) onClose();
@@ -398,7 +417,19 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
           </div>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                console.log("DEBUG: Form submission event triggered");
+                
+                // Use try-catch to handle any form submission errors
+                try {
+                  form.handleSubmit(onSubmit)(e);
+                } catch (error) {
+                  console.error("DEBUG: Error in form submission:", error);
+                }
+              }} 
+              className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
