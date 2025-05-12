@@ -1049,28 +1049,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/repairs/:repairId/items", async (req: Request, res: Response) => {
     try {
+      console.log("Received repair item creation request");
       const repairId = parseInt(req.params.repairId);
       if (isNaN(repairId)) {
+        console.log("Invalid repair ID format:", req.params.repairId);
         return res.status(400).json({ error: "Invalid repair ID format" });
       }
 
+      console.log(`Looking up repair with ID ${repairId}...`);
       const repair = await storage.getRepair(repairId);
       if (!repair) {
+        console.log(`Repair not found with ID: ${repairId}`);
         return res.status(404).json({ error: "Repair not found" });
       }
+      console.log(`Found repair: ${repair.id}, status: ${repair.status}`);
 
+      console.log("Validating repair item data...");
       const validatedData = insertRepairItemSchema.parse({
         ...req.body,
         repairId,
       });
+      console.log(`Repair item data validated successfully, type: ${validatedData.itemType}`);
 
+      console.log("Creating repair item in database...");
       const item = await storage.createRepairItem(validatedData);
+      console.log(`Repair item created successfully with ID: ${item.id}`);
       res.status(201).json(item);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Validation error in repair item data:", error.errors);
         return res.status(400).json({ error: "Invalid repair item data", details: error.errors });
       }
-      res.status(500).json({ error: "Failed to create repair item" });
+      console.error("Error creating repair item:", error);
+      res.status(500).json({ 
+        error: "Failed to create repair item", 
+        message: error instanceof Error ? error.message : String(error) 
+      });
     }
   });
 

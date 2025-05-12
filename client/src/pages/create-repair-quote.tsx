@@ -347,19 +347,28 @@ export default function CreateRepairQuote() {
   const createQuoteMutation = useMutation({
     mutationFn: async (data: z.infer<typeof quoteSchema>) => {
       // Store the actual items rather than just IDs
+      console.log("Preparing quote data for submission...");
       const itemsToStore = form.getValues("items") || [];
       
-      return apiRequest("POST", "/api/quotes", {
+      // Log the size of the data being sent
+      const itemsJson = JSON.stringify(itemsToStore);
+      console.log(`Items data size: ${itemsJson.length} characters, ${itemsToStore.length} items`);
+      
+      const payload = {
         ...data,
         // Add calculated totals
         subtotal,
         taxAmount,
         total, // Using "total" instead of "totalAmount" to match backend
         // Store the complete items data in JSON format
-        itemsData: JSON.stringify(itemsToStore),
-      });
+        itemsData: itemsJson,
+      };
+      
+      console.log("Sending quote creation request to server...");
+      return apiRequest("POST", "/api/quotes", payload);
     },
     onSuccess: () => {
+      console.log("Quote created successfully, updating UI...");
       // Invalidate query caches
       queryClient.invalidateQueries({ queryKey: ["/api/repairs"] });
       queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
@@ -374,9 +383,26 @@ export default function CreateRepairQuote() {
     },
     onError: (error: any) => {
       console.error("Failed to create quote:", error);
+      // More detailed error information
+      let errorMessage = "Failed to create quote. Please try again.";
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      if (error.response) {
+        try {
+          const responseData = error.response.data;
+          if (responseData && responseData.message) {
+            errorMessage = responseData.message;
+          }
+        } catch (e) {
+          console.error("Error parsing error response:", e);
+        }
+      }
+      
       toast({
         title: "Error",
-        description: error.message || "Failed to create quote. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }

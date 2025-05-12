@@ -96,9 +96,12 @@ export default function AddRepairItem() {
   // Mutation for adding a repair item
   const mutation = useMutation({
     mutationFn: (data: z.infer<typeof formSchema>) => {
+      console.log("Preparing to add repair item:", { repairId, itemType: data.itemType });
+      console.log("Sending API request to add repair item...");
       return apiRequest("POST", `/api/repairs/${repairId}/items`, data);
     },
     onSuccess: () => {
+      console.log("Repair item added successfully");
       queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/items`] });
       
       toast({
@@ -111,9 +114,30 @@ export default function AddRepairItem() {
     },
     onError: (error) => {
       console.error("Error adding repair item:", error);
+      
+      // More detailed error information
+      let errorMessage = "Failed to add item to repair. Please try again.";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
+      // Try to extract more details from the response if available
+      if ('response' in error && error.response) {
+        try {
+          const responseData = error.response.data;
+          if (responseData && responseData.message) {
+            errorMessage = responseData.message;
+          } else if (responseData && responseData.error) {
+            errorMessage = responseData.error;
+          }
+        } catch (e) {
+          console.error("Error parsing error response:", e);
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to add item to repair. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },
