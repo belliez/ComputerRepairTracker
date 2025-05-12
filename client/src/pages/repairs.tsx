@@ -68,11 +68,70 @@ export default function Repairs() {
     return Object.keys(filters).length > 0 ? filters : null;
   };
   
-  const { data: repairs, isLoading } = useQuery<Repair[]>({
+  // Use manual fetching approach to ensure data is properly loaded
+  const { data: repairs, isLoading, refetch, error } = useQuery<Repair[]>({
     queryKey: [
       "/api/repairs",
       buildQueryKey(),
     ],
+    // Ensure fresh data is fetched every time
+    staleTime: 0,
+    // Use manual query function to ensure proper headers
+    queryFn: async () => {
+      console.log("REPAIRS PAGE DEBUG: Starting manual fetch for repairs");
+      
+      // Create path with query parameters
+      const params = new URLSearchParams();
+      if (filterStatus) params.append('status', filterStatus);
+      if (filterPriority) params.append('priority', filterPriority);
+      if (filterTechnicianId) params.append('technicianId', filterTechnicianId.toString());
+      if (filterCustomerId) params.append('customerId', filterCustomerId.toString());
+      const queryString = params.toString();
+      const path = `/api/repairs${queryString ? `?${queryString}` : ''}`;
+      
+      console.log("REPAIRS PAGE DEBUG: Fetching from path:", path);
+      
+      // Add organization ID header and other necessary headers
+      const headers: Record<string, string> = {
+        "X-Debug-Client": "RepairTrackerClient",
+        "X-Organization-ID": "2", // Add organization ID header with fallback
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+      };
+      
+      // Add auth token if available 
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      console.log("REPAIRS PAGE DEBUG: Using headers:", headers);
+      
+      try {
+        const response = await fetch(path, { headers });
+        console.log("REPAIRS PAGE DEBUG: Response status:", response.status);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch repairs: ${response.status}`);
+        }
+        
+        const text = await response.text();
+        console.log("REPAIRS PAGE DEBUG: Response preview:", text.substring(0, 100) + "...");
+        
+        const data = JSON.parse(text);
+        console.log("REPAIRS PAGE DEBUG: Parsed repairs data:", data);
+        return data;
+      } catch (err) {
+        console.error("REPAIRS PAGE DEBUG: Error fetching repairs:", err);
+        throw err;
+      }
+    },
+    onSuccess: (data) => {
+      console.log("REPAIRS PAGE DEBUG: Successfully loaded repairs:", data?.length || 0);
+    },
+    onError: (err) => {
+      console.error("REPAIRS PAGE DEBUG: Error loading repairs:", err);
+    }
   });
 
   const handleTabChange = (tab: RepairTab) => {

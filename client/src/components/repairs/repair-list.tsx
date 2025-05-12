@@ -75,16 +75,57 @@ export default function RepairList({
   const queryPath = `/api/repairs${buildQueryParams()}`;
   console.log("REPAIRS DEBUG: Fetching repairs with path:", queryPath);
   
-  const { data: repairs, isLoading, error } = useQuery<Repair[]>({
+  const { data: repairs, isLoading, error, refetch } = useQuery<Repair[]>({
     queryKey: [queryPath],
+    // Ensure fresh data is fetched every time
+    staleTime: 0,
+    // Use manual query function to ensure proper headers
+    queryFn: async () => {
+      console.log("REPAIR LIST DEBUG: Starting manual fetch for repairs");
+      
+      // Add organization ID header and other necessary headers
+      const headers: Record<string, string> = {
+        "X-Debug-Client": "RepairTrackerClient",
+        "X-Organization-ID": "2", // Add organization ID header with fallback
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+      };
+      
+      // Add auth token if available 
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      console.log("REPAIR LIST DEBUG: Making fetch with headers:", headers);
+      
+      try {
+        const response = await fetch(queryPath, { headers });
+        console.log("REPAIR LIST DEBUG: Response status:", response.status);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch repairs: ${response.status}`);
+        }
+        
+        const text = await response.text();
+        console.log("REPAIR LIST DEBUG: Response text preview:", text.substring(0, 100) + "...");
+        
+        const data = JSON.parse(text);
+        console.log("REPAIR LIST DEBUG: Parsed repairs data:", data);
+        return data;
+      } catch (err) {
+        console.error("REPAIR LIST DEBUG: Error fetching repairs:", err);
+        throw err;
+      }
+    },
     onSuccess: (data) => {
-      console.log("REPAIRS DEBUG: Successfully loaded repairs:", data?.length || 0);
+      console.log("REPAIR LIST DEBUG: Successfully loaded repairs:", data?.length || 0);
       if (data?.length) {
-        console.log("REPAIRS DEBUG: Sample repair:", data[0]);
+        console.log("REPAIR LIST DEBUG: Sample repair:", data[0]);
       }
     },
     onError: (err) => {
-      console.error("REPAIRS DEBUG: Error loading repairs:", err);
+      console.error("REPAIR LIST DEBUG: Error loading repairs:", err);
     }
   });
 
