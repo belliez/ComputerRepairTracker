@@ -278,9 +278,25 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   };
 
   const isLoading = isLoadingItems || isLoadingQuote || mutation.isPending;
+  
+  console.log("DEBUG: QuoteForm isLoading states:", { 
+    isLoading, 
+    isLoadingItems, 
+    isLoadingQuote, 
+    mutationIsPending: mutation.isPending,
+    showForm: !(isLoading && !mutation.isPending)
+  });
 
+  console.log("DEBUG: QuoteForm about to render dialog, isOpen =", isOpen);
+    
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog 
+      open={isOpen} 
+      onOpenChange={(open) => {
+        console.log("DEBUG: Dialog onOpenChange called with open =", open);
+        if (!open) onClose();
+      }}
+    >
       <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-3 sm:p-6">
         <DialogHeader>
           <DialogTitle>{quoteId ? "Edit Quote" : "Create Quote"}</DialogTitle>
@@ -291,9 +307,10 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
           </DialogDescription>
         </DialogHeader>
 
-        {isLoading && !mutation.isPending ? (
+        {isLoadingItems || isLoadingQuote ? (
           <div className="flex justify-center items-center p-8">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+            <span className="ml-3">Loading data...</span>
           </div>
         ) : (
           <Form {...form}>
