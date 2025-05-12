@@ -1976,6 +1976,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { type, ...data } = req.body;
       
+      // Log the request details for debugging
+      console.log('DEBUG: Settings for organization:', req.organizationId, 'type:', type, 'isDevelopmentMode:', process.env.NODE_ENV === 'development');
+      console.log('Received data:', JSON.stringify(data, null, 2));
+      
       // Special handling for development mode
       const authHeader = req.headers.authorization;
       const isDevelopmentMode = process.env.NODE_ENV === 'development' && 
@@ -1987,19 +1991,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If organization ID is not set and we're not in development mode, try to find user's organization
       if (!organizationId && !isDevelopmentMode && req.user) {
         try {
+          console.log('No organization ID found on request, searching for user organizations');
+          
           // Find the user's organization
-          const [userOrg] = await db
+          const userOrgs = await db
             .select()
             .from(organizationUsers)
-            .where(eq(organizationUsers.userId, req.user.uid));
+            .where(eq(organizationUsers.userId, req.user.uid))
+            .orderBy(desc(organizationUsers.createdAt));
             
-          if (userOrg) {
+          if (userOrgs.length > 0) {
+            const userOrg = userOrgs[0]; // Use the most recently created one
             organizationId = userOrg.organizationId;
             console.log(`Found organization ${organizationId} for user ${req.user.uid}`);
             
             // Set for this request
             req.organizationId = organizationId;
             (global as any).currentOrganizationId = organizationId;
+          } else {
+            console.log('No organizations found for user, creating new one');
+            
+            // If this is a company profile setup, create an organization
+            if (type === 'company' && data.name) {
+              try {
+                console.log('Creating new organization with name:', data.name);
+                
+                // The addOrganizationContext middleware should handle this, 
+                // but as a fallback we'll do it here too
+                const [newOrg] = await db
+                  .insert(organizations)
+                  .values({
+                    name: data.name,
+                    slug: data.name.toLowerCase().replace(/\s+/g, '-'),
+                    ownerId: req.user.uid,
+                    settings: {}
+                  })
+                  .returning();
+                
+                // Link the user to the organization
+                await db
+                  .insert(organizationUsers)
+                  .values({
+                    userId: req.user.uid,
+                    organizationId: newOrg.id,
+                    role: 'owner',
+                    inviteAccepted: true
+                  });
+                
+                organizationId = newOrg.id;
+                req.organizationId = organizationId;
+                (global as any).currentOrganizationId = organizationId;
+                
+                console.log(`Created new organization '${newOrg.name}' with ID ${newOrg.id} as fallback`);
+              } catch (createOrgError) {
+                console.error('Error creating new organization in settings endpoint:', createOrgError);
+              }
+            }
           }
         } catch (orgError) {
           console.error('Error finding user organization:', orgError);

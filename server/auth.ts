@@ -729,16 +729,34 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
     // If the user is trying to create an organization and has none, allow it
     if (req.path === '/api/settings/organization' && req.method === 'POST' && userOrgs.length === 0) {
       console.log('User is creating their first organization, bypassing organization context check');
+      console.log('Received data:', JSON.stringify(req.body, null, 2));
       
-      // Create a new organization right away if one doesn't exist
-      if (req.body?.name) {
+      // Special handling for onboarding - company info is passed as { type: 'company', name: '...', ... }
+      // or directly in the body depending on the endpoint usage
+      let organizationName = '';
+      
+      if (req.body?.type === 'company') {
+        organizationName = req.body.name;
+        console.log('Detected onboarding company setup with name:', organizationName);
+      } else if (req.body?.name) {
+        organizationName = req.body.name;
+        console.log('Detected direct organization creation with name:', organizationName);
+      } else {
+        // If no name is provided, use a default one
+        organizationName = `${req.user.email || 'New'}'s Repair Shop`;
+        console.log('Using default organization name:', organizationName);
+      }
+      
+      if (organizationName) {
         try {
+          console.log('Creating new organization with name:', organizationName);
+          
           // Insert the new organization
           const [newOrg] = await db
             .insert(organizations)
             .values({
-              name: req.body.name,
-              slug: req.body.name.toLowerCase().replace(/\s+/g, '-'),
+              name: organizationName,
+              slug: organizationName.toLowerCase().replace(/\s+/g, '-'),
               ownerId: req.user.uid,
               settings: req.body.settings || {}
             })
@@ -765,6 +783,8 @@ export const addOrganizationContext = async (req: Request, res: Response, next: 
         } catch (error) {
           console.error('Error creating new organization:', error);
         }
+      } else {
+        console.error('No organization name provided for organization creation');
       }
     }
     
