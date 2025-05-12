@@ -165,7 +165,20 @@ export default function RepairInformation({
   });
 
   const onSubmit = (data: z.infer<typeof formSchema>) => {
-    mutation.mutate(data);
+    // Clean up any date fields that might cause issues
+    const sanitizedData = { ...data };
+    
+    // Handle empty date fields
+    if (sanitizedData.estimatedCompletionDate === '') {
+      sanitizedData.estimatedCompletionDate = null;
+    }
+    
+    if (sanitizedData.actualCompletionDate === '') {
+      sanitizedData.actualCompletionDate = null;
+    }
+    
+    console.log("REPAIR INFO DEBUG: Sanitized form data:", sanitizedData);
+    mutation.mutate(sanitizedData);
   };
 
   const handleSave = () => {
@@ -410,7 +423,11 @@ export default function RepairInformation({
                   <Input 
                     type="date" 
                     {...field} 
-                    value={field.value || ''} 
+                    value={field.value ? (typeof field.value === 'string' ? field.value.substring(0, 10) : field.value) : ''} 
+                    onChange={(e) => {
+                      // If empty string, set to null, otherwise pass the value
+                      field.onChange(e.target.value === '' ? null : e.target.value);
+                    }}
                   />
                 </FormControl>
                 <FormMessage />

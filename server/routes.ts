@@ -905,6 +905,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         processedData.priorityLevel = Math.max(1, Math.min(5, processedData.priorityLevel));
       }
       
+      // Process estimatedCompletionDate - if it's an empty string, set it to null
+      if (processedData.estimatedCompletionDate === '') {
+        processedData.estimatedCompletionDate = null;
+      }
+      
       // Process status to ensure it's a valid enum value
       if (processedData.status !== undefined) {
         // Check if it's a DOM element button click (likely comes from the UI status buttons)
@@ -933,9 +938,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("DEBUG - Processed repair data:", processedData);
       
       try {
-        // Use the processed data directly without Zod validation for now
-        // This bypasses the strict type checking that's causing issues
-        const updatedRepair = await storage.updateRepair(id, processedData);
+        // Sanitize date values that might cause issues
+        const sanitizedData = { ...processedData };
+        
+        // Handle all date fields to ensure they are properly formatted or null
+        if (sanitizedData.estimatedCompletionDate === '') {
+          sanitizedData.estimatedCompletionDate = null;
+        }
+        
+        if (sanitizedData.actualCompletionDate === '') {
+          sanitizedData.actualCompletionDate = null;
+        }
+        
+        if (sanitizedData.intakeDate === '') {
+          sanitizedData.intakeDate = null;
+        }
+        
+        // Remove any empty string dates that could cause issues
+        for (const key in sanitizedData) {
+          if (sanitizedData[key] === '' && 
+              (key.includes('Date') || key.includes('date'))) {
+            console.log(`Replacing empty string in date field: ${key}`);
+            sanitizedData[key] = null;
+          }
+        }
+        
+        console.log("DEBUG - Final sanitized repair data:", sanitizedData);
+        
+        // Use the sanitized data without Zod validation
+        const updatedRepair = await storage.updateRepair(id, sanitizedData);
         
         if (!updatedRepair) {
           return res.status(404).json({ error: "Repair not found" });
