@@ -1377,15 +1377,19 @@ const SettingsPage = () => {
                         {(organization.settings?.address && organization.settings.address !== "null") ? organization.settings.address : "No address set"}
                       </p>
                     </div>
-                  </div>
-                  
-                  <div className="mt-6 border-t pt-4">
-                    <h3 className="text-sm font-medium text-gray-500 mb-2">Tax Settings</h3>
-                    <div className="flex items-center">
-                      <div className={`mr-2 w-3 h-3 rounded-full ${organization.settings?.enableTax !== false ? 'bg-green-500' : 'bg-red-500'}`} />
-                      <p className="text-base">
-                        {organization.settings?.enableTax !== false ? 'Tax calculation is enabled' : 'Tax calculation is disabled'}
-                      </p>
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-medium text-gray-500">Tax Status</h3>
+                      <div className="flex items-center">
+                        {organization.settings?.enableTax !== false ? (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            Tax Enabled
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+                            Tax Disabled
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
