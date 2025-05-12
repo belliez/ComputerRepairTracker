@@ -240,9 +240,27 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
       // Update the local state immediately for the UI
       setCurrentStatus(newStatus);
       
+      // Convert status from button UI format to database format if needed
+      let statusValue = newStatus;
+      
+      // Convert hyphenated status values to underscore format for database
+      if (newStatus === 'in-repair') {
+        statusValue = 'in_repair';
+      } else if (newStatus === 'ready-for-pickup') {
+        statusValue = 'ready_for_pickup';
+      } else if (newStatus === 'on-hold') {
+        statusValue = 'on_hold';
+      } else if (newStatus === 'awaiting-approval') {
+        statusValue = 'awaiting_approval';
+      } else if (newStatus === 'parts-ordered') {
+        statusValue = 'parts_ordered';
+      }
+      
+      console.log(`STATUS UPDATE DEBUG: Converting status from "${newStatus}" to "${statusValue}"`);
+      
       // Prepare update data
       const updateData: any = {
-        status: newStatus
+        status: statusValue
       };
       
       // If the status is changing to 'completed', reset the priority level to normal (3)
