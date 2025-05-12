@@ -317,17 +317,16 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   };
 
   const handleCreateQuote = () => {
-    console.log("DEBUG: handleCreateQuote called, setting up for quote creation");
+    console.log("DEBUG: handleCreateQuote called, setting showQuoteForm to true");
     
     // First clear any existing quote ID
     setEditingQuoteId(undefined);
     
-    // Make sure we're on the quotes tab first
-    setActiveTab("quotes");
-    
-    // Then show the form immediately - no need for timeout
-    setShowQuoteForm(true);
-    console.log("DEBUG: showQuoteForm state set to true directly");
+    // Then set the form to show with a small delay to ensure state updates properly
+    setTimeout(() => {
+      setShowQuoteForm(true);
+      console.log("DEBUG: showQuoteForm state set to true");
+    }, 50);
   };
 
   const handleEditQuote = (quoteId: number) => {
@@ -336,12 +335,11 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
     // First set the quote ID
     setEditingQuoteId(quoteId);
     
-    // Make sure we're on the quotes tab
-    setActiveTab("quotes");
-    
-    // Then show the form immediately - no need for timeout
-    setShowQuoteForm(true);
-    console.log("DEBUG: Edit quote - showQuoteForm state set to true directly");
+    // Then set the form to show with a small delay to ensure state updates properly
+    setTimeout(() => {
+      setShowQuoteForm(true);
+      console.log("DEBUG: Edit quote - showQuoteForm state set to true");
+    }, 50);
   };
 
   const handleDeleteQuote = (quoteId: number) => {
@@ -1649,10 +1647,9 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
 
       {/* Quote Form */}
       {console.log("DEBUG: Quote form condition, showQuoteForm =", showQuoteForm)}
-      {console.log("DEBUG: showQuoteForm state =", showQuoteForm)}
       {showQuoteForm && (
         <>
-        {console.log("DEBUG: Rendering QuoteForm component with repairId =", repairId, "and quoteId =", editingQuoteId)}
+        {console.log("DEBUG: Rendering QuoteForm component")}
         <QuoteForm 
           repairId={repairId}
           quoteId={editingQuoteId}

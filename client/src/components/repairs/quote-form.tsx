@@ -3,7 +3,6 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertQuoteSchema, RepairItem } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
@@ -242,33 +241,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
         
         console.log(`DEBUG: Making ${method} request to ${endpoint} with data:`, values);
         
-        // Enhanced error handling - we'll make the fetch request manually to better control the flow
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-          "X-Debug-Client": "RepairTrackerClient",
-        };
-        
-        // Add org ID header
-        const orgId = localStorage.getItem('currentOrganizationId');
-        if (orgId) {
-          headers["X-Organization-ID"] = orgId;
-        }
-        
-        // Add auth token if available
-        const token = localStorage.getItem("firebase_token");
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-        
-        console.log(`DEBUG: Using headers:`, headers);
-        
-        // Make the request
-        const response = await fetch(endpoint, {
-          method,
-          headers,
-          body: JSON.stringify(values),
-          credentials: "include"
-        });
+        const response = await apiRequest(method, endpoint, values);
         
         console.log(`DEBUG: API Response status:`, response.status);
         if (!response.ok) {
@@ -308,7 +281,6 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
         description: quoteId
           ? "The quote has been updated successfully"
           : "The quote has been created successfully",
-        variant: "default",
       });
       
       onClose();
@@ -324,7 +296,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof formSchema>) => {
     console.log("DEBUG: Form onSubmit triggered with values:", values);
     
     try {
@@ -333,43 +305,12 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
         ...values,
         dateCreated: values.dateCreated ? new Date(values.dateCreated).toISOString() : new Date().toISOString(),
         expirationDate: values.expirationDate ? new Date(values.expirationDate).toISOString() : null,
-        // Explicitly include repairId to ensure it's not lost
-        repairId: repairId
       };
       
       console.log("DEBUG: Formatted values for submission:", formattedValues);
-
-      // This is critical - the mutation will trigger the API call
-      console.log("DEBUG: About to call mutation.mutateAsync");
-      const result = await mutation.mutateAsync(formattedValues);
-      console.log("DEBUG: mutation.mutateAsync completed successfully, result:", result);
-      
-      // Always refresh data after successful mutation
-      console.log("DEBUG: Invalidating queries to refresh data");
-      queryClient.invalidateQueries({ queryKey: ["/api/quotes"] });
-      queryClient.invalidateQueries({ queryKey: [`/api/repairs/${repairId}/details`] });
-      
-      // If we got here without errors, show success message
-      console.log("DEBUG: Showing success toast");
-      toast({
-        title: `Quote ${quoteId ? 'updated' : 'created'} successfully`,
-        description: `The quote has been ${quoteId ? 'updated' : 'created'} successfully.`,
-        variant: "default",
-      });
-      
-      // Close the dialog after successful submission
-      console.log("DEBUG: Calling onClose to close dialog");
-      onClose();
-      
+      mutation.mutate(formattedValues);
     } catch (error) {
       console.error("DEBUG: Error in onSubmit function:", error);
-      
-      // Show error toast
-      toast({
-        title: "Error saving quote",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
-        variant: "destructive",
-      });
     }
   };
 
@@ -384,18 +325,10 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   });
 
   console.log("DEBUG: QuoteForm about to render dialog, isOpen =", isOpen);
-  
-  // Force the dialog to always be open when the component is rendered
-  // This ensures the dialog is visible regardless of the isOpen prop
-  // We control the visibility through the parent component's conditional rendering
-  
-  useEffect(() => {
-    console.log("DEBUG: QuoteForm isOpen effect triggered with value:", isOpen);
-  }, [isOpen]);
     
   return (
     <Dialog 
-      open={true} 
+      open={isOpen} 
       onOpenChange={(open) => {
         console.log("DEBUG: Dialog onOpenChange called with open =", open);
         if (!open) onClose();
@@ -418,19 +351,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
           </div>
         ) : (
           <Form {...form}>
-            <form 
-              onSubmit={(e) => {
-                e.preventDefault();
-                console.log("DEBUG: Form submission event triggered");
-                
-                // Use try-catch to handle any form submission errors
-                try {
-                  form.handleSubmit(onSubmit)(e);
-                } catch (error) {
-                  console.error("DEBUG: Error in form submission:", error);
-                }
-              }} 
-              className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -730,16 +651,31 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                   Cancel
                 </Button>
                 <Button 
-                  type="submit"
+                  type="button"
                   disabled={mutation.isPending}
                   onClick={(e) => {
-                    console.log("DEBUG: Submit button clicked directly");
-                    // Don't prevent default - we want the form to submit normally
+                    e.preventDefault();
+                    console.log("DEBUG: Manual form submission button clicked");
+                    
+                    // Log the form values
+                    console.log("FORM VALUES BEFORE SUBMIT:", form.getValues());
+                    
+                    // Check form validation
+                    if (!form.formState.isValid) {
+                      console.log("FORM VALIDATION ERRORS:", form.formState.errors);
+                    }
+                    
+                    // Use try-catch to catch any errors during submission
+                    try {
+                      form.handleSubmit(onSubmit)();
+                    } catch (error) {
+                      console.error("ERROR DURING FORM SUBMIT:", error);
+                    }
                   }}
                 >
                   {mutation.isPending ? (
                     <span className="flex items-center">
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" /> Saving...
+                      <i className="fas fa-spinner fa-spin mr-2"></i> Saving...
                     </span>
                   ) : quoteId ? (
                     "Update Quote"
