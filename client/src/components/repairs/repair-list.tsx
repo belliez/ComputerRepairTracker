@@ -49,14 +49,68 @@ export default function RepairList({
   const [location, navigate] = useLocation();
   const { toast } = useToast();
 
-  // Get customer data for displaying names
+  // Get customer data for displaying names with manual fetch
   const { data: customers } = useQuery<Customer[]>({
     queryKey: ["/api/customers"],
+    staleTime: 0,
+    queryFn: async () => {
+      console.log("REPAIR LIST DEBUG: Fetching customers data");
+      const headers: Record<string, string> = {
+        "X-Debug-Client": "RepairTrackerClient",
+        "X-Organization-ID": "2", 
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+      };
+      
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch("/api/customers", { headers });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch customers: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      console.log("REPAIR LIST DEBUG: Customers response:", text.substring(0, 100) + "...");
+      
+      const data = JSON.parse(text);
+      console.log("REPAIR LIST DEBUG: Parsed customers data:", data);
+      return data;
+    }
   });
 
-  // Get device data for displaying details
+  // Get device data for displaying details with manual fetch
   const { data: devices } = useQuery<Device[]>({
     queryKey: ["/api/devices"],
+    staleTime: 0,
+    queryFn: async () => {
+      console.log("REPAIR LIST DEBUG: Fetching devices data");
+      const headers: Record<string, string> = {
+        "X-Debug-Client": "RepairTrackerClient",
+        "X-Organization-ID": "2", 
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+      };
+      
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch("/api/devices", { headers });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch devices: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      console.log("REPAIR LIST DEBUG: Devices response:", text.substring(0, 100) + "...");
+      
+      const data = JSON.parse(text);
+      console.log("REPAIR LIST DEBUG: Parsed devices data:", data);
+      return data;
+    }
   });
 
   // Build query params for better caching and proper server-side filtering

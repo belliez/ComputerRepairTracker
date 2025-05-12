@@ -105,6 +105,45 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
 
   const { data: repair, isLoading: isLoadingRepair } = useQuery<RepairWithRelations>({
     queryKey: [`/api/repairs/${repairId}/details`],
+    staleTime: 0,
+    queryFn: async () => {
+      console.log("REPAIR DETAIL DEBUG: Starting manual fetch for repair details");
+      
+      // Add organization ID header and other necessary headers
+      const headers: Record<string, string> = {
+        "X-Debug-Client": "RepairTrackerClient",
+        "X-Organization-ID": "2", // Add organization ID header with fallback
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+      };
+      
+      // Add auth token if available 
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      console.log("REPAIR DETAIL DEBUG: Making fetch with headers:", headers);
+      
+      try {
+        const response = await fetch(`/api/repairs/${repairId}/details`, { headers });
+        console.log("REPAIR DETAIL DEBUG: Response status:", response.status);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch repair details: ${response.status}`);
+        }
+        
+        const text = await response.text();
+        console.log("REPAIR DETAIL DEBUG: Response text:", text.substring(0, 100) + "...");
+        
+        const data = JSON.parse(text);
+        console.log("REPAIR DETAIL DEBUG: Parsed repair data:", data);
+        return data;
+      } catch (err) {
+        console.error("REPAIR DETAIL DEBUG: Error fetching repair details:", err);
+        throw err;
+      }
+    }
   });
 
   // Fetch repair items separately for better real-time updates
@@ -115,6 +154,45 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   } = useQuery<RepairItem[]>({
     queryKey: [`/api/repairs/${repairId}/items`],
     enabled: !!repairId,
+    staleTime: 0,
+    queryFn: async () => {
+      console.log("REPAIR DETAIL DEBUG: Starting manual fetch for repair items");
+      
+      // Add organization ID header and other necessary headers
+      const headers: Record<string, string> = {
+        "X-Debug-Client": "RepairTrackerClient",
+        "X-Organization-ID": "2", // Add organization ID header with fallback
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+      };
+      
+      // Add auth token if available 
+      const token = localStorage.getItem("authToken");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      console.log("REPAIR DETAIL DEBUG: Making fetch for items with headers:", headers);
+      
+      try {
+        const response = await fetch(`/api/repairs/${repairId}/items`, { headers });
+        console.log("REPAIR DETAIL DEBUG: Items response status:", response.status);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch repair items: ${response.status}`);
+        }
+        
+        const text = await response.text();
+        console.log("REPAIR DETAIL DEBUG: Items response text:", text.substring(0, 100) + "...");
+        
+        const data = JSON.parse(text);
+        console.log("REPAIR DETAIL DEBUG: Parsed repair items data:", data);
+        return data;
+      } catch (err) {
+        console.error("REPAIR DETAIL DEBUG: Error fetching repair items:", err);
+        throw err;
+      }
+    }
   });
   
   // Debug log whenever repair items change
