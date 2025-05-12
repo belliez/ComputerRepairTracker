@@ -45,6 +45,7 @@ interface QuoteFormProps {
 }
 
 export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteFormProps) {
+  console.log("DEBUG: QuoteForm rendered with props:", { repairId, quoteId, isOpen });
   const { toast } = useToast();
 
   // Get repair items to calculate the quote - always fetch for both new and edit

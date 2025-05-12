@@ -317,8 +317,10 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   };
 
   const handleCreateQuote = () => {
+    console.log("DEBUG: handleCreateQuote called, setting showQuoteForm to true");
     setEditingQuoteId(undefined);
     setShowQuoteForm(true);
+    console.log("DEBUG: State should be updated now");
   };
 
   const handleEditQuote = (quoteId: number) => {
@@ -1440,7 +1442,11 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                       </p>
                       <Button 
                         className="mt-4" 
-                        onClick={handleCreateQuote}
+                        onClick={(e) => {
+                          console.log("DEBUG: Create Quote button clicked!");
+                          e.preventDefault();
+                          handleCreateQuote();
+                        }}
                         disabled={!canCreateQuote}
                       >
                         <i className="fas fa-plus mr-1"></i> Create Quote
@@ -1626,12 +1632,16 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
       </Dialog>
 
       {/* Quote Form */}
+      {console.log("DEBUG: Quote form condition, showQuoteForm =", showQuoteForm)}
       {showQuoteForm && (
+        <>
+        {console.log("DEBUG: Rendering QuoteForm component")}
         <QuoteForm 
           repairId={repairId}
           quoteId={editingQuoteId}
           isOpen={showQuoteForm}
           onClose={() => {
+            console.log("DEBUG: Quote form closing");
             setShowQuoteForm(false);
             setEditingQuoteId(undefined);
             // Refresh the repair data
@@ -1640,6 +1650,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
             setActiveTab("quotes");
           }}
         />
+        </>
       )}
 
       {/* Invoice Form */}
