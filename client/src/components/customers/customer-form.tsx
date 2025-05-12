@@ -69,6 +69,54 @@ export default function CustomerForm({
   const { data: existingCustomer, isLoading } = useQuery({
     queryKey: [`/api/customers/${customerId}`],
     enabled: !!customerId,
+    // Custom query function to manually fetch customer details
+    queryFn: async () => {
+      console.log("CUSTOMER EDIT DEBUG: Starting manual fetch for customer details", customerId);
+      
+      // Get auth token
+      const firebaseToken = localStorage.getItem('firebase_token');
+      const orgId = localStorage.getItem('currentOrganizationId') || '2';
+      
+      // Setup headers
+      const headers: Record<string, string> = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': orgId,
+      };
+      
+      if (firebaseToken) {
+        headers['Authorization'] = `Bearer ${firebaseToken}`;
+      }
+      
+      console.log("CUSTOMER EDIT DEBUG: Making fetch with headers:", headers);
+      
+      try {
+        const res = await fetch(`/api/customers/${customerId}`, {
+          credentials: "include",
+          headers: headers
+        });
+        
+        console.log("CUSTOMER EDIT DEBUG: Response status:", res.status);
+        const text = await res.text();
+        console.log("CUSTOMER EDIT DEBUG: Response text:", text);
+        
+        if (!res.ok) {
+          throw new Error(`${res.status}: ${text || res.statusText}`);
+        }
+        
+        // Parse JSON response
+        try {
+          const data = JSON.parse(text);
+          console.log("CUSTOMER EDIT DEBUG: Parsed customer data:", data);
+          return data;
+        } catch (e) {
+          console.error("CUSTOMER EDIT DEBUG: Error parsing JSON:", e);
+          throw new Error("Failed to parse JSON response");
+        }
+      } catch (error) {
+        console.error("CUSTOMER EDIT DEBUG: Error fetching customer:", error);
+        throw error;
+      }
+    }
   });
 
   // Form validation schema
@@ -95,23 +143,80 @@ export default function CustomerForm({
   // Update form with existing customer data if editing
   useEffect(() => {
     if (existingCustomer) {
-      form.reset(existingCustomer);
+      console.log("CUSTOMER FORM DEBUG: Resetting form with existing customer data:", existingCustomer);
+      // Make sure all fields have at least empty strings instead of null
+      const formattedCustomer = {
+        ...existingCustomer,
+        address: existingCustomer.address || '',
+        city: existingCustomer.city || '',
+        state: existingCustomer.state || '',
+        postalCode: existingCustomer.postalCode || '',
+        notes: existingCustomer.notes || '',
+      };
+      form.reset(formattedCustomer);
     }
   }, [existingCustomer, form]);
 
   // Create or update customer mutation
   const mutation = useMutation({
     mutationFn: async (values: z.infer<typeof formSchema>) => {
+      console.log("CUSTOMER FORM DEBUG: Submitting values:", values);
+      
+      // Get auth token
+      const firebaseToken = localStorage.getItem('firebase_token');
+      const orgId = localStorage.getItem('currentOrganizationId') || '2';
+      
+      // Setup headers
+      const headers: Record<string, string> = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': orgId,
+        'Content-Type': 'application/json',
+      };
+      
+      if (firebaseToken) {
+        headers['Authorization'] = `Bearer ${firebaseToken}`;
+      }
+      
+      console.log("CUSTOMER FORM DEBUG: Making mutation with headers:", headers);
+      
       let response;
       if (customerId) {
         // Update existing customer
-        response = await apiRequest("PUT", `/api/customers/${customerId}`, values);
+        console.log(`CUSTOMER FORM DEBUG: Updating customer ID ${customerId}`);
+        response = await fetch(`/api/customers/${customerId}`, {
+          method: 'PUT',
+          headers: headers,
+          credentials: "include",
+          body: JSON.stringify(values)
+        });
       } else {
         // Create new customer
-        response = await apiRequest("POST", "/api/customers", values);
+        console.log("CUSTOMER FORM DEBUG: Creating new customer");
+        response = await fetch('/api/customers', {
+          method: 'POST',
+          headers: headers,
+          credentials: "include",
+          body: JSON.stringify(values)
+        });
       }
+      
+      console.log("CUSTOMER FORM DEBUG: Response status:", response.status);
+      const text = await response.text();
+      console.log("CUSTOMER FORM DEBUG: Response text:", text);
+      
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${text || response.statusText}`);
+      }
+      
       // Parse the response JSON to get the actual data with the customer ID
-      return await response.json();
+      try {
+        const data = JSON.parse(text);
+        console.log("CUSTOMER FORM DEBUG: Parsed response data:", data);
+        return data;
+      } catch (e) {
+        console.error("CUSTOMER FORM DEBUG: Error parsing JSON response:", e);
+        throw new Error("Failed to parse JSON response");
+      }
     },
     onSuccess: (data) => {
       // Force immediate refresh of customer data to ensure UI is updated
