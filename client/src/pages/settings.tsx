@@ -238,15 +238,50 @@ const SettingsPage = () => {
   }
 
   // Queries
-  const {
-    data: organization,
-    isLoading: isLoadingOrganization,
-  } = useQuery<Organization>({
-    queryKey: ['/api/organizations'],
-    select: (data) => {
-      return Array.isArray(data) && data.length > 0 ? data[0] : null;
+  // Manual fetch for organization with proper headers
+  const [organization, setOrganization] = useState<Organization | null>(null);
+  const [isLoadingOrganization, setIsLoadingOrganization] = useState(true);
+  const [organizationError, setOrganizationError] = useState<Error | null>(null);
+
+  // Function to fetch organization with proper headers
+  const fetchOrganization = async () => {
+    setIsLoadingOrganization(true);
+    try {
+      const headers = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': '2', // Hardcoded ID for now
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache'
+      };
+      
+      console.log('SETTINGS DEBUG: Fetching organization with headers:', headers);
+      const response = await fetch('/api/organizations', { 
+        headers,
+        credentials: 'include' // Include auth cookies
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching organization: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ Organization loaded successfully:', data);
+      
+      // Get the first organization if it's an array
+      const firstOrg = Array.isArray(data) && data.length > 0 ? data[0] : null;
+      setOrganization(firstOrg);
+    } catch (error) {
+      console.error('❌ Error loading organization:', error);
+      setOrganizationError(error instanceof Error ? error : new Error(String(error)));
+    } finally {
+      setIsLoadingOrganization(false);
     }
-  });
+  };
+
+  // Fetch organization on component mount
+  useEffect(() => {
+    fetchOrganization();
+  }, []);
   
   // Manual fetch with proper organization header for currencies
   const [currencies, setCurrencies] = useState<Currency[]>([]);
@@ -287,58 +322,85 @@ const SettingsPage = () => {
     fetchCurrencies();
   }, []);
   
-  const {
-    data: taxRates = [],
-    isLoading: isLoadingTaxRates,
-    error: taxRatesError
-  } = useQuery<TaxRate[]>({
-    queryKey: ['/api/settings/tax-rates'],
-    onSuccess: (data) => {
+  // Manual fetch with proper organization header for tax rates
+  const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
+  const [isLoadingTaxRates, setIsLoadingTaxRates] = useState(true);
+  const [taxRatesError, setTaxRatesError] = useState<Error | null>(null);
+
+  // Function to fetch tax rates with organization headers
+  const fetchTaxRates = async () => {
+    setIsLoadingTaxRates(true);
+    try {
+      const headers = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': '2', // Hardcoded ID for now
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache'
+      };
+      
+      console.log('SETTINGS DEBUG: Fetching tax rates with headers:', headers);
+      const response = await fetch('/api/settings/tax-rates', { headers });
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching tax rates: ${response.status}`);
+      }
+      
+      const data = await response.json();
       console.log('✅ Tax rates loaded successfully:', data);
-      console.log('Tax rates type:', typeof data);
-      console.log('Is Array:', Array.isArray(data));
-      if (Array.isArray(data)) {
-        console.log('Number of tax rates:', data.length);
-      }
-    },
-    onError: (error) => {
+      setTaxRates(Array.isArray(data) ? data : []);
+    } catch (error) {
       console.error('❌ Error loading tax rates:', error);
-      try {
-        console.error('Error details:', JSON.stringify(error));
-      } catch (e) {
-        console.error('Error could not be stringified:', error.message);
-      }
-    },
-    retry: 1,
-    refetchOnWindowFocus: false
-  });
+      setTaxRatesError(error instanceof Error ? error : new Error(String(error)));
+    } finally {
+      setIsLoadingTaxRates(false);
+    }
+  };
+
+  // Fetch tax rates on component mount
+  useEffect(() => {
+    fetchTaxRates();
+  }, []);
   
-  const {
-    data: technicians = [],
-    isLoading: isLoadingTechnicians,
-    error: techniciansError
-  } = useQuery<Technician[]>({
-    queryKey: ['/api/public-settings/technicians'],
-    enabled: activeTab === 'technicians',
-    onSuccess: (data) => {
+  // Manual fetch with proper organization header for technicians
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [isLoadingTechnicians, setIsLoadingTechnicians] = useState(true);
+  const [techniciansError, setTechniciansError] = useState<Error | null>(null);
+
+  // Function to fetch technicians with organization headers
+  const fetchTechnicians = async () => {
+    setIsLoadingTechnicians(true);
+    try {
+      const headers = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': '2', // Hardcoded ID for now
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache'
+      };
+      
+      console.log('SETTINGS DEBUG: Fetching technicians with headers:', headers);
+      const response = await fetch('/api/technicians', { headers });
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching technicians: ${response.status}`);
+      }
+      
+      const data = await response.json();
       console.log('✅ Technicians loaded successfully:', data);
-      console.log('Technicians type:', typeof data);
-      console.log('Is Array:', Array.isArray(data));
-      if (Array.isArray(data)) {
-        console.log('Number of technicians:', data.length);
-      }
-    },
-    onError: (error) => {
+      setTechnicians(Array.isArray(data) ? data : []);
+    } catch (error) {
       console.error('❌ Error loading technicians:', error);
-      try {
-        console.error('Error details:', JSON.stringify(error));
-      } catch (e) {
-        console.error('Error could not be stringified:', error.message);
-      }
-    },
-    retry: 1,
-    refetchOnWindowFocus: false
-  });
+      setTechniciansError(error instanceof Error ? error : new Error(String(error)));
+    } finally {
+      setIsLoadingTechnicians(false);
+    }
+  };
+
+  // Fetch technicians when the tab changes to technicians
+  useEffect(() => {
+    if (activeTab === 'technicians') {
+      fetchTechnicians();
+    }
+  }, [activeTab]);
   
   // Trash management queries
   const {
@@ -448,6 +510,7 @@ const SettingsPage = () => {
   // Update form when organization data is loaded
   useEffect(() => {
     if (organization) {
+      console.log('Resetting organization form with data:', organization);
       organizationForm.reset({
         name: organization.name || '',
         email: (organization.settings?.email as string) || '',
@@ -455,7 +518,7 @@ const SettingsPage = () => {
         address: (organization.settings?.address as string) || '',
       });
     }
-  }, [organization, organizationForm]);
+  }, [organization]);
 
   // Mutations
   const updateOrganizationMutation = useMutation({
