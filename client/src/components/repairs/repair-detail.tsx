@@ -743,49 +743,59 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
     }
   }, [isLoading, fetchRepairManually]);
   
-  if (isLoading && !repair) {
+  // Check if we're loading or if repair data is incomplete
+  if (isLoading || !repair || Object.keys(repair).length === 0) {
+    console.log("REPAIR DETAIL DEBUG: Showing loading screen, repair data:", repair);
+    
+    // Determine if this is a loading state or a not-found state
+    const isLoadingState = isLoading;
+    const isNotFoundState = !isLoading && (!repair || Object.keys(repair).length === 0);
+    
     return (
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden p-3 sm:p-6">
-          <div className="flex flex-col justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-4"></div>
-            <div className="text-center">
-              <p className="text-gray-500">Loading repair details...</p>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="mt-4"
-                onClick={() => {
-                  console.log("REPAIR DETAIL DEBUG: Manual refresh requested");
-                  fetchRepairManually();
-                }}
-              >
-                Refresh Data
-              </Button>
+          {isLoadingState ? (
+            // Show loading spinner if we're still loading
+            <div className="flex flex-col justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mb-4"></div>
+              <div className="text-center">
+                <p className="text-gray-500">Loading repair details...</p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="mt-4"
+                  onClick={() => {
+                    console.log("REPAIR DETAIL DEBUG: Manual refresh requested");
+                    fetchRepairManually();
+                    // Also refetch using react-query's mechanisms
+                    refetchRepair();
+                    refetchRepairItems?.();
+                  }}
+                >
+                  Refresh Data
+                </Button>
+              </div>
             </div>
-          </div>
+          ) : (
+            // Show error message if repair not found or empty
+            <>
+              <DialogHeader>
+                <DialogTitle>Error</DialogTitle>
+                <DialogDescription>
+                  Could not find repair details. The repair may have been deleted.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button onClick={onClose}>Close</Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     );
   }
 
-  if (!repair) {
-    return (
-      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl p-3 sm:p-6">
-          <DialogHeader>
-            <DialogTitle>Error</DialogTitle>
-            <DialogDescription>
-              Could not find repair details. The repair may have been deleted.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={onClose}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-  }
+  // We've already handled the !repair case in the condition above
 
   // Allow creating quotes regardless of status (for development purposes)
   const canCreateQuote = !repair.quote || true;
