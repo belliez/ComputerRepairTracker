@@ -239,8 +239,38 @@ export default function ViewRepair() {
         console.log('Resetting priority level to normal as repair is completed');
       }
       
-      // Make the API request
-      await apiRequest("PUT", `/api/repairs/${repairId}`, updateData);
+      // Prepare headers with organization context
+      const headers: Record<string, string> = {
+        "X-Debug-Client": "RepairTrackerClient",
+        "X-Organization-ID": localStorage.getItem('currentOrganizationId') || "2",
+        "Content-Type": "application/json",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+      };
+      
+      // Add auth token if available
+      const token = localStorage.getItem("firebase_token");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      console.log("STATUS UPDATE DEBUG: Using headers:", headers);
+      console.log("STATUS UPDATE DEBUG: Sending data:", updateData);
+      
+      // Make the API request with fetch
+      const response = await fetch(`/api/repairs/${repairId}`, {
+        method: 'PUT',
+        headers: headers,
+        body: JSON.stringify(updateData)
+      });
+      
+      console.log("STATUS UPDATE DEBUG: Response status:", response.status);
+      
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.error("STATUS UPDATE DEBUG: Error response:", responseText);
+        throw new Error(`Failed to update repair status: ${response.status}, ${responseText}`);
+      }
 
       // Invalidate and immediately refetch the queries to ensure UI updates
       await queryClient.invalidateQueries({ 
@@ -253,6 +283,11 @@ export default function ViewRepair() {
         queryKey: [`/api/repairs/${repairId}/details`],
         refetchType: 'active'
       });
+      
+      // Manually refetch the repair details after a short delay
+      setTimeout(() => {
+        refetchRepair();
+      }, 500);
       
       toast({
         title: "Status updated",

@@ -65,6 +65,7 @@ export default function DeviceInformation({
 
   // Update form when device data changes
   useEffect(() => {
+    console.log("DEVICE INFO DEBUG: Device data changed", device);
     if (device) {
       form.reset({
         customerId: customerId,
