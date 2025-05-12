@@ -75,6 +75,17 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
     isDefault: boolean;
   }
   
+  interface Organization {
+    id: number;
+    name: string;
+    settings?: {
+      email?: string;
+      phone?: string;
+      address?: string;
+      enableTax?: boolean;
+    };
+  }
+  
   interface Quote {
     id: number;
     repairId: number;
@@ -105,6 +116,12 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   
   const { data: defaultTaxRate, isLoading: isLoadingDefaultTaxRate } = useQuery<TaxRate>({
     queryKey: ['/api/public-settings/tax-rates/default'],
+  });
+  
+  // Get organization data to check if tax is enabled
+  const { data: organization, isLoading: isLoadingOrganization } = useQuery<Organization>({
+    queryKey: ['/api/organizations'],
+    select: (data) => Array.isArray(data) ? data[0] : data,
   });
   
   // State for selected currency and tax rate

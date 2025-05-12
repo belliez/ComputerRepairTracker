@@ -2358,12 +2358,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const email = data.email === null || data.email === undefined ? '' : data.email;
           const phone = data.phone === null || data.phone === undefined ? '' : data.phone;
           const address = data.address === null || data.address === undefined ? '' : data.address;
+          // Handle the enableTax setting - explicitly convert to boolean
+          const enableTax = data.enableTax === false ? false : data.enableTax === true ? true : currentSettings.enableTax !== false;
+          
+          console.log('Enable tax setting:', enableTax, 'from data:', data.enableTax);
           
           const updatedSettings = {
             ...currentSettings,
             email: email,
             phone: phone,
-            address: address
+            address: address,
+            enableTax: enableTax
           };
           
           console.log('Final updated settings object to be saved:', JSON.stringify(updatedSettings));
