@@ -473,9 +473,14 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
                   })()}
                   onChange={(updatedItems) => {
                     // Calculate new totals
-                    const taxRate = quoteToUse.tax ? quoteToUse.tax / quoteToUse.subtotal : 0.0825; // Use quote tax rate if available
+                    const taxRate = selectedTaxRate?.rate || 0;
+                    
+                    // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
+                    const normalizedTaxRate = taxRate > 1 ? taxRate / 100 : taxRate;
+                    
                     const newSubtotal = updatedItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-                    const newTaxAmount = newSubtotal * taxRate;
+                    // Only calculate tax if it's enabled for the organization
+                    const newTaxAmount = isTaxEnabled ? newSubtotal * normalizedTaxRate : 0;
                     const newTotal = newSubtotal + newTaxAmount;
                     
                     form.setValue("subtotal", newSubtotal);
@@ -640,7 +645,7 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
                         <FormLabel>Subtotal</FormLabel>
                         <FormControl>
                           <div className="flex items-center">
-                            <span className="mr-1">$</span>
+                            <span className="mr-1">{selectedCurrency?.symbol || "£"}</span>
                             <Input
                               {...field}
                               value={field.value.toFixed(2)}
@@ -667,18 +672,19 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
                     name="tax"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Tax</FormLabel>
+                        <FormLabel>Tax {!isTaxEnabled && "(Disabled)"}</FormLabel>
                         <FormControl>
                           <div className="flex items-center">
-                            <span className="mr-1">$</span>
+                            <span className="mr-1">{selectedCurrency?.symbol || "£"}</span>
                             <Input
                               {...field}
                               value={(field.value || 0).toFixed(2)}
                               type="number"
                               step="0.01"
-                              disabled={!!approvedQuote}
+                              disabled={!isTaxEnabled || !!approvedQuote}
                               onChange={(e) => {
-                                const value = parseFloat(e.target.value);
+                                // If tax is disabled, tax is always 0
+                                const value = isTaxEnabled ? parseFloat(e.target.value) : 0;
                                 field.onChange(value);
                                 // Update total when tax changes
                                 const currentSubtotal = form.getValues("subtotal");
@@ -700,7 +706,7 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
                         <FormLabel>Total</FormLabel>
                         <FormControl>
                           <div className="flex items-center">
-                            <span className="mr-1">$</span>
+                            <span className="mr-1">{selectedCurrency?.symbol || "£"}</span>
                             <Input
                               {...field}
                               value={field.value.toFixed(2)}
