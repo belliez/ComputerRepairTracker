@@ -731,10 +731,14 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                 <Button 
                   type="submit"
                   disabled={mutation.isPending}
+                  onClick={(e) => {
+                    console.log("DEBUG: Submit button clicked directly");
+                    // Don't prevent default - we want the form to submit normally
+                  }}
                 >
                   {mutation.isPending ? (
                     <span className="flex items-center">
-                      <i className="fas fa-spinner fa-spin mr-2"></i> Saving...
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" /> Saving...
                     </span>
                   ) : quoteId ? (
                     "Update Quote"

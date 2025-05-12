@@ -317,19 +317,17 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   };
 
   const handleCreateQuote = () => {
-    console.log("DEBUG: handleCreateQuote called, setting showQuoteForm to true");
+    console.log("DEBUG: handleCreateQuote called, setting up for quote creation");
     
     // First clear any existing quote ID
     setEditingQuoteId(undefined);
     
-    // Set active tab to quotes to ensure the form is visible in correct context
+    // Make sure we're on the quotes tab first
     setActiveTab("quotes");
     
-    // Then set the form to show with a small delay to ensure state updates properly
-    setTimeout(() => {
-      setShowQuoteForm(true);
-      console.log("DEBUG: showQuoteForm state set to true");
-    }, 100);
+    // Then show the form immediately - no need for timeout
+    setShowQuoteForm(true);
+    console.log("DEBUG: showQuoteForm state set to true directly");
   };
 
   const handleEditQuote = (quoteId: number) => {
