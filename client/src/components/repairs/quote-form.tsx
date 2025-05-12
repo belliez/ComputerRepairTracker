@@ -508,7 +508,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                   name="taxRateId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tax Rate</FormLabel>
+                      <FormLabel>Tax Rate {!isTaxEnabled && "(Disabled)"}</FormLabel>
                       <Select
                         value={String(field.value)}
                         onValueChange={(value) => {
@@ -516,6 +516,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                           field.onChange(numValue);
                           setSelectedTaxRateId(numValue);
                         }}
+                        disabled={!isTaxEnabled}
                       >
                         <FormControl>
                           <SelectTrigger>
