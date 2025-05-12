@@ -107,6 +107,47 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
     queryKey: ['/api/organizations'],
     select: (data) => Array.isArray(data) ? data[0] : data,
   });
+  
+  // Get currencies and tax rates
+  const { data: currencies, isLoading: isLoadingCurrencies } = useQuery<any[]>({
+    queryKey: ['/api/public-settings/currencies'],
+  });
+  
+  const { data: defaultCurrency, isLoading: isLoadingDefaultCurrency } = useQuery<any>({
+    queryKey: ['/api/public-settings/currencies/default'],
+  });
+  
+  const { data: taxRates, isLoading: isLoadingTaxRates } = useQuery<any[]>({
+    queryKey: ['/api/public-settings/tax-rates'],
+  });
+  
+  const { data: defaultTaxRate, isLoading: isLoadingDefaultTaxRate } = useQuery<any>({
+    queryKey: ['/api/public-settings/tax-rates/default'],
+  });
+  
+  // State for selected currency and tax rate
+  const [selectedCurrencyCode, setSelectedCurrencyCode] = useState<string>("");
+  const [selectedTaxRateId, setSelectedTaxRateId] = useState<number | null>(null);
+  
+  // Set defaults when data loads
+  useEffect(() => {
+    if (defaultCurrency && !selectedCurrencyCode) {
+      setSelectedCurrencyCode(defaultCurrency.code);
+    }
+    if (defaultTaxRate && !selectedTaxRateId) {
+      setSelectedTaxRateId(defaultTaxRate.id);
+    }
+  }, [defaultCurrency, defaultTaxRate, selectedCurrencyCode, selectedTaxRateId]);
+  
+  // Get the selected tax rate
+  const selectedTaxRate = selectedTaxRateId 
+    ? taxRates?.find(rate => rate.id === selectedTaxRateId)
+    : defaultTaxRate;
+    
+  // Get the selected currency
+  const selectedCurrency = selectedCurrencyCode
+    ? currencies?.find(curr => curr.code === selectedCurrencyCode)
+    : defaultCurrency;
     
   // Pick the quote to use - prioritize the one we're converting from
   const quoteToUse = convertQuote || approvedQuote;
@@ -127,9 +168,15 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
     total = subtotal + taxAmount;
   } else if (repairItems) {
     subtotal = repairItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-    const taxRate = 0.0825; // 8.25% tax - would come from settings in a real system
+    
+    // Get tax rate from settings
+    const taxRate = selectedTaxRate?.rate || 0;
+    
+    // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
+    const normalizedTaxRate = taxRate > 1 ? taxRate / 100 : taxRate;
+    
     // Only calculate tax if it's enabled for the organization
-    taxAmount = isTaxEnabled ? subtotal * taxRate : 0;
+    taxAmount = isTaxEnabled ? subtotal * normalizedTaxRate : 0;
     total = subtotal + taxAmount;
   }
 
@@ -144,6 +191,8 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
     status: z.string(),
     paymentMethod: z.string().optional(),
     notes: z.string().optional(),
+    currencyCode: z.string(),
+    taxRateId: z.number(),
   });
 
   // Form initialization
@@ -159,6 +208,8 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
       status: "unpaid",
       paymentMethod: "none",
       notes: approvedQuote?.notes || "",
+      currencyCode: quoteToUse?.currencyCode || (selectedCurrency?.code || defaultCurrency?.code || "GBP"),
+      taxRateId: quoteToUse?.taxRateId || (selectedTaxRate?.id || defaultTaxRate?.id || 1),
     },
   });
 
