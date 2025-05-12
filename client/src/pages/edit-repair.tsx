@@ -32,15 +32,80 @@ export default function EditRepairPage() {
   // Parse the repair ID from the URL
   const repairId = parseInt(location.split('/').pop() || '0');
   
-  // Get existing repair data
+  // Get existing repair data using manual fetch approach
   const { data: repair, isLoading: isLoadingRepair } = useQuery({
     queryKey: [`/api/repairs/${repairId}/details`],
     enabled: !!repairId,
+    queryFn: async () => {
+      console.log("EDIT REPAIR DEBUG: Fetching repair details for ID:", repairId);
+      const headers: Record<string, string> = {
+        "X-Debug-Client": "RepairTrackerClient",
+        "X-Organization-ID": localStorage.getItem('currentOrganizationId') || "2",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+      };
+      
+      // Add auth token if available
+      const token = localStorage.getItem("firebase_token");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      console.log("EDIT REPAIR DEBUG: Using headers:", headers);
+      const response = await fetch(`/api/repairs/${repairId}/details`, { headers });
+      console.log("EDIT REPAIR DEBUG: Response status:", response.status);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch repair details: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      console.log("EDIT REPAIR DEBUG: Response preview:", text.substring(0, 100) + "...");
+      
+      try {
+        const data = JSON.parse(text);
+        console.log("EDIT REPAIR DEBUG: Parsed repair data:", data);
+        return data;
+      } catch (err) {
+        console.error("EDIT REPAIR DEBUG: Failed to parse repair data:", err);
+        throw new Error("Failed to parse repair data");
+      }
+    }
   });
 
-  // Get data for form
+  // Get data for form using manual fetch approach
   const { data: technicians } = useQuery({
     queryKey: ["/api/technicians"],
+    queryFn: async () => {
+      console.log("EDIT REPAIR DEBUG: Fetching technicians data");
+      const headers: Record<string, string> = {
+        "X-Debug-Client": "RepairTrackerClient",
+        "X-Organization-ID": localStorage.getItem('currentOrganizationId') || "2",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+      };
+      
+      // Add auth token if available
+      const token = localStorage.getItem("firebase_token");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      const response = await fetch("/api/technicians", { headers });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch technicians: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      try {
+        const data = JSON.parse(text);
+        console.log("EDIT REPAIR DEBUG: Parsed technicians data:", data);
+        return data;
+      } catch (err) {
+        console.error("EDIT REPAIR DEBUG: Failed to parse technicians data:", err);
+        throw new Error("Failed to parse technicians data");
+      }
+    }
   });
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);

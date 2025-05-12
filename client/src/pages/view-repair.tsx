@@ -104,7 +104,7 @@ export default function ViewRepair() {
   // Parse the repair ID from the URL
   const repairId = parseInt(location.split('/').pop() || '0');
   
-  // Get existing repair data
+  // Get existing repair data using manual fetch approach
   const { 
     data: repair, 
     isLoading: isLoadingRepair,
@@ -113,6 +113,41 @@ export default function ViewRepair() {
     queryKey: [`/api/repairs/${repairId}/details`],
     enabled: !!repairId,
     staleTime: 0, // Consider data always stale to ensure fresh data
+    queryFn: async () => {
+      console.log("VIEW REPAIR DEBUG: Fetching repair details for ID:", repairId);
+      const headers: Record<string, string> = {
+        "X-Debug-Client": "RepairTrackerClient",
+        "X-Organization-ID": localStorage.getItem('currentOrganizationId') || "2",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache"
+      };
+      
+      // Add auth token if available
+      const token = localStorage.getItem("firebase_token");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      
+      console.log("VIEW REPAIR DEBUG: Using headers:", headers);
+      const response = await fetch(`/api/repairs/${repairId}/details`, { headers });
+      console.log("VIEW REPAIR DEBUG: Response status:", response.status);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch repair details: ${response.status}`);
+      }
+      
+      const text = await response.text();
+      console.log("VIEW REPAIR DEBUG: Response preview:", text.substring(0, 100) + "...");
+      
+      try {
+        const data = JSON.parse(text);
+        console.log("VIEW REPAIR DEBUG: Parsed repair data:", data);
+        return data;
+      } catch (err) {
+        console.error("VIEW REPAIR DEBUG: Failed to parse repair data:", err);
+        throw new Error("Failed to parse repair data");
+      }
+    }
   });
 
   // Fetch repair items separately for better real-time updates
