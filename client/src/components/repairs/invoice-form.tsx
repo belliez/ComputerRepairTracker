@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertInvoiceSchema, RepairItem, Quote } from "@shared/schema";
+import { CurrencySymbol } from "@/components/currency-symbol";
 import {
   Dialog,
   DialogContent,

@@ -432,14 +432,11 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                           {...field} 
                           onChange={(e) => {
                             // Just set the string value directly, the schema will handle conversion
-                            field.onChange(e.target.value)
+                            field.onChange(e.target.value || null);
                           }}
-                          value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
+                          value={field.value || ''}
                         />
                       </FormControl>
-                      <FormDescription>
-                        Date after which this quote is no longer valid
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -451,22 +448,43 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status</FormLabel>
-                      <FormControl>
-                        <div className="h-10 px-3 py-2 border border-input bg-gray-100 text-sm rounded-md">
-                          <Badge className={
-                            field.value === "approved" 
-                              ? "bg-green-100 text-green-800 border-green-300" 
-                              : field.value === "rejected"
-                                ? "bg-red-100 text-red-800 border-red-300"
-                                : "bg-yellow-100 text-yellow-800 border-yellow-300"
-                          }>
-                            {field.value ? field.value.charAt(0).toUpperCase() + field.value.slice(1) : 'Pending'}
-                          </Badge>
-                        </div>
-                      </FormControl>
-                      <FormDescription>
-                        New quotes start as "pending" until approved by the customer
-                      </FormDescription>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        value={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="pending">
+                            <div className="flex items-center">
+                              <Badge variant="outline" className="mr-2 bg-yellow-50 text-yellow-700 border-yellow-200">Pending</Badge>
+                              <span>Pending</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="approved">
+                            <div className="flex items-center">
+                              <Badge variant="outline" className="mr-2 bg-green-50 text-green-700 border-green-200">Approved</Badge>
+                              <span>Approved</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="rejected">
+                            <div className="flex items-center">
+                              <Badge variant="outline" className="mr-2 bg-red-50 text-red-700 border-red-200">Rejected</Badge>
+                              <span>Rejected</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="expired">
+                            <div className="flex items-center">
+                              <Badge variant="outline" className="mr-2 bg-gray-50 text-gray-700 border-gray-200">Expired</Badge>
+                              <span>Expired</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -479,11 +497,12 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                     <FormItem>
                       <FormLabel>Currency</FormLabel>
                       <Select
-                        value={field.value}
                         onValueChange={(value) => {
                           field.onChange(value);
                           setSelectedCurrencyCode(value);
                         }}
+                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -491,24 +510,19 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {isLoadingCurrencies ? (
-                            <div className="flex justify-center p-2">
-                              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                            </div>
-                          ) : currencies && currencies.length > 0 ? (
-                            currencies.map((currency) => (
-                              <SelectItem key={currency.code} value={currency.code}>
-                                {currency.symbol} {currency.name} ({currency.code})
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="USD">$ US Dollar (USD)</SelectItem>
-                          )}
+                          {currencies?.map((currency) => (
+                            <SelectItem key={currency.code} value={currency.code}>
+                              <div className="flex items-center">
+                                <span className="mr-2">{currency.symbol}</span>
+                                <span>{currency.name} ({currency.code})</span>
+                                {currency.isDefault && (
+                                  <Badge className="ml-2" variant="outline">Default</Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-                      <FormDescription>
-                        Select the currency for this quote
-                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -519,14 +533,20 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                   name="taxRateId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tax Rate {!isTaxEnabled && "(Disabled)"}</FormLabel>
+                      <FormLabel className="flex">
+                        <span>Tax Rate</span>
+                        {!isTaxEnabled && (
+                          <Badge variant="outline" className="ml-2 bg-yellow-50 text-yellow-700 border-yellow-200">Tax Disabled</Badge>
+                        )}
+                      </FormLabel>
                       <Select
-                        value={String(field.value)}
                         onValueChange={(value) => {
-                          const numValue = parseInt(value);
-                          field.onChange(numValue);
-                          setSelectedTaxRateId(numValue);
+                          const numberValue = Number(value);
+                          field.onChange(numberValue);
+                          setSelectedTaxRateId(numberValue);
                         }}
+                        defaultValue={field.value?.toString()}
+                        value={field.value?.toString()}
                         disabled={!isTaxEnabled}
                       >
                         <FormControl>
@@ -535,30 +555,22 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {!isTaxEnabled ? (
-                            <SelectItem value={String(defaultTaxRate?.id || 1)}>
-                              Tax calculation disabled
+                          {taxRates?.map((rate) => (
+                            <SelectItem key={rate.id} value={rate.id.toString()}>
+                              <div className="flex items-center">
+                                <span>{rate.name} ({rate.rate}%)</span>
+                                {rate.isDefault && (
+                                  <Badge className="ml-2" variant="outline">Default</Badge>
+                                )}
+                              </div>
                             </SelectItem>
-                          ) : isLoadingTaxRates ? (
-                            <div className="flex justify-center p-2">
-                              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                            </div>
-                          ) : taxRates && taxRates.length > 0 ? (
-                            taxRates.map((taxRate) => (
-                              <SelectItem key={taxRate.id} value={String(taxRate.id)}>
-                                {taxRate.name} ({taxRate.rate > 1 ? taxRate.rate.toFixed(2) : (taxRate.rate * 100).toFixed(2)}%)
-                                {taxRate.isDefault && " (Default)"}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem value="1">No Tax (0%)</SelectItem>
-                          )}
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormDescription>
                         {isTaxEnabled 
-                          ? "Select the appropriate tax rate" 
-                          : "Tax calculation is disabled for this organization"}
+                          ? "Select the appropriate tax rate for this quote" 
+                          : "Tax is disabled in organization settings"}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -566,164 +578,106 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                 />
               </div>
 
-              {/* Use the new EditableLineItems component */}
-              {repairItems && (
-                <EditableLineItems 
-                  items={repairItems.map(item => ({
-                    id: item.id,
-                    description: item.description,
-                    itemType: item.itemType as "part" | "service",
-                    unitPrice: item.unitPrice,
-                    quantity: item.quantity,
-                    total: item.unitPrice * item.quantity
-                  }))}
-                  onChange={(updatedItems) => {
-                    // We'll use this to update the form subtotals
-                    const newSubtotal = updatedItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-                    
-                    // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
-                    const normalizedTaxRate = taxRate > 1 ? taxRate / 100 : taxRate;
-                    
-                    const newTaxAmount = newSubtotal * normalizedTaxRate;
-                    const newTotal = newSubtotal + newTaxAmount;
-                    
-                    form.setValue("subtotal", newSubtotal);
-                    form.setValue("tax", newTaxAmount);
-                    form.setValue("total", newTotal);
-                  }}
-                  readOnly={false}
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="subtotal"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subtotal</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center">
+                            <CurrencySymbol currencyCode={selectedCurrencyCode} />
+                            <Input
+                              {...field}
+                              value={field.value ? field.value.toFixed(2) : '0.00'}
+                              disabled
+                            />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2">
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Notes</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            placeholder="Add any notes or terms for the customer..."
-                            className="h-32"
+                <FormField
+                  control={form.control}
+                  name="tax"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tax</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center">
+                          <CurrencySymbol currencyCode={selectedCurrencyCode} />
+                          <Input
                             {...field}
-                            value={field.value || ''}
+                            value={field.value ? field.value.toFixed(2) : '0.00'}
+                            disabled
                           />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="subtotal"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Subtotal</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
-                            <span className="mr-1">{selectedCurrency?.symbol || '$'}</span>
-                            <Input
-                              {...field}
-                              value={field.value ? field.value.toFixed(2) : '0.00'}
-                              disabled
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name="total"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Total</FormLabel>
+                      <FormControl>
+                        <div className="flex items-center">
+                          <CurrencySymbol currencyCode={selectedCurrencyCode} />
+                          <Input
+                            {...field}
+                            value={field.value ? field.value.toFixed(2) : '0.00'}
+                            disabled
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-                  <FormField
-                    control={form.control}
-                    name="tax"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Tax {!isTaxEnabled ? "(Disabled)" : `(${taxRate > 1 ? taxRate.toFixed(2) : (taxRate * 100).toFixed(2)}%)`}</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
-                            <span className="mr-1">{selectedCurrency?.symbol || '$'}</span>
-                            <Input
-                              {...field}
-                              value={field.value ? field.value.toFixed(2) : '0.00'}
-                              disabled
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="total"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Total</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center">
-                            <span className="mr-1">{selectedCurrency?.symbol || '$'}</span>
-                            <Input
-                              {...field}
-                              value={field.value ? field.value.toFixed(2) : '0.00'}
-                              className="font-bold"
-                              disabled
-                            />
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                <FormField
+                  control={form.control}
+                  name="notes"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Notes</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Any special notes, terms or conditions for this quote?"
+                          className="min-h-[100px]"
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <DialogFooter>
                 <Button 
                   type="button" 
                   variant="outline" 
-                  onClick={onClose}
+                  onClick={() => {
+                    console.log("DEBUG: Cancel button clicked");
+                    onClose();
+                  }}
                 >
                   Cancel
                 </Button>
-                <Button 
-                  type="button"
-                  disabled={mutation.isPending}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    console.log("DEBUG: Manual form submission button clicked");
-                    
-                    // Log the form values
-                    console.log("FORM VALUES BEFORE SUBMIT:", form.getValues());
-                    
-                    // Check form validation
-                    if (!form.formState.isValid) {
-                      console.log("FORM VALIDATION ERRORS:", form.formState.errors);
-                    }
-                    
-                    // Use try-catch to catch any errors during submission
-                    try {
-                      form.handleSubmit(onSubmit)();
-                    } catch (error) {
-                      console.error("ERROR DURING FORM SUBMIT:", error);
-                    }
-                  }}
-                >
-                  {mutation.isPending ? (
-                    <span className="flex items-center">
-                      <i className="fas fa-spinner fa-spin mr-2"></i> Saving...
-                    </span>
-                  ) : quoteId ? (
-                    "Update Quote"
-                  ) : (
-                    "Create Quote"
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading && (
+                    <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
                   )}
+                  {quoteId ? "Update Quote" : "Create Quote"}
                 </Button>
               </DialogFooter>
             </form>
