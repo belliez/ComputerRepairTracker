@@ -50,12 +50,14 @@ import { printDocument, createQuoteDocument, createInvoiceDocument } from "@/lib
 import CustomerInformation from "@/components/repairs/customer-information";
 import DeviceInformation from "@/components/repairs/device-information";
 import RepairInformation from "@/components/repairs/repair-information";
+import QuoteForm from "@/components/repairs/quote-form";
 
 export default function ViewRepair() {
   const [location, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { formatCurrency } = useCurrency();
+  const [showQuoteForm, setShowQuoteForm] = useState(false);
   
   // Quote approval mutation
   const approveQuoteMutation = useMutation({
@@ -621,6 +623,15 @@ export default function ViewRepair() {
 
   return (
     <div className="container mx-auto px-4 py-6">
+      {/* Quote Form Dialog */}
+      {repairId && (
+        <QuoteForm
+          repairId={repairId}
+          isOpen={showQuoteForm}
+          onClose={() => setShowQuoteForm(false)}
+        />
+      )}
+      
       {/* Header */}
       <div className="flex justify-between items-center mb-6 pb-4 border-b">
         <Link to="/repairs">
@@ -848,12 +859,18 @@ export default function ViewRepair() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xl font-bold">Quotes</CardTitle>
-              <Link to={`/repairs/${repairId}/quotes/create`}>
-                <Button variant="outline" size="sm" className="h-8 gap-1">
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Create Quote</span>
-                </Button>
-              </Link>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-8 gap-1"
+                onClick={() => {
+                  console.log("DEBUG: Setting showQuoteForm to true");
+                  setShowQuoteForm(true);
+                }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Create Quote</span>
+              </Button>
             </CardHeader>
             <CardContent>
               {(repair.quotes || []).length > 0 ? (
