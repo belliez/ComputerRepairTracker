@@ -522,15 +522,34 @@ const SettingsPage = () => {
 
   // Mutations
   const updateOrganizationMutation = useMutation({
-    mutationFn: (data: z.infer<typeof organizationSchema>) => {
+    mutationFn: async (data: z.infer<typeof organizationSchema>) => {
       console.log('Submitting organization update:', data);
-      return apiRequest('POST', '/api/settings/organization', {
-        ...data,
-        type: 'company'
+      
+      const headers = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': '2', // Hardcoded ID for now
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await fetch('/api/settings/organization', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          ...data,
+          type: 'company'
+        })
       });
+      
+      if (!response.ok) {
+        throw new Error(`Error updating organization: ${response.status}`);
+      }
+      
+      return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/organizations'] });
+      // Refetch organization data directly
+      fetchOrganization();
       setShowOrganizationDialog(false);
       toast({
         title: "Organization updated",
