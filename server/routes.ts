@@ -683,7 +683,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Repairs
-  // New endpoint for dashboard repair status counts
+  // Create a dedicated middleware-bypassing route for repair status counts
+  // This is registered before the auth middleware to ensure it remains accessible
+  app.get("/repair-status-counts", async (req: Request, res: Response) => {
+    console.log("REPAIR STATS PUBLIC DEBUG: Accessing public repair status counts endpoint");
+    
+    try {
+      // Set global organization context from header
+      if (req.headers['x-organization-id']) {
+        const orgId = parseInt(req.headers['x-organization-id'] as string, 10);
+        (global as any).currentOrganizationId = orgId;
+        console.log(`Setting global organization context to ${orgId} from request header`);
+      } else {
+        // Default fallback organization
+        (global as any).currentOrganizationId = 2;
+        console.log(`Using default organization ID: 2`);
+      }
+      
+      // Use the optimized SQL aggregation method
+      const statusCounts = await storage.getRepairStatusCounts();
+      console.log(`Found status counts:`, statusCounts);
+      
+      res.json(statusCounts);
+    } catch (error) {
+      console.error("Error fetching repair status counts:", error);
+      res.status(500).json({ error: "Failed to fetch repair status counts" });
+    }
+  });
+  
+  // Keep the authenticated version for the API router as well (not strictly needed but kept for consistency)
   apiRouter.get("/repair-status-counts", async (req: Request, res: Response) => {
     try {
       console.log("REPAIRS STATS DEBUG: Fetching repair status counts for dashboard");

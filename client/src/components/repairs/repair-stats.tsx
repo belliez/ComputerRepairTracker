@@ -22,7 +22,7 @@ export default function RepairStats({
 }: RepairStatsProps) {
   // Get repair status counts directly from an optimized SQL query endpoint
   const { data: statusCountsData, isLoading: isLoadingStatusCounts } = useQuery<{status: string; count: number}[]>({
-    queryKey: ["/api/repair-status-counts"],
+    queryKey: ["/repair-status-counts"],
     refetchOnWindowFocus: false,
     staleTime: 30000, // Consider data stale after 30 seconds
   });

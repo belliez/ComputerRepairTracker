@@ -81,7 +81,7 @@ export default function Dashboard() {
   const DashboardStats = () => {
     // Use more efficient status counts endpoint for the dashboard stats
     const { data: statusCountsData, isLoading: isLoadingStatusCounts } = useQuery<{status: string; count: number}[]>({
-      queryKey: ["/api/repairs/status-counts"],
+      queryKey: ["/repair-status-counts"],
       refetchOnWindowFocus: false,
       staleTime: 30000, // Consider data stale after 30 seconds
     });
