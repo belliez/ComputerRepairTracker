@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import InvoiceForm from "@/components/repairs/invoice-form";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrency } from "@/hooks/use-currency";
 
 export default function Invoices() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -29,6 +30,7 @@ export default function Invoices() {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
   const [selectedRepairId, setSelectedRepairId] = useState<number | null>(null);
   const { toast } = useToast();
+  const { formatCurrency } = useCurrency();
 
   const { data: invoices, isLoading } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
@@ -133,7 +135,7 @@ export default function Invoices() {
         </Card>
         <Card>
           <CardContent className="p-4 flex flex-col items-center justify-center">
-            <div className="text-3xl font-bold text-blue-600">${totalRevenue.toFixed(2)}</div>
+            <div className="text-3xl font-bold text-blue-600">{formatCurrency(totalRevenue)}</div>
             <div className="text-sm text-gray-500">Total Revenue</div>
           </CardContent>
         </Card>
@@ -218,7 +220,7 @@ export default function Invoices() {
                       <TableCell>
                         {format(new Date(invoice.dateIssued), "MMM d, yyyy")}
                       </TableCell>
-                      <TableCell>${invoice.total.toFixed(2)}</TableCell>
+                      <TableCell>{formatCurrency(invoice.total)}</TableCell>
                       <TableCell>
                         {invoice.status === "paid" ? (
                           <Badge className="bg-green-100 text-green-800 border-green-300">
