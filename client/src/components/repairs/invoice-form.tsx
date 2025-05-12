@@ -248,16 +248,18 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
         form.setValue("subtotal", quoteToUse.subtotal);
         form.setValue("tax", quoteToUse.tax || 0);
         form.setValue("total", quoteToUse.total);
-        form.setValue("notes", quoteToUse.notes || "");
         
-        // If converting from a quote, also use its currency code and tax rate
+        // Also update currency and tax rate from quote if available
         if (quoteToUse.currencyCode) {
           form.setValue("currencyCode", quoteToUse.currencyCode);
+          setSelectedCurrencyCode(quoteToUse.currencyCode);
         }
         
         if (quoteToUse.taxRateId) {
           form.setValue("taxRateId", quoteToUse.taxRateId);
+          setSelectedTaxRateId(quoteToUse.taxRateId);
         }
+        form.setValue("notes", quoteToUse.notes || "");
         
         // Check if the quote has item data we can use
         if (quoteToUse.itemsData) {
@@ -498,9 +500,14 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
                   }))}
                   onChange={(updatedItems) => {
                     // Calculate new totals
-                    const taxRate = 0.0825; // 8.25% tax
+                    const taxRate = selectedTaxRate?.rate || 0;
+                    
+                    // Normalize tax rate: if greater than 1, assume it's a percentage and convert to decimal
+                    const normalizedTaxRate = taxRate > 1 ? taxRate / 100 : taxRate;
+                    
                     const newSubtotal = updatedItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-                    const newTaxAmount = newSubtotal * taxRate;
+                    // Only calculate tax if it's enabled for the organization
+                    const newTaxAmount = isTaxEnabled ? newSubtotal * normalizedTaxRate : 0;
                     const newTotal = newSubtotal + newTaxAmount;
                     
                     form.setValue("subtotal", newSubtotal);
@@ -516,6 +523,91 @@ export default function InvoiceForm({ repairId, invoiceId, isOpen, onClose }: In
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                    <FormField
+                      control={form.control}
+                      name="currencyCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Currency</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              setSelectedCurrencyCode(value);
+                            }}
+                            defaultValue={field.value}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select currency" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {currencies?.map((currency) => (
+                                <SelectItem 
+                                  key={currency.code} 
+                                  value={currency.code}
+                                >
+                                  {currency.code} - {currency.name} ({currency.symbol})
+                                  {currency.isDefault && " (Default)"}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="taxRateId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tax Rate</FormLabel>
+                          <Select
+                            onValueChange={(value) => {
+                              const numValue = parseInt(value);
+                              field.onChange(numValue);
+                              setSelectedTaxRateId(numValue);
+                            }}
+                            defaultValue={field.value?.toString()}
+                            value={field.value?.toString()}
+                            disabled={!isTaxEnabled}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder={isTaxEnabled ? "Select tax rate" : "Tax disabled"} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {isTaxEnabled ? (
+                                taxRates?.map((taxRate) => (
+                                  <SelectItem 
+                                    key={taxRate.id} 
+                                    value={taxRate.id.toString()}
+                                  >
+                                    {taxRate.name} ({(taxRate.rate * 100).toFixed(2)}%)
+                                    {taxRate.isDefault && " (Default)"}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="0">Tax calculation disabled</SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          {!isTaxEnabled && (
+                            <FormDescription>
+                              Tax calculation is disabled for this organization
+                            </FormDescription>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  
                   <FormField
                     control={form.control}
                     name="notes"
