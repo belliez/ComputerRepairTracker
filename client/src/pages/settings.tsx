@@ -137,6 +137,8 @@ const SettingsPage = () => {
   const [deletingTechnicianId, setDeletingTechnicianId] = useState<number | null>(null);
   const [showDeleteAllDataConfirm, setShowDeleteAllDataConfirm] = useState(false);
   const [activeTrashTab, setActiveTrashTab] = useState('customers');
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [isSendingTestEmail, setIsSendingTestEmail] = useState(false);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -152,6 +154,14 @@ const SettingsPage = () => {
     phone?: string;
     address?: string;
     settings?: Record<string, any>;
+  }
+  
+  interface EmailSettings {
+    enabled: boolean;
+    fromEmail: string;
+    fromName: string;
+    replyTo?: string;
+    footerText?: string;
   }
   
   interface Currency {
@@ -1263,6 +1273,7 @@ const SettingsPage = () => {
       <Tabs defaultValue="organization" onValueChange={setActiveTab} value={activeTab}>
         <TabsList className="mb-6">
           <TabsTrigger value="organization">Organization</TabsTrigger>
+          <TabsTrigger value="email">Email</TabsTrigger>
           <TabsTrigger value="currencies">
             Currencies 
             {currencies && currencies.find(c => c.isDefault) && (
