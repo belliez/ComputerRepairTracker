@@ -180,6 +180,33 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
     }
   }, [defaultCurrencyData, defaultTaxRate, selectedCurrencyCode, selectedTaxRateId]);
   
+  // Reset form state when dialog is closed
+  const resetFormState = () => {
+    // Clear selection state
+    setSelectedCurrencyCode("");
+    setSelectedTaxRateId(null);
+    
+    // Next time the form opens, it will load the current default currency
+    if (defaultCurrencyData?.code) {
+      console.log("QUOTE FORM DEBUG: Resetting to default currency:", defaultCurrencyData.code);
+    }
+  };
+  
+  // Reset when closing
+  useEffect(() => {
+    if (!isOpen) {
+      resetFormState();
+    }
+  }, [isOpen]);
+  
+  // Apply default currency when available and no selection exists
+  useEffect(() => {
+    if (isOpen && defaultCurrencyData?.code && !selectedCurrencyCode) {
+      console.log("QUOTE FORM DEBUG: Applying default currency from API:", defaultCurrencyData.code);
+      setSelectedCurrencyCode(defaultCurrencyData.code);
+    }
+  }, [isOpen, defaultCurrencyData, selectedCurrencyCode]);
+  
   // When editing, load the existing quote's settings
   useEffect(() => {
     if (existingQuote) {

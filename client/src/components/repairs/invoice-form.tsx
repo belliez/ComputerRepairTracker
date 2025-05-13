@@ -205,6 +205,7 @@ export default function InvoiceForm({
 
   // Reset form state when dialog is closed
   const resetFormState = () => {
+    // Clear selection state
     setSelectedCurrencyCode("");
     setSelectedTaxRateId(null);
     
@@ -220,6 +221,14 @@ export default function InvoiceForm({
       resetFormState();
     }
   }, [isOpen]);
+  
+  // Apply default currency when available and no selection exists
+  useEffect(() => {
+    if (isOpen && defaultCurrency?.code && !selectedCurrencyCode) {
+      console.log("INVOICE FORM DEBUG: Applying default currency from API:", defaultCurrency.code);
+      setSelectedCurrencyCode(defaultCurrency.code);
+    }
+  }, [isOpen, defaultCurrency, selectedCurrencyCode]);
   
   // When editing, load the existing invoice's settings
   useEffect(() => {

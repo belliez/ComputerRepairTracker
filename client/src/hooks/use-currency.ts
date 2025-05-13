@@ -8,14 +8,18 @@ export type Currency = {
 };
 
 export function useCurrency() {
-  // Get the default currency
+  // Get the default currency - staleTime: 0 ensures it always refetches
   const { data: defaultCurrency } = useQuery<Currency>({
     queryKey: ['/api/settings/currencies/default'],
+    staleTime: 0, // Don't use cache, always fetch fresh data
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   // Get all available currencies
   const { data: currencies = [] } = useQuery<Currency[]>({
     queryKey: ['/api/settings/currencies'],
+    staleTime: 0, // Don't use cache, always fetch fresh data
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   // Format a currency value based on provided currency code or default currency

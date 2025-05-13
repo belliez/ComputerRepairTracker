@@ -1469,10 +1469,27 @@ const SettingsPage = () => {
                   Manage currencies for quotes and invoices
                 </CardDescription>
                 {currencies && currencies.find(c => c.isDefault) && (
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 mt-2">
                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                       Default: {currencies.find(c => c.isDefault)?.code}
                     </Badge>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-8 px-2 text-xs"
+                      onClick={() => {
+                        // Force refresh all currency data
+                        fetchCurrencies();
+                        queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
+                        queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies/default'] });
+                        toast({
+                          title: "Currency cache cleared",
+                          description: "All currency data has been refreshed"
+                        });
+                      }}
+                    >
+                      <RefreshCw className="h-3 w-3 mr-1" /> Refresh Cache
+                    </Button>
                   </div>
                 )}
               </div>
