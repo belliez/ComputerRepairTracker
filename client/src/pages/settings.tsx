@@ -2423,15 +2423,55 @@ const SettingsPage = () => {
                     <AlertDescription>
                       {emailForm.watch('provider') === 'smtp' ? (
                         <>
-                          Emails are sent through your custom SMTP server. Make sure to provide valid SMTP credentials for your mail server.
+                          <p className="mb-2">
+                            Emails are sent through your custom SMTP server. Make sure to provide valid SMTP credentials for your mail server.
+                          </p>
+                          
+                          {emailForm.watch('smtpHost') === 'smtp.gmail.com' && (
+                            <div className="mt-2 border-l-4 border-blue-400 pl-3 py-2 bg-blue-50 rounded text-sm">
+                              <h5 className="font-semibold text-blue-800">Gmail-specific instructions:</h5>
+                              <ul className="list-disc list-inside space-y-1 mt-1">
+                                <li>If you have 2FA enabled on your Google account (recommended), you must generate an App Password at <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Google App Passwords</a></li>
+                                <li>Use that App Password instead of your normal Gmail password</li>
+                                <li>Make sure the SMTP username matches the Gmail address you're authenticating with</li>
+                                <li>Keep port 587 and TLS/SSL enabled</li>
+                              </ul>
+                            </div>
+                          )}
                         </>
                       ) : emailForm.watch('provider') === 'mailgun' ? (
                         <>
-                          Emails are sent through Mailgun API. You need to provide your Mailgun API key, domain, and select the correct region where your Mailgun account is hosted.
+                          <p className="mb-2">
+                            Emails are sent through Mailgun API. You need to provide your Mailgun API key, domain, and select the correct region where your Mailgun account is hosted.
+                          </p>
+                          
+                          <div className="mt-2 border-l-4 border-blue-400 pl-3 py-2 bg-blue-50 rounded text-sm">
+                            <h5 className="font-semibold text-blue-800">Mailgun configuration notes:</h5>
+                            <ul className="list-disc list-inside space-y-1 mt-1">
+                              <li>Find your API key in the Mailgun dashboard under API Keys</li>
+                              <li>Private API keys typically begin with "key-" (older format) or include hyphens</li>
+                              <li>Make sure to use a domain that has been verified in your Mailgun account</li>
+                              <li>Select the correct region (US or EU) where your Mailgun account is hosted</li>
+                              <li>The "From Email" should use a domain that's verified in Mailgun</li>
+                            </ul>
+                          </div>
                         </>
                       ) : (
                         <>
-                          Emails are sent through SendGrid API. You can either use the system-wide API key configured by the administrator or provide your own SendGrid API key.
+                          <p className="mb-2">
+                            Emails are sent through SendGrid API. You need to provide a valid SendGrid API key with permissions to send emails.
+                          </p>
+                          
+                          <div className="mt-2 border-l-4 border-blue-400 pl-3 py-2 bg-blue-50 rounded text-sm">
+                            <h5 className="font-semibold text-blue-800">SendGrid API Key instructions:</h5>
+                            <ul className="list-disc list-inside space-y-1 mt-1">
+                              <li>Create an API key at <a href="https://app.sendgrid.com/settings/api_keys" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">SendGrid API Keys</a></li>
+                              <li>Ensure the API key has "Mail Send" permissions</li>
+                              <li>Verify your sending domain in SendGrid settings</li>
+                              <li>Make sure the "From Email" matches a verified sender in your SendGrid account</li>
+                              <li>API keys should begin with "SG." followed by alphanumeric characters</li>
+                            </ul>
+                          </div>
                         </>
                       )}
                     </AlertDescription>
