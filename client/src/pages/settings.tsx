@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
 // Helper function to format currency for preview display
@@ -165,6 +165,13 @@ const SettingsPage = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
+  // Fetch email settings from the API
+  const { data: emailSettingsData, isLoading: isLoadingEmailSettings } = useQuery({
+    queryKey: ['/api/settings/email'],
+    queryFn: getQueryFn(),
+    enabled: activeTab === 'email'
+  });
+  
   // Email form setup
   const emailForm = useForm<z.infer<typeof emailSettingsSchema>>({
     resolver: zodResolver(emailSettingsSchema),
@@ -183,6 +190,30 @@ const SettingsPage = () => {
       smtpSecure: false
     }
   });
+  
+  // Update email form when settings are loaded from API
+  useEffect(() => {
+    if (emailSettingsData) {
+      console.log('Updating email form with data from API:', emailSettingsData);
+      emailForm.reset({
+        enabled: emailSettingsData.enabled ?? true,
+        fromEmail: emailSettingsData.fromEmail ?? '',
+        fromName: emailSettingsData.fromName ?? '',
+        replyTo: emailSettingsData.replyTo ?? '',
+        footerText: emailSettingsData.footerText ?? '',
+        provider: emailSettingsData.provider ?? 'sendgrid',
+        
+        // Provider-specific settings
+        sendgridApiKey: emailSettingsData.sendgridApiKey ?? '',
+        
+        smtpHost: emailSettingsData.smtpHost ?? '',
+        smtpPort: emailSettingsData.smtpPort ?? 587,
+        smtpUser: emailSettingsData.smtpUser ?? '',
+        smtpPassword: emailSettingsData.smtpPassword ?? '',
+        smtpSecure: emailSettingsData.smtpSecure ?? false
+      });
+    }
+  }, [emailSettingsData]);
   
   // Handle email form submission
   const onEmailFormSubmit = async (data: z.infer<typeof emailSettingsSchema>) => {
