@@ -623,7 +623,13 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
                             <CurrencySymbol currencyCode={selectedCurrencyCode} />
                             <Input
                               {...field}
-                              value={field.value ? field.value.toFixed(2) : '0.00'}
+                              value={
+                                field.value 
+                                  ? selectedCurrencyCode === 'JPY' 
+                                    ? field.value.toFixed(0) 
+                                    : field.value.toFixed(2) 
+                                  : selectedCurrencyCode === 'JPY' ? '0' : '0.00'
+                              }
                               disabled
                             />
                         </div>

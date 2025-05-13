@@ -643,10 +643,10 @@ export default function InvoiceForm({
                           <CurrencySymbol currencyCode={selectedCurrencyCode} />
                           <Input
                             {...field}
-                            value={field.value.toFixed(2)}
+                            value={selectedCurrencyCode === 'JPY' ? field.value.toFixed(0) : field.value.toFixed(2)}
                             disabled={!!approvedQuote}
                             type="number"
-                            step="0.01"
+                            step={selectedCurrencyCode === 'JPY' ? "1" : "0.01"}
                             onChange={(e) => {
                               const value = parseFloat(e.target.value);
                               field.onChange(value);
@@ -677,10 +677,10 @@ export default function InvoiceForm({
                           <CurrencySymbol currencyCode={selectedCurrencyCode} />
                           <Input
                             {...field}
-                            value={field.value.toFixed(2)}
+                            value={selectedCurrencyCode === 'JPY' ? field.value.toFixed(0) : field.value.toFixed(2)}
                             disabled={true} // Tax is always calculated
                             type="number"
-                            step="0.01"
+                            step={selectedCurrencyCode === 'JPY' ? "1" : "0.01"}
                           />
                         </div>
                       </FormControl>
@@ -700,10 +700,10 @@ export default function InvoiceForm({
                           <CurrencySymbol currencyCode={selectedCurrencyCode} />
                           <Input
                             {...field}
-                            value={field.value.toFixed(2)}
+                            value={selectedCurrencyCode === 'JPY' ? field.value.toFixed(0) : field.value.toFixed(2)}
                             disabled={true} // Total is always calculated
                             type="number"
-                            step="0.01"
+                            step={selectedCurrencyCode === 'JPY' ? "1" : "0.01"}
                           />
                         </div>
                       </FormControl>
