@@ -329,15 +329,50 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
   
   console.log("PRINT DOCUMENT: Final currency being used for formatting:", currency);
   
-  // Override currency to GBP for hardcoded USD quotes (temporary fix for existing quotes)
-  if (currency.code === 'USD') {
-    console.log("PRINT DOCUMENT: Detected USD in an existing quote, forcing to GBP which is the current default");
-    currency = {
-      code: 'GBP',
-      name: 'British Pound',
-      symbol: '£',
-      isDefault: true
-    };
+  // Override currency for hardcoded old quotes to match the current organization default
+  if (currency.code === 'USD' || currency.code === 'GBP') {
+    // Find the default currency from our API response
+    const defaultCurrency = allCurrencies?.find((c: Currency) => c.isDefault);
+    
+    if (defaultCurrency) {
+      console.log(`PRINT DOCUMENT: Detected old ${currency.code} in an existing quote, using current org default currency:`, defaultCurrency.code);
+      
+      // Get a human-readable name for the currency
+      const defaultCurrencyName = 
+        defaultCurrency.code === 'USD' ? 'US Dollar' : 
+        defaultCurrency.code === 'EUR' ? 'Euro' : 
+        defaultCurrency.code === 'GBP' ? 'British Pound' : 
+        defaultCurrency.code === 'JPY' ? 'Japanese Yen' : 
+        defaultCurrency.code === 'AUD' ? 'Australian Dollar' : 
+        defaultCurrency.code === 'CAD' ? 'Canadian Dollar' : 
+        defaultCurrency.name || `${defaultCurrency.code} Currency`;
+      
+      // Get the correct symbol
+      const defaultCurrencySymbol = 
+        defaultCurrency.code === 'EUR' ? '€' : 
+        defaultCurrency.code === 'GBP' ? '£' : 
+        defaultCurrency.code === 'USD' ? '$' : 
+        defaultCurrency.code === 'JPY' ? '¥' : 
+        defaultCurrency.code === 'AUD' ? 'A$' : 
+        defaultCurrency.code === 'CAD' ? 'C$' : 
+        defaultCurrency.symbol;
+      
+      currency = {
+        code: defaultCurrency.code,
+        name: defaultCurrencyName,
+        symbol: defaultCurrencySymbol,
+        isDefault: true
+      };
+    } else {
+      // Fallback to EUR if we can't determine the default
+      console.log(`PRINT DOCUMENT: No default currency found, using fallback EUR for this ${currency.code} quote`);
+      currency = {
+        code: 'EUR',
+        name: 'Euro',
+        symbol: '€',
+        isDefault: true
+      };
+    }
   }
   
   // Define decimal places based on currency
@@ -620,10 +655,17 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
   // Define decimal places based on currency
   const decimalPlaces = currency.code === 'JPY' ? 0 : 2;
   
-  // Get direct symbol for HTML template
-  const currencySymbol = getCurrencySymbol(currency.code);
+  // Get direct symbol for HTML template - use hardcoded values for reliability
+  const currencySymbol = 
+    currency.code === 'EUR' ? '€' : 
+    currency.code === 'GBP' ? '£' : 
+    currency.code === 'USD' ? '$' : 
+    currency.code === 'JPY' ? '¥' : 
+    currency.code === 'AUD' ? 'A$' : 
+    currency.code === 'CAD' ? 'C$' : 
+    currency.symbol || '';  // fallback to stored symbol or empty string
   
-  console.log("PRINT DOCUMENT: Using direct symbol for invoice HTML template:", currencySymbol, "with", decimalPlaces, "decimal places");
+  console.log("PRINT DOCUMENT: Using direct symbol for invoice HTML template:", currencySymbol || 'none', "with", decimalPlaces, "decimal places");
   
   // Generate items table with direct symbol injection
   const itemsTable = `
