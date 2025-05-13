@@ -35,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/use-currency";
+import { CurrencySymbol } from "@/components/currency-symbol";
 
 interface PartsFormProps {
   itemId?: number | null;
@@ -274,7 +275,7 @@ export default function PartsForm({ itemId, isOpen, onClose }: PartsFormProps) {
                       <FormLabel>Retail Price</FormLabel>
                       <FormControl>
                         <div className="flex items-center">
-                          <span className="mr-1">{defaultCurrency?.symbol || '$'}</span>
+                          <CurrencySymbol />
                           <Input
                             type="number"
                             step="0.01"
