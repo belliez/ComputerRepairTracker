@@ -367,7 +367,7 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
           <p><strong>Date Created:</strong> ${dateCreated}</p>
           <p><strong>Expiration Date:</strong> ${expirationDate}</p>
           <p><strong>Repair Ticket:</strong> ${repair.ticketNumber}</p>
-          ${quote.currencyCode ? `<p><strong>Currency:</strong> ${quote.currencyCode}</p>` : ''}
+          <p><strong>Currency:</strong> ${currency.name}</p>
         </div>
       </div>
     </div>
