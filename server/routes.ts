@@ -1378,16 +1378,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Invoices
   apiRouter.get("/invoices", async (req: Request, res: Response) => {
     try {
+      const orgId = (global as any).currentOrganizationId || 2;
+      console.log(`INVOICES DEBUG: Request URL: ${req.path}, Path: ${req.path}, BaseURL: ${req.baseUrl}, OriginalURL: ${req.originalUrl}`);
+      console.log(`INVOICES DEBUG: Organization ID Header: ${req.headers['x-organization-id']}`);
+      console.log(`INVOICES DEBUG: Using organization ID from request context: ${orgId}`);
+      console.log(`INVOICES DEBUG: Authorization Header: ${req.headers.authorization ? 'present' : 'missing'}`);
+      console.log(`INVOICES DEBUG: Debug client header: ${req.headers['x-debug-client']}`);
+      
       const repairId = req.query.repairId ? parseInt(req.query.repairId as string) : undefined;
       
       if (repairId) {
+        console.log(`INVOICES DEBUG: Fetching invoices for repair ${repairId}`);
         const invoices = await storage.getInvoicesByRepair(repairId);
+        console.log(`INVOICES DEBUG: Found ${invoices.length} invoices for repair ${repairId}`);
         return res.json(invoices);
       }
       
+      console.log(`INVOICES DEBUG: Fetching all invoices for organization ${orgId}`);
       const invoices = await storage.getInvoices();
+      console.log(`INVOICES DEBUG: Found ${invoices.length} invoices for organization ${orgId}`);
+      
+      // Log the first invoice if available for debugging
+      if (invoices.length > 0) {
+        console.log(`INVOICES DEBUG: First invoice preview: ${JSON.stringify(invoices[0]).substring(0, 100)}...`);
+      }
+      
       res.json(invoices);
     } catch (error) {
+      console.error("INVOICES DEBUG: Error fetching invoices:", error);
       res.status(500).json({ error: "Failed to fetch invoices" });
     }
   });
