@@ -1376,17 +1376,17 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <div className="text-sm font-medium text-gray-500">Subtotal</div>
-                              <div className="text-lg">{formatCurrency(quote.subtotal)}</div>
+                              <div className="text-lg">{formatCurrency(quote.subtotal, quote.currencyCode || undefined)}</div>
                             </div>
                             <div>
                               <div className="text-sm font-medium text-gray-500">Tax</div>
-                              <div className="text-lg">{formatCurrency(quote.tax || 0)}</div>
+                              <div className="text-lg">{formatCurrency(quote.tax || 0, quote.currencyCode || undefined)}</div>
                             </div>
                           </div>
 
                           <div>
                             <div className="text-sm font-medium text-gray-500">Total</div>
-                            <div className="text-2xl font-bold">{formatCurrency(quote.total)}</div>
+                            <div className="text-2xl font-bold">{formatCurrency(quote.total, quote.currencyCode || undefined)}</div>
                           </div>
 
                           {quote.notes && (
@@ -1528,17 +1528,17 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <div className="text-sm font-medium text-gray-500">Subtotal</div>
-                              <div className="text-lg">{formatCurrency(invoice.subtotal)}</div>
+                              <div className="text-lg">{formatCurrency(invoice.subtotal, invoice.currencyCode || undefined)}</div>
                             </div>
                             <div>
                               <div className="text-sm font-medium text-gray-500">Tax</div>
-                              <div className="text-lg">{formatCurrency(invoice.tax || 0)}</div>
+                              <div className="text-lg">{formatCurrency(invoice.tax || 0, invoice.currencyCode || undefined)}</div>
                             </div>
                           </div>
 
                           <div>
                             <div className="text-sm font-medium text-gray-500">Total</div>
-                            <div className="text-2xl font-bold">{formatCurrency(invoice.total)}</div>
+                            <div className="text-2xl font-bold">{formatCurrency(invoice.total, invoice.currencyCode || undefined)}</div>
                           </div>
 
                           {invoice.paymentMethod && invoice.paymentMethod !== 'none' && (
