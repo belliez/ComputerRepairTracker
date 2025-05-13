@@ -64,6 +64,44 @@ export interface EmailSettings {
  * @param organizationId The organization ID
  * @returns The email settings for the organization, or default settings if not configured
  */
+/**
+ * Get default system-wide Mailgun settings from environment variables
+ * This is used as a fallback when no organization email settings are configured
+ */
+export function getDefaultMailgunSettings(): EmailSettings | null {
+  const mailgunApiKey = process.env.DEFAULT_MAILGUN_API_KEY;
+  const mailgunDomain = process.env.DEFAULT_MAILGUN_DOMAIN;
+  
+  if (!mailgunApiKey || !mailgunDomain) {
+    console.warn('Default Mailgun settings not found in environment variables.');
+    return null;
+  }
+  
+  return {
+    enabled: true,
+    fromEmail: process.env.DEFAULT_MAIL_FROM_EMAIL || `no-reply@${mailgunDomain}`,
+    fromName: process.env.DEFAULT_MAIL_FROM_NAME || 'Repair Track',
+    replyTo: process.env.DEFAULT_MAIL_REPLY_TO || '',
+    footerText: process.env.DEFAULT_MAIL_FOOTER || `© ${new Date().getFullYear()} Repair Track. This email was sent via a system-wide default configuration. Please configure your own email settings.`,
+    
+    // Default to Mailgun provider
+    provider: 'mailgun',
+    
+    // Mailgun settings
+    mailgunApiKey,
+    mailgunDomain,
+    mailgunRegion: (process.env.DEFAULT_MAILGUN_REGION as 'us' | 'eu') || 'us',
+    
+    // Include empty fields for other providers to maintain the type
+    sendgridApiKey: '',
+    smtpHost: '',
+    smtpPort: 0,
+    smtpUser: '',
+    smtpPassword: '',
+    smtpSecure: false
+  };
+}
+
 export async function getOrganizationEmailSettings(organizationId: number): Promise<EmailSettings | null> {
   try {
     // Query the organization from the database
@@ -137,20 +175,50 @@ export async function sendEmailWithOverride(emailData: EmailData, overrideSettin
   try {
     // Use override settings if provided, otherwise fall back to organization settings
     let settings: EmailSettings | null = overrideSettings;
+    let usingDefaultSettings = false;
+    let emailConfigurationMissing = false;
     
     // If no override settings provided, get from database
     if (!settings) {
       settings = await getOrganizationEmailSettings(emailData.organizationId);
     }
     
-    if (!settings) {
-      console.error(`Failed to retrieve email settings for organization ${emailData.organizationId}`);
-      return false;
+    // Check if settings exist and if any provider is configured
+    const hasProviderConfigured = settings && (
+      (settings.provider === 'sendgrid' && settings.sendgridApiKey) ||
+      (settings.provider === 'mailgun' && settings.mailgunApiKey && settings.mailgunDomain) ||
+      (settings.provider === 'smtp' && settings.smtpHost && settings.smtpPort)
+    );
+    
+    // If no settings or no provider configured, try default Mailgun settings
+    if (!settings || !hasProviderConfigured) {
+      emailConfigurationMissing = true;
+      console.warn(`No valid email configuration for organization ${emailData.organizationId}, attempting to use default Mailgun settings`);
+      
+      const defaultSettings = getDefaultMailgunSettings();
+      if (defaultSettings) {
+        settings = defaultSettings;
+        usingDefaultSettings = true;
+        console.log('Using default Mailgun settings to send email');
+      } else {
+        console.error(`Failed to retrieve default Mailgun settings`);
+        return false;
+      }
     }
     
     if (!settings.enabled) {
       console.log(`Email sending is disabled for organization ${emailData.organizationId}`);
       return false;
+    }
+    
+    // Add notice about using default settings if applicable
+    if (usingDefaultSettings && emailConfigurationMissing) {
+      // Add a notice to the email that this was sent via default configuration
+      emailData.html += `
+      <div style="margin-top: 30px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #ffc107; font-size: 14px;">
+        <p><strong>Notice:</strong> This email was sent via the system's default email configuration because your organization hasn't configured email settings yet.</p>
+        <p>To configure your own email settings, please go to Settings > Email in your RepairTrack dashboard.</p>
+      </div>`;
     }
     
     // Construct the from field with name and email
