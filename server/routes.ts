@@ -1644,9 +1644,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get organization settings to determine currency if not set in quote
       const organizationId = quote.organizationId || req.organizationId || 1;
       
-      // If quote doesn't have a currency code set, try to get the default currency for the organization
-      if (!quote.currencyCode) {
-        try {
+      // For email display purposes, always check the organization's default currency 
+      // regardless of what's saved in the quote, to ensure consistency
+      try {
           // Get the organization's default currency
           const [defaultCurrency] = await db
             .select()
