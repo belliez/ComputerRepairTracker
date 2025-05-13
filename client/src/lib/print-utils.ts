@@ -234,7 +234,13 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
        quote.currencyCode === 'AUD' ? 'Australian Dollar' : 
        quote.currencyCode === 'CAD' ? 'Canadian Dollar' : 
        `${quote.currencyCode} Currency`) : 'British Pound', 
-    symbol: getCurrencySymbol(quote.currencyCode),
+    symbol: quote.currencyCode === 'EUR' ? '€' : 
+            quote.currencyCode === 'GBP' ? '£' : 
+            quote.currencyCode === 'USD' ? '$' : 
+            quote.currencyCode === 'JPY' ? '¥' : 
+            quote.currencyCode === 'AUD' ? 'A$' : 
+            quote.currencyCode === 'CAD' ? 'C$' : 
+            getCurrencySymbol(quote.currencyCode),
     isDefault: false // Will be updated when we fetch the currency list
   };
   
@@ -337,8 +343,15 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
   // Define decimal places based on currency
   const decimalPlaces = currency.code === 'JPY' ? 0 : 2;
   
-  // Get direct symbol for HTML template, without fallback
-  const currencySymbol = getCurrencySymbol(currency.code);
+  // Get direct symbol for HTML template - use hardcoded values for reliability
+  const currencySymbol = 
+    currency.code === 'EUR' ? '€' : 
+    currency.code === 'GBP' ? '£' : 
+    currency.code === 'USD' ? '$' : 
+    currency.code === 'JPY' ? '¥' : 
+    currency.code === 'AUD' ? 'A$' : 
+    currency.code === 'CAD' ? 'C$' : 
+    currency.symbol || '';  // fallback to stored symbol or empty string
   
   console.log("PRINT DOCUMENT: Using direct symbol for HTML template:", currencySymbol || 'none', "with", decimalPlaces, "decimal places");
   
@@ -491,7 +504,13 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
        invoice.currencyCode === 'AUD' ? 'Australian Dollar' : 
        invoice.currencyCode === 'CAD' ? 'Canadian Dollar' : 
        `${invoice.currencyCode} Currency`) : 'British Pound', 
-    symbol: getCurrencySymbol(invoice.currencyCode),
+    symbol: invoice.currencyCode === 'EUR' ? '€' : 
+            invoice.currencyCode === 'GBP' ? '£' : 
+            invoice.currencyCode === 'USD' ? '$' : 
+            invoice.currencyCode === 'JPY' ? '¥' : 
+            invoice.currencyCode === 'AUD' ? 'A$' : 
+            invoice.currencyCode === 'CAD' ? 'C$' : 
+            getCurrencySymbol(invoice.currencyCode),
     isDefault: false // Will be updated when we fetch the currency list
   };
   
