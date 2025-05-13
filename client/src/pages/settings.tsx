@@ -266,14 +266,18 @@ const SettingsPage = () => {
       const headers = {
         'X-Debug-Client': 'RepairTrackerClient',
         'X-Organization-ID': '2', // Hardcoded ID for now
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': localStorage.getItem('authToken') || ''
       };
       
       const response = await fetch('/api/settings/organization', {
         method: 'POST',
         headers,
         credentials: 'include',
-        body: JSON.stringify({ settings })
+        body: JSON.stringify({ 
+          type: 'email',
+          settings
+        })
       });
       
       if (!response.ok) {
