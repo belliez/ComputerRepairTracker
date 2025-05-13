@@ -222,7 +222,14 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
   // Initialize with the quote's currency code if available
   let currency = { 
     code: quote.currencyCode || 'EUR', // Default to EUR as it's the organization default
-    name: quote.currencyCode ? `${quote.currencyCode} Currency` : 'Euro', 
+    name: quote.currencyCode ? 
+      (quote.currencyCode === 'USD' ? 'US Dollar' : 
+       quote.currencyCode === 'EUR' ? 'Euro' : 
+       quote.currencyCode === 'GBP' ? 'British Pound' : 
+       quote.currencyCode === 'JPY' ? 'Japanese Yen' : 
+       quote.currencyCode === 'AUD' ? 'Australian Dollar' : 
+       quote.currencyCode === 'CAD' ? 'Canadian Dollar' : 
+       `${quote.currencyCode} Currency`) : 'Euro', 
     symbol: getCurrencySymbol(quote.currencyCode, '€'),
     isDefault: false 
   };
@@ -429,7 +436,14 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
   // Initialize with the invoice's currency code if available
   let currency = { 
     code: invoice.currencyCode || 'EUR', // Default to EUR as it's the organization default
-    name: invoice.currencyCode ? `${invoice.currencyCode} Currency` : 'Euro', 
+    name: invoice.currencyCode ? 
+      (invoice.currencyCode === 'USD' ? 'US Dollar' : 
+       invoice.currencyCode === 'EUR' ? 'Euro' : 
+       invoice.currencyCode === 'GBP' ? 'British Pound' : 
+       invoice.currencyCode === 'JPY' ? 'Japanese Yen' : 
+       invoice.currencyCode === 'AUD' ? 'Australian Dollar' : 
+       invoice.currencyCode === 'CAD' ? 'Canadian Dollar' : 
+       `${invoice.currencyCode} Currency`) : 'Euro', 
     symbol: getCurrencySymbol(invoice.currencyCode, '€'),
     isDefault: false 
   };
@@ -603,7 +617,7 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
           <p><strong>Date Paid:</strong> ${datePaid}</p>
           <p><strong>Payment Method:</strong> ${invoice.paymentMethod === 'none' ? 'Not Paid Yet' : invoice.paymentMethod}</p>
           <p><strong>Repair Ticket:</strong> ${repair.ticketNumber}</p>
-          ${invoice.currencyCode ? `<p><strong>Currency:</strong> ${invoice.currencyCode}</p>` : ''}
+          <p><strong>Currency:</strong> ${currency.name}</p>
         </div>
       </div>
     </div>
