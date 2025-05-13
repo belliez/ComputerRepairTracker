@@ -16,7 +16,11 @@ export interface PrintableDocument {
  * Helper function to get a currency symbol based on currency code
  * Used for consistent direct symbol injection in HTML templates
  */
-export function getCurrencySymbol(currencyCode: string = 'USD', fallbackSymbol?: string): string {
+export function getCurrencySymbol(currencyCode: string, fallbackSymbol: string = '€'): string {
+  if (!currencyCode) {
+    return fallbackSymbol;
+  }
+  
   switch(currencyCode) {
     case 'USD': return '$';
     case 'GBP': return '£';
@@ -24,7 +28,7 @@ export function getCurrencySymbol(currencyCode: string = 'USD', fallbackSymbol?:
     case 'JPY': return '¥';
     case 'AUD': return 'A$';
     case 'CAD': return 'C$';
-    default: return fallbackSymbol || '$';
+    default: return fallbackSymbol;
   }
 }
 
@@ -231,8 +235,16 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
        quote.currencyCode === 'CAD' ? 'Canadian Dollar' : 
        `${quote.currencyCode} Currency`) : 'Euro', 
     symbol: getCurrencySymbol(quote.currencyCode, '€'),
-    isDefault: false 
+    isDefault: quote.currencyCode ? false : true
   };
+  
+  // Log the currency data we're initializing with
+  console.log("PRINT DOCUMENT: Initial currency data:", {
+    code: currency.code,
+    name: currency.name,
+    symbol: currency.symbol,
+    isDefault: currency.isDefault
+  });
   
   try {
     // Direct API fetch for currency data to avoid any caching issues
@@ -269,13 +281,25 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
           // Use our initialized currency object with the correct symbol
         }
       } else {
-        // If no currency code on quote, use the default currency
+        // If no currency code on quote, use the default currency from the API
         const defaultCurrency = allCurrencies.find((c: Currency) => c.isDefault);
         if (defaultCurrency) {
           currency = defaultCurrency;
-          console.log("PRINT DOCUMENT: Using default currency:", defaultCurrency.code, "with symbol:", defaultCurrency.symbol);
+          console.log("PRINT DOCUMENT: Using organization default currency:", defaultCurrency.code, "with symbol:", defaultCurrency.symbol);
+          
+          // Update the name with human-readable format
+          currency.name = 
+            defaultCurrency.code === 'USD' ? 'US Dollar' : 
+            defaultCurrency.code === 'EUR' ? 'Euro' : 
+            defaultCurrency.code === 'GBP' ? 'British Pound' : 
+            defaultCurrency.code === 'JPY' ? 'Japanese Yen' : 
+            defaultCurrency.code === 'AUD' ? 'Australian Dollar' : 
+            defaultCurrency.code === 'CAD' ? 'Canadian Dollar' : 
+            defaultCurrency.name || `${defaultCurrency.code} Currency`;
+          
+          console.log("PRINT DOCUMENT: Updated currency name to:", currency.name);
         } else {
-          console.log("PRINT DOCUMENT: No default currency found, using:", currency.code);
+          console.log("PRINT DOCUMENT: No default currency found in API response, using fallback EUR");
         }
       }
     } else {

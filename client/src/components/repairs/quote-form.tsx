@@ -311,7 +311,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
       total,
       status: "pending",
       notes: "",
-      currencyCode: selectedCurrencyCode || (defaultCurrencyData?.code || "JPY"),
+      currencyCode: selectedCurrencyCode || (defaultCurrencyData?.code || "EUR"),
       taxRateId: selectedTaxRateId || (defaultTaxRate?.id || 25), // Using ID 25 which exists in the DB
     },
   });
