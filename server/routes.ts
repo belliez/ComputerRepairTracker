@@ -2453,7 +2453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       switch (type) {
         case 'email':
           try {
-            console.log('Processing email settings update:', data);
+            console.log('Processing email settings update:', JSON.stringify(data, null, 2));
             
             // Get current organization settings
             const orgEmailResult = await db.select({ settings: organizations.settings })
@@ -2463,12 +2463,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const currentSettings = orgEmailResult[0]?.settings || {};
             
             // Create updated settings object with email settings
-            const updatedSettings = {
-              ...currentSettings,
-              email: data.settings || {}
-            };
+            const emailSettings = data.settings || {};
             
-            console.log('Updated email settings to be saved:', JSON.stringify(updatedSettings));
+            // Log the complete settings object before saving
+            console.log('Email settings to be saved:', JSON.stringify(emailSettings, null, 2));
+            
+            let updatedSettings;
+            
+            // Determine if we need to update an existing email settings object
+            if (currentSettings.email) {
+              // Merge with existing email settings
+              updatedSettings = {
+                ...currentSettings,
+                email: {
+                  ...currentSettings.email,
+                  ...emailSettings
+                }
+              };
+            } else {
+              // No existing email settings, just add the new ones
+              updatedSettings = {
+                ...currentSettings,
+                email: emailSettings
+              };
+            }
+            
+            console.log('Final organization settings to be saved:', JSON.stringify(updatedSettings, null, 2));
             
             // Update the organization with new settings
             await db.update(organizations)
@@ -2479,9 +2499,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
               .where(eq(organizations.id, organizationId));
               
             console.log('Email settings updated successfully');
+            
+            // Return the updated settings
+            return res.status(200).json({ 
+              message: "Email settings updated successfully",
+              settings: updatedSettings.email
+            });
           } catch (emailError) {
             console.error('Error updating email settings:', emailError);
-            throw emailError;
+            res.status(500).json({ 
+              error: "Failed to update email settings",
+              details: emailError.message 
+            });
           }
           break;
             
@@ -3071,6 +3100,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   apiRouter.post("/organizations", authenticateJWT, createOrganization);
   apiRouter.post("/organizations/:organizationId/users", authenticateJWT, addUserToOrganization);
   apiRouter.get("/auth/accept-invite/:token", acceptOrganizationInvite);
+  
+  // Email settings endpoint to retrieve configuration
+  apiRouter.get("/settings/email", authenticateJWT, async (req: Request, res: Response) => {
+    try {
+      const organizationId = req.organizationId || 1;
+      console.log(`Getting email settings for organization: ${organizationId}`);
+      
+      // Get organization email settings from the database
+      const [orgSettings] = await db.select()
+        .from(organizations)
+        .where(eq(organizations.id, organizationId));
+      
+      if (!orgSettings) {
+        return res.status(404).json({ message: "Organization not found" });
+      }
+      
+      // Extract email settings or return empty object
+      const emailSettings = orgSettings.settings && orgSettings.settings.email 
+        ? orgSettings.settings.email 
+        : {};
+      
+      console.log(`Found email settings for org ${organizationId}:`, 
+        JSON.stringify(emailSettings, null, 2));
+      
+      res.json(emailSettings);
+    } catch (error) {
+      console.error("Error fetching email settings:", error);
+      res.status(500).json({ 
+        message: "Error fetching email settings",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
   
   // Create a separate router for settings endpoints that don't require authentication
   const settingsRouter = express.Router();

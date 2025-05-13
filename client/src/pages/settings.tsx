@@ -260,70 +260,75 @@ const SettingsPage = () => {
     }
   };
   
-  // Function to get the current auth token
-  const getAuthToken = (): string | null => {
+  // Utility for simplified API calls with consistent auth headers
+  const apiCall = async (url: string, method: string, data?: any) => {
     try {
-      // First try firebase_token (used in the app)
-      const firebaseToken = localStorage.getItem('firebase_token');
-      if (firebaseToken) {
-        // If it already has Bearer prefix, return as is
-        if (firebaseToken.startsWith('Bearer ')) {
-          return firebaseToken;
-        }
-        return `Bearer ${firebaseToken}`;
-      }
-      
-      // Then try authToken (used in some parts)
-      const authToken = localStorage.getItem('authToken');
-      if (authToken) {
-        // If it already has Bearer prefix, return as is
-        if (authToken.startsWith('Bearer ')) {
-          return authToken;
-        }
-        return `Bearer ${authToken}`;
-      }
-      
-      console.warn('No authentication token found in localStorage');
-      return null;
-    } catch (error) {
-      console.error('Error getting auth token:', error);
-      return null;
-    }
-  };
-
-  // Mutation to update email settings
-  const updateEmailSettingsMutation = useMutation({
-    mutationFn: async (settings: any) => {
-      const authToken = getAuthToken();
-      
-      if (!authToken) {
-        throw new Error('Authentication token not found. Please log in again.');
+      // Get token from firebase_token (main app storage)
+      let token = localStorage.getItem('firebase_token') || '';
+      if (!token.startsWith('Bearer ')) {
+        token = `Bearer ${token}`;
       }
       
       const headers = {
         'X-Debug-Client': 'RepairTrackerClient',
         'X-Organization-ID': '2', // Hardcoded ID for now
         'Content-Type': 'application/json',
-        'Authorization': authToken
+        'Authorization': token
       };
       
-      console.log('Sending email settings update with token:', authToken.substring(0, 20) + '...');
+      console.log(`Making API ${method} request to ${url}`);
       
-      const response = await fetch('/api/settings/organization', {
-        method: 'POST',
+      const options: RequestInit = {
+        method,
         headers,
-        credentials: 'include',
-        body: JSON.stringify({ 
-          type: 'email',
-          settings
-        })
-      });
+        credentials: 'include'
+      };
+      
+      if (data) {
+        options.body = JSON.stringify(data);
+      }
+      
+      const response = await fetch(url, options);
       
       if (!response.ok) {
-        throw new Error(`Error updating email settings: ${response.status}`);
+        throw new Error(`API error: ${response.status} ${response.statusText}`);
       }
       
       return await response.json();
+    } catch (error) {
+      console.error('API call error:', error);
+      throw error;
+    }
+  };
+
+  // Mutation to update email settings
+  const updateEmailSettingsMutation = useMutation({
+    mutationFn: async (emailSettings: any) => {
+      // Explicitly structure the request to match server expectations
+      return apiCall('/api/settings/organization', 'POST', {
+        type: 'email',
+        settings: {
+          enabled: emailSettings.enabled,
+          fromEmail: emailSettings.fromEmail,
+          fromName: emailSettings.fromName,
+          replyTo: emailSettings.replyTo,
+          footerText: emailSettings.footerText,
+          provider: emailSettings.provider,
+          
+          // Include provider-specific settings
+          ...(emailSettings.provider === 'sendgrid' ? {
+            sendgridApiKey: emailSettings.sendgridApiKey
+          } : {}),
+          
+          ...(emailSettings.provider === 'smtp' ? {
+            smtpHost: emailSettings.smtpHost,
+            smtpPort: emailSettings.smtpPort,
+            smtpUser: emailSettings.smtpUser,
+            smtpPassword: emailSettings.smtpPassword,
+            smtpSecure: emailSettings.smtpSecure
+          } : {})
+        }
+      });
     },
     onSuccess: () => {
       toast({

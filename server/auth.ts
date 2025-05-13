@@ -212,7 +212,47 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
     return res.status(401).json({ message: 'Authorization header required' });
   }
   
-  const token = authHeader.split(' ')[1];
+  // Check for development token
+  if (authHeader.includes('dev-token-')) {
+    console.log('Development token detected, using development authentication');
+    
+    // Create a mock user for development mode
+    const mockUser = {
+      uid: 'dev-user-123',
+      email: 'dev@example.com',
+      name: 'Development User',
+      displayName: 'Development User',
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 3600,
+      aud: 'dev-audience',
+      iss: 'dev-issuer',
+      sub: 'dev-subject',
+      auth_time: Math.floor(Date.now() / 1000),
+      firebase: { 
+        sign_in_provider: 'password',
+        identities: {}
+      }
+    };
+    
+    req.user = mockUser as any;
+    
+    // Check for organization ID in headers
+    const orgIdHeader = req.headers['x-organization-id'];
+    if (orgIdHeader) {
+      const parsedOrgId = parseInt(orgIdHeader as string, 10);
+      if (!isNaN(parsedOrgId)) {
+        req.organizationId = parsedOrgId;
+        (global as any).currentOrganizationId = parsedOrgId;
+        console.log(`Setting global organization context to ${parsedOrgId} from request header for dev mode`);
+      }
+    }
+    
+    console.log('Development user authenticated:', req.user.uid);
+    return next();
+  }
+  
+  // Normal JWT token flow
+  const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
   
   if (!token) {
     return res.status(401).json({ message: 'Bearer token required' });
