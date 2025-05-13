@@ -200,7 +200,21 @@ const SettingsPage = () => {
   });
   
   // Cache to store provider-specific settings when switching between providers
-  const [providerSettings, setProviderSettings] = useState({
+  const [providerSettings, setProviderSettings] = useState<{
+    sendgrid: { sendgridApiKey: string };
+    smtp: { 
+      smtpHost: string; 
+      smtpPort: number; 
+      smtpUser: string; 
+      smtpPassword: string; 
+      smtpSecure: boolean 
+    };
+    mailgun: { 
+      mailgunApiKey: string; 
+      mailgunDomain: string; 
+      mailgunRegion: 'us' | 'eu' 
+    };
+  }>({
     sendgrid: {
       sendgridApiKey: ''
     },
@@ -279,105 +293,115 @@ const SettingsPage = () => {
     }
   }, [emailSettingsData, emailForm]);
   
+  // Store the previous provider value to track changes
+  const [previousProvider, setPreviousProvider] = useState<string | null>(null);
+  
   // Watch for provider changes to save/restore provider-specific settings
   useEffect(() => {
     const subscription = emailForm.watch((values, { name }) => {
       // Only run this logic when the provider field changes
       if (name === 'provider') {
-        const currentProvider = values.provider as 'sendgrid' | 'smtp' | 'mailgun';
-        const currentValues = emailForm.getValues();
+        const newProvider = values.provider as 'sendgrid' | 'smtp' | 'mailgun';
+        console.log('Provider changed to:', newProvider);
         
-        console.log('Provider changed to:', currentProvider);
+        // Get current form values before we make any changes
+        const currentFormValues = emailForm.getValues();
         
-        // First, save the current provider settings to our cache
-        if (currentProvider === 'sendgrid') {
-          // Before switching to SendGrid, save current SMTP/Mailgun settings
-          if (values.provider !== 'smtp') {
-            setProviderSettings(prev => ({
-              ...prev,
-              smtp: {
-                smtpHost: currentValues.smtpHost,
-                smtpPort: currentValues.smtpPort,
-                smtpUser: currentValues.smtpUser,
-                smtpPassword: currentValues.smtpPassword,
-                smtpSecure: currentValues.smtpSecure
-              }
-            }));
-          }
-          if (values.provider !== 'mailgun') {
-            setProviderSettings(prev => ({
-              ...prev,
-              mailgun: {
-                mailgunApiKey: currentValues.mailgunApiKey,
-                mailgunDomain: currentValues.mailgunDomain,
-                mailgunRegion: currentValues.mailgunRegion
-              }
-            }));
-          }
-        } else if (currentProvider === 'smtp') {
-          // Before switching to SMTP, save current SendGrid/Mailgun settings
-          if (values.provider !== 'sendgrid') {
+        // Save the current provider settings to our cache before changing
+        if (previousProvider) {
+          if (previousProvider === 'sendgrid') {
+            const sendgridApiKey = currentFormValues.sendgridApiKey || '';
             setProviderSettings(prev => ({
               ...prev,
               sendgrid: {
-                sendgridApiKey: currentValues.sendgridApiKey
+                sendgridApiKey
               }
             }));
-          }
-          if (values.provider !== 'mailgun') {
-            setProviderSettings(prev => ({
-              ...prev,
-              mailgun: {
-                mailgunApiKey: currentValues.mailgunApiKey,
-                mailgunDomain: currentValues.mailgunDomain,
-                mailgunRegion: currentValues.mailgunRegion
-              }
-            }));
-          }
-        } else if (currentProvider === 'mailgun') {
-          // Before switching to Mailgun, save current SendGrid/SMTP settings
-          if (values.provider !== 'sendgrid') {
-            setProviderSettings(prev => ({
-              ...prev,
-              sendgrid: {
-                sendgridApiKey: currentValues.sendgridApiKey
-              }
-            }));
-          }
-          if (values.provider !== 'smtp') {
+          } else if (previousProvider === 'smtp') {
+            const smtpHost = currentFormValues.smtpHost || '';
+            const smtpPort = currentFormValues.smtpPort || 587;
+            const smtpUser = currentFormValues.smtpUser || '';
+            const smtpPassword = currentFormValues.smtpPassword || '';
+            const smtpSecure = Boolean(currentFormValues.smtpSecure);
+            
             setProviderSettings(prev => ({
               ...prev,
               smtp: {
-                smtpHost: currentValues.smtpHost,
-                smtpPort: currentValues.smtpPort,
-                smtpUser: currentValues.smtpUser,
-                smtpPassword: currentValues.smtpPassword,
-                smtpSecure: currentValues.smtpSecure
+                smtpHost,
+                smtpPort,
+                smtpUser,
+                smtpPassword,
+                smtpSecure
+              }
+            }));
+          } else if (previousProvider === 'mailgun') {
+            const mailgunApiKey = currentFormValues.mailgunApiKey || '';
+            const mailgunDomain = currentFormValues.mailgunDomain || '';
+            // Ensure we're using a valid enum value
+            const mailgunRegion = 
+              (currentFormValues.mailgunRegion === 'eu' ? 'eu' : 'us') as 'us' | 'eu';
+            
+            setProviderSettings(prev => ({
+              ...prev,
+              mailgun: {
+                mailgunApiKey,
+                mailgunDomain,
+                mailgunRegion
               }
             }));
           }
         }
         
-        // Now restore the settings for the new provider from our cache
-        if (currentProvider === 'sendgrid') {
-          emailForm.setValue('sendgridApiKey', providerSettings.sendgrid.sendgridApiKey);
-        } else if (currentProvider === 'smtp') {
-          emailForm.setValue('smtpHost', providerSettings.smtp.smtpHost);
-          emailForm.setValue('smtpPort', providerSettings.smtp.smtpPort);
-          emailForm.setValue('smtpUser', providerSettings.smtp.smtpUser);
-          emailForm.setValue('smtpPassword', providerSettings.smtp.smtpPassword);
-          emailForm.setValue('smtpSecure', providerSettings.smtp.smtpSecure);
-        } else if (currentProvider === 'mailgun') {
-          emailForm.setValue('mailgunApiKey', providerSettings.mailgun.mailgunApiKey);
-          emailForm.setValue('mailgunDomain', providerSettings.mailgun.mailgunDomain);
-          emailForm.setValue('mailgunRegion', providerSettings.mailgun.mailgunRegion);
-        }
+        // Update settings for the newly selected provider
+        // Use setTimeout to ensure this runs after the current render cycle
+        setTimeout(() => {
+          // Now restore the settings for the new provider from our cache
+          if (newProvider === 'sendgrid') {
+            // Use the cached SendGrid settings
+            const { sendgridApiKey } = providerSettings.sendgrid;
+            emailForm.setValue('sendgridApiKey', sendgridApiKey);
+          } else if (newProvider === 'smtp') {
+            // Use the cached SMTP settings
+            const { 
+              smtpHost, smtpPort, smtpUser, smtpPassword, smtpSecure 
+            } = providerSettings.smtp;
+            
+            emailForm.setValue('smtpHost', smtpHost);
+            emailForm.setValue('smtpPort', smtpPort);
+            emailForm.setValue('smtpUser', smtpUser);
+            emailForm.setValue('smtpPassword', smtpPassword);
+            emailForm.setValue('smtpSecure', smtpSecure);
+          } else if (newProvider === 'mailgun') {
+            // Use the cached Mailgun settings
+            const { 
+              mailgunApiKey, mailgunDomain, mailgunRegion 
+            } = providerSettings.mailgun;
+            
+            emailForm.setValue('mailgunApiKey', mailgunApiKey);
+            emailForm.setValue('mailgunDomain', mailgunDomain);
+            emailForm.setValue('mailgunRegion', mailgunRegion);
+          }
+          
+          // Log restored values for debugging
+          console.log(`Restored ${newProvider} settings:`, 
+            newProvider === 'sendgrid' ? providerSettings.sendgrid :
+            newProvider === 'smtp' ? providerSettings.smtp :
+            providerSettings.mailgun);
+        }, 0);
+        
+        // Update the previous provider for the next change
+        setPreviousProvider(newProvider);
       }
     });
     
+    // Initialize previousProvider from the form's initial value
+    if (!previousProvider && emailForm.getValues().provider) {
+      setPreviousProvider(emailForm.getValues().provider);
+    }
+    
     // Cleanup the subscription on unmount
     return () => subscription.unsubscribe();
-  }, [emailForm, providerSettings]);
+  }, [emailForm, providerSettings, previousProvider]);
   
   // Handle email form submission
   const onEmailFormSubmit = async (data: z.infer<typeof emailSettingsSchema>) => {
