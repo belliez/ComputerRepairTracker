@@ -73,17 +73,26 @@ export function formatCurrency(
 
 /**
  * Print a document in a new window
- * @param document The document to print
+ * Can accept either a PrintableDocument directly or a Promise that resolves to a PrintableDocument
+ * @param documentOrPromise The document to print or a Promise that resolves to a document
  */
-export function printDocument(document: PrintableDocument): void {
-  // Create a new window for the document
-  const printWindow = window.open('', '_blank');
-  
-  if (!printWindow) {
-    console.error('Failed to open print window. Please check your popup settings.');
-    alert('Failed to open print window. Please check your popup settings.');
-    return;
-  }
+export async function printDocument(documentOrPromise: PrintableDocument | Promise<PrintableDocument>): Promise<void> {
+  try {
+    // If the parameter is a Promise, wait for it to resolve
+    const document = documentOrPromise instanceof Promise 
+      ? await documentOrPromise 
+      : documentOrPromise;
+    
+    console.log("PRINT DOCUMENT: Printing document with title:", document.title);
+    
+    // Create a new window for the document
+    const printWindow = window.open('', '_blank');
+    
+    if (!printWindow) {
+      console.error('Failed to open print window. Please check your popup settings.');
+      alert('Failed to open print window. Please check your popup settings.');
+      return;
+    }
   
   // Write the document content to the new window
   printWindow.document.write(`
@@ -201,6 +210,10 @@ export function printDocument(document: PrintableDocument): void {
   // Focus on the new window and initialize it
   printWindow.document.close();
   printWindow.focus();
+  } catch (error) {
+    console.error("PRINT DOCUMENT: Error during print process:", error);
+    alert('Failed to print document. Please try again.');
+  }
 }
 
 /**
