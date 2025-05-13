@@ -20,14 +20,7 @@ export default function RepairStats({
   onCreateInvoice, 
   onOrderParts 
 }: RepairStatsProps) {
-  // Get repair status counts directly from an optimized SQL query endpoint
-  const { data: statusCountsData, isLoading: isLoadingStatusCounts } = useQuery<{status: string; count: number}[]>({
-    queryKey: ["/repair-status-counts"],
-    refetchOnWindowFocus: false,
-    staleTime: 30000, // Consider data stale after 30 seconds
-  });
-
-  // Still need repairs for technician assignment
+  // Get all repairs data and calculate status counts ourselves
   const { data: repairs, isLoading: isLoadingRepairs } = useQuery<Repair[]>({
     queryKey: ["/api/repairs"],
     refetchOnWindowFocus: false,
@@ -43,7 +36,7 @@ export default function RepairStats({
   const [showAllTechs, setShowAllTechs] = useState(false);
   const [location, navigate] = useLocation();
 
-  if (isLoadingStatusCounts || isLoadingRepairs || isLoadingTechnicians) {
+  if (isLoadingRepairs || isLoadingTechnicians) {
     return (
       <div className="col-span-1 space-y-6">
         <Card>
@@ -65,7 +58,7 @@ export default function RepairStats({
   const allRepairs = repairs || [];
   const allTechnicians = technicians || [];
 
-  // Convert statusCountsData to a record for easier access
+  // Calculate status counts directly from repairs data
   const statusCounts: Record<string, number> = {};
   
   // Initialize all statuses with zero count
@@ -73,27 +66,31 @@ export default function RepairStats({
     statusCounts[status] = 0;
   });
   
-  // Update with the actual counts from the server
-  if (statusCountsData) {
-    statusCountsData.forEach(item => {
-      statusCounts[item.status] = item.count;
+  // Count repairs by status
+  if (allRepairs && allRepairs.length > 0) {
+    allRepairs.forEach(repair => {
+      if (repair.status && statusCounts.hasOwnProperty(repair.status)) {
+        statusCounts[repair.status]++;
+      }
     });
   }
-
+  
   // Calculate total for percentages
   const totalRepairs = allRepairs.length;
 
-  // Calculate technician workloads
-  const techWorkloads = allTechnicians.map(tech => {
-    const techRepairs = allRepairs.filter(repair => repair.technicianId === tech.id);
-    const urgentRepairs = techRepairs.filter(repair => repair.priorityLevel != null && repair.priorityLevel <= 2);
-    
-    return {
-      ...tech,
-      repairCount: techRepairs.length,
-      urgentCount: urgentRepairs.length
-    };
-  }).sort((a, b) => b.repairCount - a.repairCount);
+  // Calculate technician workloads if technicians data exists
+  const techWorkloads = allTechnicians && allTechnicians.length > 0 
+    ? allTechnicians.map(tech => {
+        const techRepairs = allRepairs.filter(repair => repair.technicianId === tech.id);
+        const urgentRepairs = techRepairs.filter(repair => repair.priorityLevel != null && repair.priorityLevel <= 2);
+        
+        return {
+          ...tech,
+          repairCount: techRepairs.length,
+          urgentCount: urgentRepairs.length
+        };
+      }).sort((a, b) => b.repairCount - a.repairCount)
+    : [];
 
   // Limit the number of technicians shown by default
   const displayedTechnicians = showAllTechs ? techWorkloads : techWorkloads.slice(0, 3);
@@ -151,59 +148,67 @@ export default function RepairStats({
           <CardTitle className="text-lg font-medium text-gray-800">Technician Workload</CardTitle>
         </CardHeader>
         <CardContent className="p-4">
-          <ul className="divide-y divide-gray-200">
-            {displayedTechnicians.map(tech => {
-              // Generate initials from name
-              const initials = `${tech.firstName.charAt(0)}${tech.lastName.charAt(0)}`;
-              
-              // Randomly assign a color for demo purposes
-              const colorClasses = [
-                "bg-blue-100 text-blue-600",
-                "bg-green-100 text-green-600",
-                "bg-purple-100 text-purple-600",
-                "bg-yellow-100 text-yellow-600",
-                "bg-red-100 text-red-600",
-              ];
-              
-              const colorIndex = tech.id % colorClasses.length;
-              const avatarColorClass = colorClasses[colorIndex];
-              
-              return (
-                <li 
-                  key={tech.id} 
-                  className="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 px-2 -mx-2 rounded transition-colors"
-                  onClick={() => navigate(`/repairs?technicianId=${tech.id}`)}
-                >
-                  <div className="flex items-center">
-                    <div className={`w-8 h-8 rounded-full ${avatarColorClass} flex items-center justify-center mr-3`}>
-                      <span className="font-semibold text-sm">{initials}</span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{`${tech.firstName} ${tech.lastName}`}</p>
-                      <p className="text-xs text-gray-500">{tech.role}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-gray-900">{tech.repairCount} repairs</div>
-                    {tech.urgentCount > 0 && (
-                      <div className="text-xs text-blue-600">{tech.urgentCount} urgent</div>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          
-          {techWorkloads.length > 3 && (
-            <div className="mt-4">
-              <Button 
-                variant="link" 
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium p-0"
-                onClick={() => setShowAllTechs(!showAllTechs)}
-              >
-                {showAllTechs ? "Show less" : "View all technicians"} →
-              </Button>
+          {techWorkloads.length === 0 ? (
+            <div className="text-center py-4 text-gray-500">
+              <p>No technicians found. Add technicians to see their workload here.</p>
             </div>
+          ) : (
+            <>
+              <ul className="divide-y divide-gray-200">
+                {displayedTechnicians.map(tech => {
+                  // Generate initials from name
+                  const initials = `${tech.firstName.charAt(0)}${tech.lastName.charAt(0)}`;
+                  
+                  // Randomly assign a color for demo purposes
+                  const colorClasses = [
+                    "bg-blue-100 text-blue-600",
+                    "bg-green-100 text-green-600",
+                    "bg-purple-100 text-purple-600",
+                    "bg-yellow-100 text-yellow-600",
+                    "bg-red-100 text-red-600",
+                  ];
+                  
+                  const colorIndex = tech.id % colorClasses.length;
+                  const avatarColorClass = colorClasses[colorIndex];
+                  
+                  return (
+                    <li 
+                      key={tech.id} 
+                      className="py-3 flex justify-between items-center cursor-pointer hover:bg-gray-50 px-2 -mx-2 rounded transition-colors"
+                      onClick={() => navigate(`/repairs?technicianId=${tech.id}`)}
+                    >
+                      <div className="flex items-center">
+                        <div className={`w-8 h-8 rounded-full ${avatarColorClass} flex items-center justify-center mr-3`}>
+                          <span className="font-semibold text-sm">{initials}</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{`${tech.firstName} ${tech.lastName}`}</p>
+                          <p className="text-xs text-gray-500">{tech.role}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-gray-900">{tech.repairCount} repairs</div>
+                        {tech.urgentCount > 0 && (
+                          <div className="text-xs text-blue-600">{tech.urgentCount} urgent</div>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              
+              {techWorkloads.length > 3 && (
+                <div className="mt-4">
+                  <Button 
+                    variant="link" 
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium p-0"
+                    onClick={() => setShowAllTechs(!showAllTechs)}
+                  >
+                    {showAllTechs ? "Show less" : "View all technicians"} →
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
