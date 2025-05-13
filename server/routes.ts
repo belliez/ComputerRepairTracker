@@ -5,7 +5,7 @@ import { z } from "zod";
 import { initializeDemo } from "./init-db";
 import { db } from "./db";
 import { and, eq, desc } from "drizzle-orm";
-import { sendEmail, generateQuoteEmail, generateInvoiceEmail, EmailData } from "./email";
+import { sendEmail, sendEmailWithOverride, generateQuoteEmail, generateInvoiceEmail, EmailData, EmailSettings } from "./email";
 import Stripe from "stripe";
 import {
   insertCustomerSchema,

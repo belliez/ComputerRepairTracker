@@ -713,8 +713,19 @@ const SettingsPage = () => {
         address: (organization.settings?.address as string) || '',
         enableTax: enableTax,
       });
+      
+      // Also populate email settings form
+      const emailSettings = organization.settings?.email || {};
+      
+      emailForm.reset({
+        enabled: emailSettings.enabled !== false, // Default to true
+        fromEmail: emailSettings.fromEmail || (organization.settings?.email as string) || '',
+        fromName: emailSettings.fromName || organization.name || '',
+        replyTo: emailSettings.replyTo || '',
+        footerText: emailSettings.footerText || `© ${new Date().getFullYear()} ${organization.name}`
+      });
     }
-  }, [organization]);
+  }, [organization, emailForm]);
 
   // Mutations
   const updateOrganizationMutation = useMutation({
