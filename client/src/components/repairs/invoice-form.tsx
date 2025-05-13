@@ -314,7 +314,7 @@ export default function InvoiceForm({
       total,
       status: "unpaid",
       notes: "",
-      currencyCode: selectedCurrencyCode || (defaultCurrency?.code || "JPY"),
+      currencyCode: selectedCurrencyCode || (defaultCurrency?.code || "EUR"),
       taxRateId: selectedTaxRateId || (defaultTaxRate?.id || 25), // Using ID 25 which exists in the DB
       paymentDate: null,
       paymentMethod: null,
