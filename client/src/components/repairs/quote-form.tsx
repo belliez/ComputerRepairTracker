@@ -193,6 +193,14 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
     ? currencies?.find(currency => currency.code === selectedCurrencyCode)
     : defaultCurrencyData;
     
+  // Ensure selectedCurrencyCode is set when defaultCurrencyData becomes available
+  useEffect(() => {
+    if (defaultCurrencyData?.code && !selectedCurrencyCode) {
+      console.log("QUOTE FORM DEBUG: Setting default currency from defaultCurrencyData:", defaultCurrencyData.code);
+      setSelectedCurrencyCode(defaultCurrencyData.code);
+    }
+  }, [defaultCurrencyData, selectedCurrencyCode]);
+    
   // Debug logs for currency and tax rate data
   useEffect(() => {
     console.log("QUOTE FORM DEBUG: Default currency data:", defaultCurrencyData);
@@ -244,7 +252,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
       total,
       status: "pending",
       notes: "",
-      currencyCode: selectedCurrencyCode || (defaultCurrencyData?.code || "USD"),
+      currencyCode: selectedCurrencyCode || (defaultCurrencyData?.code || "JPY"),
       taxRateId: selectedTaxRateId || (defaultTaxRate?.id || 25), // Using ID 25 which exists in the DB
     },
   });
@@ -268,7 +276,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
         total: existingQuote.total,
         status: existingQuote.status,
         notes: existingQuote.notes || "",
-        currencyCode: existingQuote.currencyCode || (defaultCurrencyData?.code || "USD"),
+        currencyCode: existingQuote.currencyCode || (defaultCurrencyData?.code || "JPY"),
         taxRateId: existingQuote.taxRateId || (defaultTaxRate?.id || 1),
       });
     }

@@ -172,6 +172,14 @@ export default function InvoiceForm({
   const selectedCurrency = selectedCurrencyCode
     ? currencies?.find(currency => currency.code === selectedCurrencyCode)
     : defaultCurrency;
+    
+  // Ensure selectedCurrencyCode is set when defaultCurrency becomes available
+  useEffect(() => {
+    if (defaultCurrency?.code && !selectedCurrencyCode) {
+      console.log("INVOICE FORM DEBUG: Setting default currency from defaultCurrency:", defaultCurrency.code);
+      setSelectedCurrencyCode(defaultCurrency.code);
+    }
+  }, [defaultCurrency, selectedCurrencyCode]);
   
   // Get the selected tax rate
   const selectedTaxRate = selectedTaxRateId 
@@ -247,7 +255,7 @@ export default function InvoiceForm({
       total,
       status: "unpaid",
       notes: "",
-      currencyCode: selectedCurrencyCode || (defaultCurrency?.code || "GBP"),
+      currencyCode: selectedCurrencyCode || (defaultCurrency?.code || "JPY"),
       taxRateId: selectedTaxRateId || (defaultTaxRate?.id || 25), // Using ID 25 which exists in the DB
       paymentDate: null,
       paymentMethod: null,
@@ -277,7 +285,7 @@ export default function InvoiceForm({
         total: existingInvoice.total,
         status: existingInvoice.status,
         notes: existingInvoice.notes || "",
-        currencyCode: existingInvoice.currencyCode || (defaultCurrency?.code || "GBP"),
+        currencyCode: existingInvoice.currencyCode || (defaultCurrency?.code || "JPY"),
         taxRateId: existingInvoice.taxRateId || (defaultTaxRate?.id || 25), // Using ID 25 which exists in the DB
         paymentDate,
         paymentMethod: existingInvoice.paymentMethod,
