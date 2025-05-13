@@ -1161,13 +1161,13 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                             
                             <div className="grid grid-cols-2 gap-2 text-sm">
                               <div>
-                                <span className="text-gray-500">Price:</span> ${item.unitPrice.toFixed(2)}
+                                <span className="text-gray-500">Price:</span> {formatCurrency(item.unitPrice)}
                               </div>
                               <div>
                                 <span className="text-gray-500">Quantity:</span> {item.quantity}
                               </div>
                               <div>
-                                <span className="text-gray-500">Total:</span> ${(item.unitPrice * item.quantity).toFixed(2)}
+                                <span className="text-gray-500">Total:</span> {formatCurrency(item.unitPrice * item.quantity)}
                               </div>
                               <div>
                                 <Badge variant="outline" className={
@@ -1245,9 +1245,9 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                                     {item.itemType === "part" ? "Part" : "Service"}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right">${item.unitPrice.toFixed(2)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
                                 <TableCell className="text-right">{item.quantity}</TableCell>
-                                <TableCell className="text-right">${(item.unitPrice * item.quantity).toFixed(2)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(item.unitPrice * item.quantity)}</TableCell>
                                 <TableCell>
                                   <Badge variant="outline" className={
                                     item.isCompleted
@@ -1306,7 +1306,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                   <div>
                     {repairItems && repairItems.length > 0 && (
                       <div className="text-right font-medium">
-                        Total: ${repairItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0).toFixed(2)}
+                        Total: {formatCurrency(repairItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0))}
                       </div>
                     )}
                   </div>
