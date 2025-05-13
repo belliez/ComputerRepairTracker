@@ -86,7 +86,12 @@ export async function getOrganizationEmailSettings(organizationId: number): Prom
       smtpPort: emailSettings.smtpPort || 587,
       smtpUser: emailSettings.smtpUser || '',
       smtpPassword: emailSettings.smtpPassword || '',
-      smtpSecure: emailSettings.smtpSecure || false
+      smtpSecure: emailSettings.smtpSecure || false,
+      
+      // Mailgun settings
+      mailgunApiKey: emailSettings.mailgunApiKey || '',
+      mailgunDomain: emailSettings.mailgunDomain || '',
+      mailgunRegion: emailSettings.mailgunRegion || 'us'
     };
   } catch (error) {
     console.error('Error fetching organization email settings:', error);

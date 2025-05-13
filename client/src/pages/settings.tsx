@@ -2250,6 +2250,10 @@ const SettingsPage = () => {
                         <>
                           Emails are sent through your custom SMTP server. Make sure to provide valid SMTP credentials for your mail server.
                         </>
+                      ) : emailForm.watch('provider') === 'mailgun' ? (
+                        <>
+                          Emails are sent through Mailgun API. You need to provide your Mailgun API key, domain, and select the correct region where your Mailgun account is hosted.
+                        </>
                       ) : (
                         <>
                           Emails are sent through SendGrid API. You can either use the system-wide API key configured by the administrator or provide your own SendGrid API key.
