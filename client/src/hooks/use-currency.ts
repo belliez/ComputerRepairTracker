@@ -33,10 +33,10 @@ export function useCurrency() {
       return '-';
     }
     
-    // Use the default currency, or fallback to USD
-    const currencyCode = defaultCurrency?.code || 'USD';
+    // Hard-code GBP for testing
+    const currencyCode = 'GBP';
     
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-GB', {
       style: 'currency',
       currency: currencyCode,
       minimumFractionDigits: 2,
