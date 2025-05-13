@@ -133,15 +133,15 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   
   // Set defaults when data loads
   useEffect(() => {
-    if (defaultCurrency && !selectedCurrencyCode) {
-      console.log("QUOTE FORM DEBUG: Setting default currency code to", defaultCurrency.code, "with symbol", defaultCurrency.symbol);
-      setSelectedCurrencyCode(defaultCurrency.code);
+    if (defaultCurrencyData && !selectedCurrencyCode) {
+      console.log("QUOTE FORM DEBUG: Setting default currency code to", defaultCurrencyData.code, "with symbol", defaultCurrencyData.symbol);
+      setSelectedCurrencyCode(defaultCurrencyData.code);
     }
     if (defaultTaxRate && !selectedTaxRateId) {
       console.log("QUOTE FORM DEBUG: Setting default tax rate ID to", defaultTaxRate.id, "with rate", defaultTaxRate.rate);
       setSelectedTaxRateId(defaultTaxRate.id);
     }
-  }, [defaultCurrency, defaultTaxRate, selectedCurrencyCode, selectedTaxRateId]);
+  }, [defaultCurrencyData, defaultTaxRate, selectedCurrencyCode, selectedTaxRateId]);
   
   // When editing, load the existing quote's settings
   useEffect(() => {
@@ -163,15 +163,15 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   // Get the selected currency
   const selectedCurrency = selectedCurrencyCode
     ? currencies?.find(currency => currency.code === selectedCurrencyCode)
-    : defaultCurrency;
+    : defaultCurrencyData;
     
   // Debug logs for currency and tax rate data
   useEffect(() => {
-    console.log("QUOTE FORM DEBUG: Default currency data:", defaultCurrency);
+    console.log("QUOTE FORM DEBUG: Default currency data:", defaultCurrencyData);
     console.log("QUOTE FORM DEBUG: Selected currency code:", selectedCurrencyCode);
     console.log("QUOTE FORM DEBUG: All currencies:", currencies);
     console.log("QUOTE FORM DEBUG: Selected currency object:", selectedCurrency);
-  }, [defaultCurrency, selectedCurrencyCode, currencies, selectedCurrency]);
+  }, [defaultCurrencyData, selectedCurrencyCode, currencies, selectedCurrency]);
   
   // Calculate values from repair items
   const subtotal = repairItems?.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0) || 0;
@@ -216,7 +216,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
       total,
       status: "pending",
       notes: "",
-      currencyCode: selectedCurrencyCode || (defaultCurrency?.code || "USD"),
+      currencyCode: selectedCurrencyCode || (defaultCurrencyData?.code || "USD"),
       taxRateId: selectedTaxRateId || (defaultTaxRate?.id || 1),
     },
   });
