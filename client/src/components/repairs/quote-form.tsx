@@ -104,14 +104,23 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
     taxRateId: number;
   }
   
-  // Get currencies and tax rates
-  const { data: currencies, isLoading: isLoadingCurrencies } = useQuery<Currency[]>({
+  // Get currencies and tax rates - refresh when dialog opens
+  const { data: currencies, isLoading: isLoadingCurrencies, refetch: refetchCurrencies } = useQuery<Currency[]>({
     queryKey: ['/api/settings/currencies'],
   });
   
-  const { data: defaultCurrencyData, isLoading: isLoadingDefaultCurrency } = useQuery<Currency>({
+  const { data: defaultCurrencyData, isLoading: isLoadingDefaultCurrency, refetch: refetchDefaultCurrency } = useQuery<Currency>({
     queryKey: ['/api/settings/currencies/default'],
   });
+  
+  // Force refresh currencies and default currency when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      console.log("QUOTE FORM: Dialog opened, refreshing currency data");
+      refetchCurrencies();
+      refetchDefaultCurrency();
+    }
+  }, [isOpen, refetchCurrencies, refetchDefaultCurrency]);
   
   const { data: taxRates, isLoading: isLoadingTaxRates } = useQuery<TaxRate[]>({
     queryKey: ['/api/settings/tax-rates'],

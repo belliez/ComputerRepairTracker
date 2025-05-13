@@ -109,14 +109,23 @@ export default function InvoiceForm({
     paymentMethod: string | null;
   }
 
-  // Get currencies and tax rates
-  const { data: currencies, isLoading: isLoadingCurrencies } = useQuery<Currency[]>({
+  // Get currencies and tax rates - refresh when dialog opens
+  const { data: currencies, isLoading: isLoadingCurrencies, refetch: refetchCurrencies } = useQuery<Currency[]>({
     queryKey: ['/api/settings/currencies'],
   });
   
-  const { data: defaultCurrency, isLoading: isLoadingDefaultCurrency } = useQuery<Currency>({
+  const { data: defaultCurrency, isLoading: isLoadingDefaultCurrency, refetch: refetchDefaultCurrency } = useQuery<Currency>({
     queryKey: ['/api/settings/currencies/default'],
   });
+  
+  // Force refresh currencies and default currency when dialog opens
+  useEffect(() => {
+    if (isOpen) {
+      console.log("INVOICE FORM: Dialog opened, refreshing currency data");
+      refetchCurrencies();
+      refetchDefaultCurrency();
+    }
+  }, [isOpen, refetchCurrencies, refetchDefaultCurrency]);
   
   const { data: taxRates, isLoading: isLoadingTaxRates } = useQuery<TaxRate[]>({
     queryKey: ['/api/settings/tax-rates'],
@@ -194,6 +203,24 @@ export default function InvoiceForm({
     console.log("INVOICE FORM DEBUG: Selected currency object:", selectedCurrency);
   }, [defaultCurrency, selectedCurrencyCode, currencies, selectedCurrency]);
 
+  // Reset form state when dialog is closed
+  const resetFormState = () => {
+    setSelectedCurrencyCode("");
+    setSelectedTaxRateId(null);
+    
+    // Next time the form opens, it will load the current default currency
+    if (defaultCurrency?.code) {
+      console.log("INVOICE FORM DEBUG: Resetting to default currency:", defaultCurrency.code);
+    }
+  };
+  
+  // Reset when closing
+  useEffect(() => {
+    if (!isOpen) {
+      resetFormState();
+    }
+  }, [isOpen]);
+  
   // When editing, load the existing invoice's settings
   useEffect(() => {
     if (existingInvoice) {

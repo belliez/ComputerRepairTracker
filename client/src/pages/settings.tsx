@@ -1166,6 +1166,10 @@ const SettingsPage = () => {
       // Refetch the currencies to update the UI
       fetchCurrencies();
       
+      // Invalidate all currency-related queries to ensure all components use the new default
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies/default'] });
+      
       toast({
         title: "Default currency updated",
         description: `${currencyCode} is now the default currency`,
