@@ -215,14 +215,15 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
     dateCreated: quote.dateCreated,
     subtotal: quote.subtotal,
     tax: quote.tax,
-    total: quote.total
+    total: quote.total,
+    raw: quote // Log the full quote object for debugging
   });
   
   // Initialize with the quote's currency code if available
   let currency = { 
-    code: quote.currencyCode || 'GBP', 
-    name: quote.currencyCode ? `${quote.currencyCode} Currency` : 'British Pound', 
-    symbol: getCurrencySymbol(quote.currencyCode, '$'),
+    code: quote.currencyCode || 'EUR', // Default to EUR as it's the organization default
+    name: quote.currencyCode ? `${quote.currencyCode} Currency` : 'Euro', 
+    symbol: getCurrencySymbol(quote.currencyCode, '€'),
     isDefault: false 
   };
   
@@ -421,19 +422,15 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
     dateIssued: invoice.dateIssued,
     subtotal: invoice.subtotal,
     tax: invoice.tax,
-    total: invoice.total
+    total: invoice.total,
+    raw: invoice // Log the full invoice object for debugging
   });
   
   // Initialize with the invoice's currency code if available
   let currency = { 
-    code: invoice.currencyCode || 'GBP', 
-    name: invoice.currencyCode ? `${invoice.currencyCode} Currency` : 'British Pound', 
-    symbol: invoice.currencyCode === 'USD' ? '$' : 
-            invoice.currencyCode === 'GBP' ? '£' : 
-            invoice.currencyCode === 'EUR' ? '€' : 
-            invoice.currencyCode === 'JPY' ? '¥' : 
-            invoice.currencyCode === 'AUD' ? 'A$' : 
-            '$', 
+    code: invoice.currencyCode || 'EUR', // Default to EUR as it's the organization default
+    name: invoice.currencyCode ? `${invoice.currencyCode} Currency` : 'Euro', 
+    symbol: getCurrencySymbol(invoice.currencyCode, '€'),
     isDefault: false 
   };
   
