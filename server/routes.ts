@@ -1641,7 +1641,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get repair items (these will be used as a fallback if itemsData is not available)
       const items = await storage.getRepairItems(repair.id);
       
-      console.log(`Sending quote email for quote #${quote.quoteNumber}, repair #${repair.ticketNumber}`);
+      // Get organization settings to determine currency for email display
+      const organizationId = quote.organizationId || req.organizationId || 1;
+      
+      // Always get the organization's default currency for email display purposes
+      try {
+        // Get the organization's default currency
+        const [defaultCurrency] = await db
+          .select()
+          .from(currencies)
+          .where(
+            and(
+              eq(currencies.organizationId, organizationId),
+              eq(currencies.isDefault, true)
+            )
+          );
+          
+        if (defaultCurrency) {
+          console.log(`Quote email: Using organization's default currency: ${defaultCurrency.code}`);
+          // Override the quote object's currency code for email rendering
+          quote.currencyCode = defaultCurrency.code;
+        } else {
+          console.log(`Quote email: No default currency found for organization ${organizationId}, using GBP as fallback`);
+          quote.currencyCode = 'GBP'; // Fallback to GBP
+        }
+      } catch (error) {
+        console.error("Error fetching default currency:", error);
+        quote.currencyCode = 'GBP'; // Fallback to GBP
+      }
+    
+      console.log(`Sending quote email for quote #${quote.quoteNumber}, repair #${repair.ticketNumber} with currency code: ${quote.currencyCode}`);
       
       // Check for itemsData
       if (quote.itemsData) {
@@ -1838,7 +1867,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get repair items (these will be used as a fallback if itemsData is not available)
       const items = await storage.getRepairItems(repair.id);
       
-      console.log(`Sending invoice email for invoice #${invoice.invoiceNumber}, repair #${repair.ticketNumber}`);
+      // Get organization settings to determine currency for email display
+      const organizationId = invoice.organizationId || req.organizationId || 1;
+      
+      // Always get the organization's default currency for email display purposes
+      try {
+        // Get the organization's default currency
+        const [defaultCurrency] = await db
+          .select()
+          .from(currencies)
+          .where(
+            and(
+              eq(currencies.organizationId, organizationId),
+              eq(currencies.isDefault, true)
+            )
+          );
+          
+        if (defaultCurrency) {
+          console.log(`Invoice email: Using organization's default currency: ${defaultCurrency.code}`);
+          // Override the invoice object's currency code for email rendering
+          invoice.currencyCode = defaultCurrency.code;
+        } else {
+          console.log(`Invoice email: No default currency found for organization ${organizationId}, using GBP as fallback`);
+          invoice.currencyCode = 'GBP'; // Fallback to GBP
+        }
+      } catch (error) {
+        console.error("Error fetching default currency:", error);
+        invoice.currencyCode = 'GBP'; // Fallback to GBP
+      }
+    
+      console.log(`Sending invoice email for invoice #${invoice.invoiceNumber}, repair #${repair.ticketNumber} with currency code: ${invoice.currencyCode}`);
       
       // Check for itemsData
       if (invoice.itemsData) {
