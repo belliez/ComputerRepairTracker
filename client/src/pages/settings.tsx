@@ -1163,17 +1163,31 @@ const SettingsPage = () => {
         throw new Error(`Error setting default currency: ${response.status}`);
       }
       
-      // Refetch the currencies to update the UI
-      fetchCurrencies();
+      // Clear all cached data by forcing a hard reset of the React Query cache for currency data
+      queryClient.removeQueries({ queryKey: ['/api/settings/currencies'] });
+      queryClient.removeQueries({ queryKey: ['/api/settings/currencies/default'] });
       
-      // Invalidate all currency-related queries to ensure all components use the new default
-      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies/default'] });
-      
-      toast({
-        title: "Default currency updated",
-        description: `${currencyCode} is now the default currency`,
-      });
+      // Refetch all data with a slight delay to ensure database updates have propagated
+      setTimeout(() => {
+        // Force refetch to get fresh data after the changes have been applied
+        fetchCurrencies();
+        
+        // Invalidate all currency-related queries to ensure all components use the new default
+        queryClient.invalidateQueries();
+        
+        // Show a toast notification about the cache reset
+        toast({
+          title: "Default currency updated",
+          description: `The default currency has been set to ${currencyCode}. Application cache has been reset.`
+        });
+        
+        // For a guaranteed refresh, reload the entire app after a few seconds
+        // This is the most reliable way to ensure everything is using the updated currency
+        setTimeout(() => {
+          console.log("Forcing application reload to refresh all currency data");
+          window.location.reload();
+        }, 2000);
+      }, 500);
     } catch (error) {
       console.error('Error setting default currency:', error);
       toast({
