@@ -24,18 +24,19 @@ export function CurrencySymbol({ currencyCode, className = "mr-1" }: CurrencySym
   });
 
   // State to track the selected currency symbol
-  const [symbol, setSymbol] = useState<string>('£');
+  const [symbol, setSymbol] = useState<string>('');
 
   useEffect(() => {
-    // Hard-coded to £ temporarily for testing
-    setSymbol('£');
+    console.log("CURRENCY SYMBOL DEBUG: Looking for symbol for currency code:", currencyCode);
+    console.log("CURRENCY SYMBOL DEBUG: Available currencies:", currencies);
+    console.log("CURRENCY SYMBOL DEBUG: Default currency:", defaultCurrency);
     
-    // Commented out for testing
-    /*
     // If a specific currency code is provided, use that
     if (currencyCode && currencies) {
       const selectedCurrency = currencies.find(c => c.code === currencyCode);
+      console.log("CURRENCY SYMBOL DEBUG: Selected currency:", selectedCurrency);
       if (selectedCurrency?.symbol) {
+        console.log("CURRENCY SYMBOL DEBUG: Setting symbol to:", selectedCurrency.symbol);
         setSymbol(selectedCurrency.symbol);
         return;
       }
@@ -43,9 +44,9 @@ export function CurrencySymbol({ currencyCode, className = "mr-1" }: CurrencySym
     
     // Otherwise use the default currency
     if (defaultCurrency?.symbol) {
+      console.log("CURRENCY SYMBOL DEBUG: Setting symbol to default:", defaultCurrency.symbol);
       setSymbol(defaultCurrency.symbol);
     }
-    */
   }, [currencies, defaultCurrency, currencyCode]);
 
   return <span className={className}>{symbol}</span>;
