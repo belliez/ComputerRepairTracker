@@ -2468,25 +2468,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Log the complete settings object before saving
             console.log('Email settings to be saved:', JSON.stringify(emailSettings, null, 2));
             
+            // Make sure the provider field is correctly stored and not overridden
+            const provider = emailSettings.provider || 'sendgrid';
+            console.log('Email provider from form:', provider);
+            
             let updatedSettings;
             
-            // Determine if we need to update an existing email settings object
-            if (currentSettings.email) {
-              // Merge with existing email settings
-              updatedSettings = {
-                ...currentSettings,
-                email: {
-                  ...currentSettings.email,
-                  ...emailSettings
-                }
-              };
-            } else {
-              // No existing email settings, just add the new ones
-              updatedSettings = {
-                ...currentSettings,
-                email: emailSettings
-              };
-            }
+            // Always use the complete email settings object rather than merging
+            // This ensures all fields are updated and not just the ones that changed
+            updatedSettings = {
+              ...currentSettings,
+              email: emailSettings
+            };
             
             console.log('Final organization settings to be saved:', JSON.stringify(updatedSettings, null, 2));
             
@@ -3116,10 +3109,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Organization not found" });
       }
       
-      // Extract email settings or return empty object
-      const emailSettings = orgSettings.settings && orgSettings.settings.email 
-        ? orgSettings.settings.email 
-        : {};
+      // Extract email settings
+      let emailSettings = {};
+      
+      if (orgSettings.settings) {
+        // Handle the case where email is stored as an object
+        if (orgSettings.settings.email && typeof orgSettings.settings.email === 'object') {
+          // Check if it's the string array format that needs conversion
+          if (Array.isArray(orgSettings.settings.email) || '0' in orgSettings.settings.email) {
+            console.log('Converting email string array to proper email object');
+            // It's stored as an array of characters or object with numeric keys, reconstruct it properly
+            emailSettings = {
+              enabled: true,
+              provider: 'sendgrid', // Default provider if not specified
+              fromEmail: Object.values(orgSettings.settings.email).join(''), // Convert to string
+              fromName: orgSettings.name || 'Repair Shop'
+            };
+          } else {
+            // It's already an object with the right properties
+            emailSettings = orgSettings.settings.email;
+          }
+        } else if (typeof orgSettings.settings.email === 'string') {
+          // Handle case where email is just a string (email address)
+          emailSettings = {
+            enabled: true,
+            provider: 'sendgrid',
+            fromEmail: orgSettings.settings.email,
+            fromName: orgSettings.name || 'Repair Shop'
+          };
+        }
+      }
       
       console.log(`Found email settings for org ${organizationId}:`, 
         JSON.stringify(emailSettings, null, 2));

@@ -198,6 +198,10 @@ const SettingsPage = () => {
       // Cast to any to avoid TypeScript errors with the API response
       const settings = emailSettingsData as any;
       
+      // Log provider value to debug
+      console.log('Provider from settings:', settings.provider);
+      
+      // Set form values with defaults where needed
       emailForm.reset({
         enabled: settings.enabled ?? true,
         fromEmail: settings.fromEmail ?? '',
@@ -215,6 +219,12 @@ const SettingsPage = () => {
         smtpPassword: settings.smtpPassword ?? '',
         smtpSecure: settings.smtpSecure ?? false
       });
+      
+      // Force update provider field separately to ensure it's set correctly
+      if (settings.provider) {
+        emailForm.setValue('provider', settings.provider);
+        console.log('Explicitly set provider to:', settings.provider);
+      }
     }
   }, [emailSettingsData, emailForm]);
   
