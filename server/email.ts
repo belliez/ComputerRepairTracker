@@ -506,15 +506,15 @@ export function generateQuoteEmail(quote: any, customer: any, repair: any, items
         <table style="margin-left: auto; width: 100%; border-collapse: collapse;">
           <tr>
             <th style="border: 1px solid #ddd; padding: 5px 12px; text-align: left; background-color: #f2f7ff;">Subtotal</th>
-            <td style="border: 1px solid #ddd; padding: 5px 12px; text-align: right;">$${quote.subtotal.toFixed(2)}</td>
+            <td style="border: 1px solid #ddd; padding: 5px 12px; text-align: right;">${currencySymbol}${quote.subtotal.toFixed(decimalPlaces)}</td>
           </tr>
           <tr>
             <th style="border: 1px solid #ddd; padding: 5px 12px; text-align: left; background-color: #f2f7ff;">Tax</th>
-            <td style="border: 1px solid #ddd; padding: 5px 12px; text-align: right;">$${(quote.tax || 0).toFixed(2)}</td>
+            <td style="border: 1px solid #ddd; padding: 5px 12px; text-align: right;">${currencySymbol}${(quote.tax || 0).toFixed(decimalPlaces)}</td>
           </tr>
           <tr>
             <th style="border: 1px solid #ddd; padding: 5px 12px; text-align: left; background-color: #f2f7ff;">Total</th>
-            <td style="border: 1px solid #ddd; padding: 5px 12px; text-align: right;"><strong>$${quote.total.toFixed(2)}</strong></td>
+            <td style="border: 1px solid #ddd; padding: 5px 12px; text-align: right;"><strong>${currencySymbol}${quote.total.toFixed(decimalPlaces)}</strong></td>
           </tr>
         </table>
       </div>
