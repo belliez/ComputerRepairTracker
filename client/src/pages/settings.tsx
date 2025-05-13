@@ -260,15 +260,54 @@ const SettingsPage = () => {
     }
   };
   
+  // Function to get the current auth token
+  const getAuthToken = (): string | null => {
+    try {
+      // First try firebase_token (used in the app)
+      const firebaseToken = localStorage.getItem('firebase_token');
+      if (firebaseToken) {
+        // If it already has Bearer prefix, return as is
+        if (firebaseToken.startsWith('Bearer ')) {
+          return firebaseToken;
+        }
+        return `Bearer ${firebaseToken}`;
+      }
+      
+      // Then try authToken (used in some parts)
+      const authToken = localStorage.getItem('authToken');
+      if (authToken) {
+        // If it already has Bearer prefix, return as is
+        if (authToken.startsWith('Bearer ')) {
+          return authToken;
+        }
+        return `Bearer ${authToken}`;
+      }
+      
+      console.warn('No authentication token found in localStorage');
+      return null;
+    } catch (error) {
+      console.error('Error getting auth token:', error);
+      return null;
+    }
+  };
+
   // Mutation to update email settings
   const updateEmailSettingsMutation = useMutation({
     mutationFn: async (settings: any) => {
+      const authToken = getAuthToken();
+      
+      if (!authToken) {
+        throw new Error('Authentication token not found. Please log in again.');
+      }
+      
       const headers = {
         'X-Debug-Client': 'RepairTrackerClient',
         'X-Organization-ID': '2', // Hardcoded ID for now
         'Content-Type': 'application/json',
-        'Authorization': localStorage.getItem('authToken') || ''
+        'Authorization': authToken
       };
+      
+      console.log('Sending email settings update with token:', authToken.substring(0, 20) + '...');
       
       const response = await fetch('/api/settings/organization', {
         method: 'POST',
