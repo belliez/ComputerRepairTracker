@@ -48,7 +48,7 @@ function formatCurrencyPreview(amount: number | string | null | undefined, curre
     maximumFractionDigits
   }).format(numericAmount);
 };
-import { Loader, Loader2, PlusCircle, Trash2, X, RefreshCw, RotateCw, UserRound, Pencil, Edit } from 'lucide-react';
+import { Loader, Loader2, PlusCircle, Trash2, X, RefreshCw, RotateCw, UserRound, Pencil, Edit, Mail } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -86,6 +86,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 // Schemas for form validation
@@ -122,6 +124,14 @@ const technicianSchema = z.object({
   isActive: z.boolean().optional().default(true),
 });
 
+const emailSettingsSchema = z.object({
+  enabled: z.boolean().default(true),
+  fromEmail: z.string().email('Please enter a valid email address').min(1, 'From email is required'),
+  fromName: z.string().min(1, 'From name is required'),
+  replyTo: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
+  footerText: z.string().optional().or(z.literal(''))
+});
+
 const SettingsPage = () => {
   const [activeTab, setActiveTab] = useState('organization');
   const [showCurrencyDialog, setShowCurrencyDialog] = useState(false);
@@ -142,6 +152,18 @@ const SettingsPage = () => {
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Email form setup
+  const emailForm = useForm<z.infer<typeof emailSettingsSchema>>({
+    resolver: zodResolver(emailSettingsSchema),
+    defaultValues: {
+      enabled: true,
+      fromEmail: '',
+      fromName: '',
+      replyTo: '',
+      footerText: ''
+    }
+  });
   
   // Define types for our queries
   interface Organization {
@@ -1468,6 +1490,172 @@ const SettingsPage = () => {
                       </div>
                     </div>
                   </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="text-gray-500">No organization information found</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Email Tab */}
+        <TabsContent value="email">
+          <Card>
+            <CardHeader>
+              <CardTitle>Email Settings</CardTitle>
+              <CardDescription>
+                Configure email settings for quotes, invoices, and notifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingOrganization ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : organization ? (
+                <div className="space-y-6">
+                  <Form {...emailForm}>
+                    <form onSubmit={emailForm.handleSubmit(onEmailFormSubmit)} className="space-y-4">
+                      <FormField
+                        control={emailForm.control}
+                        name="enabled"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">
+                                Email Notifications
+                              </FormLabel>
+                              <FormDescription>
+                                Enable sending emails to customers
+                              </FormDescription>
+                            </div>
+                            <FormControl>
+                              <Switch
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <FormField
+                          control={emailForm.control}
+                          name="fromEmail"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>From Email Address</FormLabel>
+                              <FormControl>
+                                <Input placeholder="service@example.com" {...field} />
+                              </FormControl>
+                              <FormDescription>
+                                The email address that will appear in the "From" field
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={emailForm.control}
+                          name="fromName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>From Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Your Company Name" {...field} />
+                              </FormControl>
+                              <FormDescription>
+                                The name that will appear in the "From" field
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <FormField
+                        control={emailForm.control}
+                        name="replyTo"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Reply-To Email (Optional)</FormLabel>
+                            <FormControl>
+                              <Input placeholder="support@example.com" {...field} />
+                            </FormControl>
+                            <FormDescription>
+                              Where customers should reply (defaults to From Email if not specified)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={emailForm.control}
+                        name="footerText"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email Footer (Optional)</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="© 2025 Your Company Name"
+                                className="min-h-[80px]"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Text to be displayed at the bottom of all emails
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="flex justify-between">
+                        <Button type="submit" disabled={updateEmailSettingsMutation.isPending}>
+                          {updateEmailSettingsMutation.isPending && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Save Email Settings
+                        </Button>
+                        
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            type="email"
+                            placeholder="Test email address"
+                            value={testEmailAddress}
+                            onChange={(e) => setTestEmailAddress(e.target.value)}
+                            className="max-w-[220px]"
+                          />
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            disabled={!testEmailAddress || isSendingTestEmail || !emailForm.getValues("enabled")}
+                            onClick={handleSendTestEmail}
+                          >
+                            {isSendingTestEmail ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Mail className="mr-2 h-4 w-4" />
+                            )}
+                            Send Test Email
+                          </Button>
+                        </div>
+                      </div>
+                    </form>
+                  </Form>
+                  
+                  <Alert>
+                    <Mail className="h-4 w-4" />
+                    <AlertTitle>Email Provider Setup</AlertTitle>
+                    <AlertDescription>
+                      Emails are sent through SendGrid. The API key has been configured by the system administrator.
+                    </AlertDescription>
+                  </Alert>
                 </div>
               ) : (
                 <div className="py-8 text-center">
