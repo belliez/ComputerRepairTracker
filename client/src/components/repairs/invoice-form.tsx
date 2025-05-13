@@ -278,7 +278,7 @@ export default function InvoiceForm({
         status: existingInvoice.status,
         notes: existingInvoice.notes || "",
         currencyCode: existingInvoice.currencyCode || (defaultCurrency?.code || "GBP"),
-        taxRateId: existingInvoice.taxRateId || (defaultTaxRate?.id || 1),
+        taxRateId: existingInvoice.taxRateId || (defaultTaxRate?.id || 25), // Using ID 25 which exists in the DB
         paymentDate,
         paymentMethod: existingInvoice.paymentMethod,
       });
@@ -293,6 +293,8 @@ export default function InvoiceForm({
         const method = invoiceId ? "PUT" : "POST";
         
         console.log(`DEBUG: Making ${method} request to ${endpoint} with data:`, values);
+        console.log("INVOICE FORM DEBUG: Available tax rates:", taxRates);
+        console.log("INVOICE FORM DEBUG: Selected tax rate ID:", values.taxRateId);
         
         const response = await apiRequest(method, endpoint, values);
         
