@@ -9,18 +9,28 @@ export type Currency = {
 
 export function useCurrency() {
   // Get the default currency - staleTime: 0 ensures it always refetches
-  const { data: defaultCurrency } = useQuery<Currency>({
+  const { data: defaultCurrency, refetch: refetchDefaultCurrency } = useQuery<Currency>({
     queryKey: ['/api/settings/currencies/default'],
     staleTime: 0, // Don't use cache, always fetch fresh data
     refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   // Get all available currencies
-  const { data: currencies = [] } = useQuery<Currency[]>({
+  const { data: currencies = [], refetch: refetchCurrencies } = useQuery<Currency[]>({
     queryKey: ['/api/settings/currencies'],
     staleTime: 0, // Don't use cache, always fetch fresh data
     refetchOnWindowFocus: true, // Refetch when window regains focus
   });
+  
+  // Function to explicitly refresh all currency data
+  const refreshCurrencyData = async () => {
+    console.log("CURRENCY: Explicitly refreshing all currency data");
+    await Promise.all([
+      refetchDefaultCurrency(),
+      refetchCurrencies()
+    ]);
+    return true;
+  };
 
   // Format a currency value based on provided currency code or default currency
   const formatCurrency = (amount: number | string | null | undefined, customCurrencyCode?: string) => {
@@ -37,8 +47,10 @@ export function useCurrency() {
       return '-';
     }
     
-    // Use custom currency code if provided, otherwise use default currency from API, or fallback to JPY
-    const currencyCode = customCurrencyCode || defaultCurrency?.code || 'JPY';
+    // Use custom currency code if provided, otherwise use default from all currencies (most reliable),
+    // then try the direct default currency endpoint, and finally fall back to EUR
+    const currentDefaultCurrency = currencies.find(c => c.isDefault);
+    const currencyCode = customCurrencyCode || currentDefaultCurrency?.code || defaultCurrency?.code || 'EUR';
     
     // Choose locale based on the currency code
     let locale: string;
@@ -56,7 +68,10 @@ export function useCurrency() {
         locale = 'en-US';
     }
     
-    console.log("FORMAT CURRENCY DEBUG: Using currency code:", currencyCode, "with locale:", locale);
+    console.log("FORMAT CURRENCY DEBUG: Using currency code:", currencyCode, 
+      "with locale:", locale, 
+      "default from currencies array:", currentDefaultCurrency?.code,
+      "default from API endpoint:", defaultCurrency?.code);
     
     // Set decimal digit options based on currency
     const minimumFractionDigits = currencyCode === 'JPY' ? 0 : 2;
@@ -73,6 +88,7 @@ export function useCurrency() {
   return {
     defaultCurrency,
     currencies,
-    formatCurrency
+    formatCurrency,
+    refreshCurrencyData
   };
 }

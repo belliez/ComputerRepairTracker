@@ -14,13 +14,17 @@ interface CurrencySymbolProps {
 }
 
 export function CurrencySymbol({ currencyCode, className = "mr-1" }: CurrencySymbolProps) {
-  // Get all currencies and default currency
+  // Get all currencies and default currency with no caching
   const { data: currencies } = useQuery<Currency[]>({
     queryKey: ['/api/settings/currencies'],
+    staleTime: 0, // Don't use cache, always fetch fresh data
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
   
   const { data: defaultCurrency } = useQuery<Currency>({
     queryKey: ['/api/settings/currencies/default'],
+    staleTime: 0, // Don't use cache, always fetch fresh data
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   // State to track the selected currency symbol
@@ -29,12 +33,12 @@ export function CurrencySymbol({ currencyCode, className = "mr-1" }: CurrencySym
   useEffect(() => {
     console.log("CURRENCY SYMBOL DEBUG: Looking for symbol for currency code:", currencyCode);
     console.log("CURRENCY SYMBOL DEBUG: Available currencies:", currencies);
-    console.log("CURRENCY SYMBOL DEBUG: Default currency:", defaultCurrency);
+    console.log("CURRENCY SYMBOL DEBUG: Default currency from API:", defaultCurrency);
     
     // If a specific currency code is provided, use that
     if (currencyCode && currencies) {
       const selectedCurrency = currencies.find(c => c.code === currencyCode);
-      console.log("CURRENCY SYMBOL DEBUG: Selected currency:", selectedCurrency);
+      console.log("CURRENCY SYMBOL DEBUG: Selected currency by code:", selectedCurrency);
       if (selectedCurrency?.symbol) {
         console.log("CURRENCY SYMBOL DEBUG: Setting symbol to:", selectedCurrency.symbol);
         setSymbol(selectedCurrency.symbol);
@@ -42,9 +46,20 @@ export function CurrencySymbol({ currencyCode, className = "mr-1" }: CurrencySym
       }
     }
     
-    // Otherwise use the default currency
+    // If no specific code provided or not found, look for a currency marked as default in the array
+    if (currencies && currencies.length > 0) {
+      const defaultFromArray = currencies.find(c => c.isDefault === true);
+      console.log("CURRENCY SYMBOL DEBUG: Default currency from array:", defaultFromArray);
+      if (defaultFromArray?.symbol) {
+        console.log("CURRENCY SYMBOL DEBUG: Setting symbol to default from array:", defaultFromArray.symbol);
+        setSymbol(defaultFromArray.symbol);
+        return;
+      }
+    }
+    
+    // Final fallback to default currency from API
     if (defaultCurrency?.symbol) {
-      console.log("CURRENCY SYMBOL DEBUG: Setting symbol to default:", defaultCurrency.symbol);
+      console.log("CURRENCY SYMBOL DEBUG: Setting symbol to default from API:", defaultCurrency.symbol);
       setSymbol(defaultCurrency.symbol);
     }
   }, [currencies, defaultCurrency, currencyCode]);
