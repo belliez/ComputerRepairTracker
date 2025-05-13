@@ -57,18 +57,28 @@ export function formatCurrency(
   const minimumFractionDigits = currencyCode === 'JPY' ? 0 : 2;
   const maximumFractionDigits = currencyCode === 'JPY' ? 0 : 2;
   
-  // Output debug info for currency formatting in print documents
+  // Output enhanced debug info for currency formatting in print documents
   console.log("PRINT FORMAT CURRENCY:", 
-    "Using", currencyCode, 
+    "Amount:", numericAmount,
+    "| Using", currencyCode, 
     "with locale", locale, 
     "| Currency object:", currency);
   
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: currencyCode,
-    minimumFractionDigits,
-    maximumFractionDigits
-  }).format(numericAmount);
+  try {
+    const formatted = new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: currencyCode,
+      minimumFractionDigits,
+      maximumFractionDigits
+    }).format(numericAmount);
+    
+    console.log("PRINT FORMAT CURRENCY: Formatted result:", formatted);
+    return formatted;
+  } catch (error) {
+    console.error("PRINT FORMAT CURRENCY: Error formatting currency:", error);
+    // Fallback to a basic currency format
+    return `${currency?.symbol || '$'}${numericAmount.toFixed(minimumFractionDigits)}`;
+  }
 }
 
 /**
@@ -227,45 +237,79 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
     : 'N/A';
   
   // Fetch the latest currency data for accurate display
-  let currency = { code: quote.currencyCode || 'GBP', name: '', symbol: '', isDefault: false };
+  console.log("PRINT DOCUMENT: Quote data received with currency:", quote.currencyCode, "and quote data:", {
+    quoteNumber: quote.quoteNumber,
+    dateCreated: quote.dateCreated,
+    subtotal: quote.subtotal,
+    tax: quote.tax,
+    total: quote.total
+  });
+  
+  // Initialize with the quote's currency code if available
+  let currency = { 
+    code: quote.currencyCode || 'GBP', 
+    name: quote.currencyCode ? `${quote.currencyCode} Currency` : 'British Pound', 
+    symbol: quote.currencyCode === 'USD' ? '$' : 
+            quote.currencyCode === 'GBP' ? '£' : 
+            quote.currencyCode === 'EUR' ? '€' : 
+            quote.currencyCode === 'JPY' ? '¥' : 
+            quote.currencyCode === 'AUD' ? 'A$' : 
+            '$', 
+    isDefault: false 
+  };
   
   try {
     // Direct API fetch for currency data to avoid any caching issues
+    console.log("PRINT DOCUMENT: Fetching fresh currency data for print...");
     const response = await fetch('/api/settings/currencies', {
       method: 'GET',
       headers: {
         'X-Debug-Client': 'RepairTrackerClient',
         'X-Organization-ID': '2',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
+        'Pragma': 'no-cache',
+        'X-Requested-With': 'XMLHttpRequest'
       },
       cache: 'no-store'
     });
     
     if (response.ok) {
       const allCurrencies = await response.json();
-      console.log("PRINT DOCUMENT: Fetched", allCurrencies.length, "currencies for print document");
+      console.log("PRINT DOCUMENT: Fetched", allCurrencies.length, "currencies for print document:", allCurrencies);
       
       // Find the currency that matches the quote's currency code
-      const matchingCurrency = allCurrencies.find((c: Currency) => c.code === quote.currencyCode);
+      const quoteCurrencyCode = quote.currencyCode;
+      console.log("PRINT DOCUMENT: Looking for currency code:", quoteCurrencyCode);
       
-      // If found, use it
-      if (matchingCurrency) {
-        currency = matchingCurrency;
-        console.log("PRINT DOCUMENT: Using matching currency:", matchingCurrency.code);
-      }
-      // Otherwise, use the default currency
-      else {
+      if (quoteCurrencyCode) {
+        const matchingCurrency = allCurrencies.find((c: Currency) => c.code === quoteCurrencyCode);
+        
+        // If found, use it
+        if (matchingCurrency) {
+          currency = matchingCurrency;
+          console.log("PRINT DOCUMENT: Using matching currency:", matchingCurrency.code, "with symbol:", matchingCurrency.symbol);
+        } else {
+          console.log("PRINT DOCUMENT: Currency not found in list:", quoteCurrencyCode);
+          // Use our initialized currency object with the correct symbol
+        }
+      } else {
+        // If no currency code on quote, use the default currency
         const defaultCurrency = allCurrencies.find((c: Currency) => c.isDefault);
         if (defaultCurrency) {
           currency = defaultCurrency;
-          console.log("PRINT DOCUMENT: Using default currency:", defaultCurrency.code);
+          console.log("PRINT DOCUMENT: Using default currency:", defaultCurrency.code, "with symbol:", defaultCurrency.symbol);
+        } else {
+          console.log("PRINT DOCUMENT: No default currency found, using:", currency.code);
         }
       }
+    } else {
+      console.error("PRINT DOCUMENT: Failed to fetch currencies, status:", response.status);
     }
   } catch (error) {
     console.error("PRINT DOCUMENT: Error fetching currency data:", error);
   }
+  
+  console.log("PRINT DOCUMENT: Final currency being used for formatting:", currency);
   
   // Use itemsData from quote if available, otherwise fall back to passed items
   let itemsToDisplay = itemsFromRepair;
@@ -391,45 +435,79 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
     : 'Not paid';
   
   // Fetch the latest currency data for accurate display
-  let currency = { code: invoice.currencyCode || 'GBP', name: '', symbol: '', isDefault: false };
+  console.log("PRINT DOCUMENT: Invoice data received with currency:", invoice.currencyCode, "and invoice data:", {
+    invoiceNumber: invoice.invoiceNumber,
+    dateIssued: invoice.dateIssued,
+    subtotal: invoice.subtotal,
+    tax: invoice.tax,
+    total: invoice.total
+  });
+  
+  // Initialize with the invoice's currency code if available
+  let currency = { 
+    code: invoice.currencyCode || 'GBP', 
+    name: invoice.currencyCode ? `${invoice.currencyCode} Currency` : 'British Pound', 
+    symbol: invoice.currencyCode === 'USD' ? '$' : 
+            invoice.currencyCode === 'GBP' ? '£' : 
+            invoice.currencyCode === 'EUR' ? '€' : 
+            invoice.currencyCode === 'JPY' ? '¥' : 
+            invoice.currencyCode === 'AUD' ? 'A$' : 
+            '$', 
+    isDefault: false 
+  };
   
   try {
     // Direct API fetch for currency data to avoid any caching issues
+    console.log("PRINT DOCUMENT: Fetching fresh currency data for invoice print...");
     const response = await fetch('/api/settings/currencies', {
       method: 'GET',
       headers: {
         'X-Debug-Client': 'RepairTrackerClient',
         'X-Organization-ID': '2',
         'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache'
+        'Pragma': 'no-cache',
+        'X-Requested-With': 'XMLHttpRequest'
       },
       cache: 'no-store'
     });
     
     if (response.ok) {
       const allCurrencies = await response.json();
-      console.log("PRINT DOCUMENT: Fetched", allCurrencies.length, "currencies for invoice document");
+      console.log("PRINT DOCUMENT: Fetched", allCurrencies.length, "currencies for invoice document:", allCurrencies);
       
       // Find the currency that matches the invoice's currency code
-      const matchingCurrency = allCurrencies.find((c: Currency) => c.code === invoice.currencyCode);
+      const invoiceCurrencyCode = invoice.currencyCode;
+      console.log("PRINT DOCUMENT: Looking for currency code:", invoiceCurrencyCode);
       
-      // If found, use it
-      if (matchingCurrency) {
-        currency = matchingCurrency;
-        console.log("PRINT DOCUMENT: Using matching currency:", matchingCurrency.code);
-      }
-      // Otherwise, use the default currency
-      else {
+      if (invoiceCurrencyCode) {
+        const matchingCurrency = allCurrencies.find((c: Currency) => c.code === invoiceCurrencyCode);
+        
+        // If found, use it
+        if (matchingCurrency) {
+          currency = matchingCurrency;
+          console.log("PRINT DOCUMENT: Using matching currency:", matchingCurrency.code, "with symbol:", matchingCurrency.symbol);
+        } else {
+          console.log("PRINT DOCUMENT: Currency not found in list:", invoiceCurrencyCode);
+          // Use our initialized currency object with the correct symbol
+        }
+      } else {
+        // If no currency code on invoice, use the default currency
         const defaultCurrency = allCurrencies.find((c: Currency) => c.isDefault);
         if (defaultCurrency) {
           currency = defaultCurrency;
-          console.log("PRINT DOCUMENT: Using default currency:", defaultCurrency.code);
+          console.log("PRINT DOCUMENT: Using default currency:", defaultCurrency.code, "with symbol:", defaultCurrency.symbol);
+        } else {
+          console.log("PRINT DOCUMENT: No default currency found, using:", currency.code);
         }
       }
+    } else {
+      console.error("PRINT DOCUMENT: Failed to fetch currencies, status:", response.status);
     }
   } catch (error) {
     console.error("PRINT DOCUMENT: Error fetching currency data:", error);
   }
+  
+  console.log("PRINT DOCUMENT: Final currency being used for formatting:", currency);
   
   // Use itemsData from invoice if available, otherwise fall back to passed items
   let itemsToDisplay = itemsFromRepair;
