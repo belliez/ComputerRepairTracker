@@ -202,24 +202,52 @@ async function sendWithSMTP(mailContent: any, settings: EmailSettings): Promise<
       throw new Error('Missing SMTP configuration. Please provide host and port in settings.');
     }
     
+    // Determine if secure connection should be used based on port and setting
+    const isSecure = settings.smtpSecure === true || settings.smtpPort === 465;
+    console.log(`SMTP Configuration: Host=${settings.smtpHost}, Port=${settings.smtpPort}, Secure=${isSecure}`);
+
     // Create SMTP transport
     const transport = nodemailer.createTransport({
       host: settings.smtpHost,
       port: settings.smtpPort,
-      secure: settings.smtpSecure === true, // Use TLS if set to true
+      secure: isSecure, // true for 465, false for other ports
       auth: settings.smtpUser ? {
         user: settings.smtpUser,
         pass: settings.smtpPassword || '',
       } : undefined,
+      // Add additional configuration to handle TLS issues with Gmail
+      tls: {
+        // Do not fail on invalid certs
+        rejectUnauthorized: false,
+        // Force specific TLS version for Gmail
+        minVersion: 'TLSv1.2'
+      }
     });
     
-    // Verify connection
-    await transport.verify();
-    
-    // Send mail
-    await transport.sendMail(mailContent);
-    console.log('Email sent successfully using SMTP');
-    return true;
+    // Enhanced error handling for connection verification
+    try {
+      console.log('Verifying SMTP connection...');
+      await transport.verify();
+      console.log('SMTP connection verified successfully');
+      
+      // Send mail
+      const result = await transport.sendMail(mailContent);
+      console.log('Email sent successfully using SMTP', result);
+      return true;
+    } catch (verifyError) {
+      console.error('Failed to verify SMTP connection or send email:', verifyError);
+      
+      // Try sending directly without verification as a fallback
+      console.log('Attempting to send email directly without verification...');
+      try {
+        const result = await transport.sendMail(mailContent);
+        console.log('Email sent successfully using SMTP (without verification)', result);
+        return true;
+      } catch (sendError) {
+        console.error('Failed to send email directly:', sendError);
+        throw sendError;
+      }
+    }
   } catch (error) {
     console.error('SMTP error:', error);
     throw error; // Re-throw to be caught by the main function
