@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCurrency } from "@/hooks/use-currency";
 
 interface LineItem {
   id?: number;
@@ -41,6 +42,7 @@ export default function EditableLineItems({
   readOnly = false,
   showEditControls = true
 }: EditableLineItemsProps) {
+  const { formatCurrency } = useCurrency();
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [newItem, setNewItem] = useState<LineItem>({
     description: "",
@@ -173,7 +175,7 @@ export default function EditableLineItems({
                         className="w-20 ml-auto"
                       />
                     ) : (
-                      `$${item.unitPrice.toFixed(2)}`
+                      formatCurrency(item.unitPrice)
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -190,7 +192,7 @@ export default function EditableLineItems({
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    ${((item.unitPrice || 0) * (item.quantity || 0)).toFixed(2)}
+                    {formatCurrency((item.unitPrice || 0) * (item.quantity || 0))}
                   </TableCell>
                   {showEditControls && (
                     <TableCell className="text-right">
@@ -278,7 +280,7 @@ export default function EditableLineItems({
                   />
                 </TableCell>
                 <TableCell className="text-right">
-                  ${((newItem.unitPrice || 0) * (newItem.quantity || 0)).toFixed(2)}
+                  {formatCurrency((newItem.unitPrice || 0) * (newItem.quantity || 0))}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button onClick={handleAddItem} variant="outline" size="sm">
