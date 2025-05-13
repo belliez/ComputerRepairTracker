@@ -103,12 +103,25 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   const [currentInvoice, setCurrentInvoice] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { formatCurrency } = useCurrency();
+  // Use enhanced currency functionality with no cache
+  const { formatCurrency, refreshCurrencyData } = useCurrency();
   
-  // Fetch default currency data for formatting
-  const { data: defaultCurrency } = useQuery<{code: string}>({
+  // Fetch default currency data for formatting - disabling caching
+  const { data: defaultCurrency, refetch: refetchDefaultCurrency } = useQuery<{code: string}>({
     queryKey: ['/api/settings/currencies/default'],
+    staleTime: 0, // Don't use cache, always fetch fresh data
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
+  
+  // When the repair detail opens, refresh currency data
+  useEffect(() => {
+    if (isOpen) {
+      console.log("REPAIR DETAIL: Refreshing currency data");
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies/default'] });
+      refreshCurrencyData();
+    }
+  }, [isOpen, queryClient, refreshCurrencyData]);
 
   const { data: repair, isLoading: isLoadingRepair, refetch: refetchRepair } = useQuery<RepairWithRelations>({
     queryKey: [`/api/repairs/${repairId}/details`],
