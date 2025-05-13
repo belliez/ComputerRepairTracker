@@ -104,6 +104,11 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { formatCurrency } = useCurrency();
+  
+  // Fetch default currency data for formatting
+  const { data: defaultCurrency } = useQuery<{code: string}>({
+    queryKey: ['/api/settings/currencies/default'],
+  });
 
   const { data: repair, isLoading: isLoadingRepair, refetch: refetchRepair } = useQuery<RepairWithRelations>({
     queryKey: [`/api/repairs/${repairId}/details`],
@@ -1161,13 +1166,13 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                             
                             <div className="grid grid-cols-2 gap-2 text-sm">
                               <div>
-                                <span className="text-gray-500">Price:</span> {formatCurrency(item.unitPrice, repair?.defaultCurrencyCode)}
+                                <span className="text-gray-500">Price:</span> {formatCurrency(item.unitPrice, defaultCurrency?.code)}
                               </div>
                               <div>
                                 <span className="text-gray-500">Quantity:</span> {item.quantity}
                               </div>
                               <div>
-                                <span className="text-gray-500">Total:</span> {formatCurrency(item.unitPrice * item.quantity)}
+                                <span className="text-gray-500">Total:</span> {formatCurrency(item.unitPrice * item.quantity, defaultCurrency?.code)}
                               </div>
                               <div>
                                 <Badge variant="outline" className={
@@ -1245,9 +1250,9 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                                     {item.itemType === "part" ? "Part" : "Service"}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right">{formatCurrency(item.unitPrice)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(item.unitPrice, defaultCurrency?.code)}</TableCell>
                                 <TableCell className="text-right">{item.quantity}</TableCell>
-                                <TableCell className="text-right">{formatCurrency(item.unitPrice * item.quantity)}</TableCell>
+                                <TableCell className="text-right">{formatCurrency(item.unitPrice * item.quantity, defaultCurrency?.code)}</TableCell>
                                 <TableCell>
                                   <Badge variant="outline" className={
                                     item.isCompleted
@@ -1306,7 +1311,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                   <div>
                     {repairItems && repairItems.length > 0 && (
                       <div className="text-right font-medium">
-                        Total: {formatCurrency(repairItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0), repair?.defaultCurrencyCode)}
+                        Total: {formatCurrency(repairItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0), defaultCurrency?.code)}
                       </div>
                     )}
                   </div>
