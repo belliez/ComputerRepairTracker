@@ -209,8 +209,16 @@ export default function AddRepairItem() {
                     <FormLabel>Select from Inventory (Optional)</FormLabel>
                     <Select
                       onValueChange={(value) => {
-                        field.onChange(value === "null" ? null : parseInt(value));
-                        if (value && value !== "null") handleInventoryItemSelect(parseInt(value));
+                        // If "null" is selected, set the inventory item to null 
+                        // and don't modify other fields
+                        if (value === "null") {
+                          field.onChange(null);
+                        } else {
+                          // Otherwise parse and handle the selected inventory item
+                          const itemId = parseInt(value);
+                          field.onChange(itemId);
+                          handleInventoryItemSelect(itemId);
+                        }
                       }}
                       value={field.value?.toString() || "null"}
                     >
@@ -220,7 +228,7 @@ export default function AddRepairItem() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem key="none" value="none">None</SelectItem>
+                        <SelectItem key="none" value="null">None</SelectItem>
                         {Array.isArray(inventoryItems) && inventoryItems.map((item: any) => (
                           item && item.id && (
                             <SelectItem key={item.id} value={item.id.toString()}>
