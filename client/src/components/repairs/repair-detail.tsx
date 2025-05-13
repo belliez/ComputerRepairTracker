@@ -1161,7 +1161,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                             
                             <div className="grid grid-cols-2 gap-2 text-sm">
                               <div>
-                                <span className="text-gray-500">Price:</span> {formatCurrency(item.unitPrice)}
+                                <span className="text-gray-500">Price:</span> {formatCurrency(item.unitPrice, repair?.defaultCurrencyCode)}
                               </div>
                               <div>
                                 <span className="text-gray-500">Quantity:</span> {item.quantity}
