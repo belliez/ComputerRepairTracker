@@ -131,7 +131,7 @@ const emailSettingsSchema = z.object({
   fromName: z.string().min(1, 'From name is required'),
   replyTo: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
   footerText: z.string().optional().or(z.literal('')),
-  provider: z.enum(['sendgrid', 'smtp']).default('sendgrid'),
+  provider: z.enum(['sendgrid', 'smtp', 'mailgun']).default('sendgrid'),
   
   // SendGrid specific settings
   sendgridApiKey: z.string().optional().or(z.literal('')),
@@ -141,7 +141,12 @@ const emailSettingsSchema = z.object({
   smtpPort: z.number().int().positive().optional().or(z.literal('')).transform(v => v === '' ? 587 : Number(v)),
   smtpUser: z.string().optional().or(z.literal('')),
   smtpPassword: z.string().optional().or(z.literal('')),
-  smtpSecure: z.boolean().optional().default(false)
+  smtpSecure: z.boolean().optional().default(false),
+  
+  // Mailgun specific settings
+  mailgunApiKey: z.string().optional().or(z.literal('')),
+  mailgunDomain: z.string().optional().or(z.literal('')),
+  mailgunRegion: z.enum(['us', 'eu']).default('us')
 });
 
 const SettingsPage = () => {
@@ -187,7 +192,10 @@ const SettingsPage = () => {
       smtpPort: 587,
       smtpUser: '',
       smtpPassword: '',
-      smtpSecure: false
+      smtpSecure: false,
+      mailgunApiKey: '',
+      mailgunDomain: '',
+      mailgunRegion: 'us'
     }
   });
   
@@ -217,7 +225,12 @@ const SettingsPage = () => {
         smtpPort: settings.smtpPort ?? 587,
         smtpUser: settings.smtpUser ?? '',
         smtpPassword: settings.smtpPassword ?? '',
-        smtpSecure: settings.smtpSecure ?? false
+        smtpSecure: settings.smtpSecure ?? false,
+        
+        // Mailgun specific settings
+        mailgunApiKey: settings.mailgunApiKey ?? '',
+        mailgunDomain: settings.mailgunDomain ?? '',
+        mailgunRegion: settings.mailgunRegion ?? 'us'
       });
       
       // Force update provider field separately to ensure it's set correctly
@@ -248,14 +261,20 @@ const SettingsPage = () => {
       
       // Include the appropriate provider-specific settings
       ...(data.provider === 'sendgrid' 
-        ? { sendgridApiKey: data.sendgridApiKey || '' }
-        : {
-            smtpHost: data.smtpHost || '',
-            smtpPort: typeof data.smtpPort === 'number' ? data.smtpPort : 587,
-            smtpUser: data.smtpUser || '',
-            smtpPassword: data.smtpPassword || '',
-            smtpSecure: data.smtpSecure || false
-          }
+          ? { sendgridApiKey: data.sendgridApiKey || '' }
+          : data.provider === 'mailgun'
+            ? {
+                mailgunApiKey: data.mailgunApiKey || '',
+                mailgunDomain: data.mailgunDomain || '',
+                mailgunRegion: data.mailgunRegion || 'us'
+              }
+            : {
+                smtpHost: data.smtpHost || '',
+                smtpPort: typeof data.smtpPort === 'number' ? data.smtpPort : 587,
+                smtpUser: data.smtpUser || '',
+                smtpPassword: data.smtpPassword || '',
+                smtpSecure: data.smtpSecure || false
+              }
       )
     };
     
@@ -1980,6 +1999,7 @@ const SettingsPage = () => {
                                 <SelectContent>
                                   <SelectItem value="sendgrid">SendGrid API</SelectItem>
                                   <SelectItem value="smtp">SMTP Server</SelectItem>
+                                  <SelectItem value="mailgun">Mailgun API</SelectItem>
                                 </SelectContent>
                               </Select>
                               <FormDescription>
@@ -2009,6 +2029,79 @@ const SettingsPage = () => {
                                   </FormControl>
                                   <FormDescription>
                                     Leave blank to use system-wide SendGrid API key
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
+                        
+                        {emailForm.watch('provider') === 'mailgun' && (
+                          <div className="space-y-4 border-t pt-4">
+                            <h4 className="font-medium">Mailgun Settings</h4>
+                            
+                            <FormField
+                              control={emailForm.control}
+                              name="mailgunApiKey"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Mailgun API Key</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      type="password" 
+                                      placeholder="key-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                      {...field} 
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={emailForm.control}
+                              name="mailgunDomain"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Mailgun Domain</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      placeholder="mg.yourdomain.com"
+                                      {...field} 
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    The domain you've verified with Mailgun
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            
+                            <FormField
+                              control={emailForm.control}
+                              name="mailgunRegion"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Mailgun Region</FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange} 
+                                    defaultValue={field.value}
+                                    value={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select region" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="us">US (Default)</SelectItem>
+                                      <SelectItem value="eu">EU</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormDescription>
+                                    Choose the region where your Mailgun domain is hosted
                                   </FormDescription>
                                   <FormMessage />
                                 </FormItem>

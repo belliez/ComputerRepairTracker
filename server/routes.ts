@@ -1749,7 +1749,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         smtpPort: typeof emailSettings.smtpPort === 'number' ? emailSettings.smtpPort : 587,
         smtpUser: emailSettings.smtpUser || '',
         smtpPassword: emailSettings.smtpPassword || '',
-        smtpSecure: emailSettings.smtpSecure || false
+        smtpSecure: emailSettings.smtpSecure || false,
+        
+        // Mailgun settings
+        mailgunApiKey: emailSettings.mailgunApiKey || '',
+        mailgunDomain: emailSettings.mailgunDomain || '',
+        mailgunRegion: emailSettings.mailgunRegion || 'us'
       };
       
       // Send the test email with overridden settings

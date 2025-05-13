@@ -230,7 +230,7 @@ async function sendWithMailgun(mailContent: any, settings: EmailSettings): Promi
     });
     
     // Prepare Mailgun message format
-    const mgMessage = {
+    const mgMessage: Record<string, any> = {
       from: mailContent.from,
       to: mailContent.to,
       subject: mailContent.subject,
