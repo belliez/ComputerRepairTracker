@@ -1,17 +1,71 @@
 import { MailService } from '@sendgrid/mail';
+import { db } from './db';
+import { eq } from 'drizzle-orm';
+import { organizations } from '@shared/schema';
 
 // Types for email data
 export interface EmailData {
   to: string;
-  from: string;
+  from?: string; // Now optional, can be derived from organization settings
   subject: string;
   text?: string;
   html: string;
+  organizationId: number; // Required to fetch organization-specific settings
+}
+
+// Email settings interface
+export interface EmailSettings {
+  enabled: boolean;
+  fromEmail: string;
+  fromName: string;
+  replyTo?: string;
+  footerText?: string;
+  provider: 'sendgrid'; // For future expansion to other providers
 }
 
 /**
- * Send an email using SendGrid API
- * @param emailData The email data to send
+ * Get organization email settings
+ * @param organizationId The organization ID
+ * @returns The email settings for the organization, or default settings if not configured
+ */
+export async function getOrganizationEmailSettings(organizationId: number): Promise<EmailSettings | null> {
+  try {
+    // Query the organization from the database
+    const [organization] = await db
+      .select({ settings: organizations.settings })
+      .from(organizations)
+      .where(eq(organizations.id, organizationId));
+    
+    if (!organization) {
+      console.error(`Organization with ID ${organizationId} not found`);
+      return null;
+    }
+    
+    // Extract email settings from the organization settings
+    const settings = organization.settings as any || {};
+    const emailSettings = settings.email || {};
+    
+    // Return with defaults for missing values
+    const defaultFromEmail = `no-reply@repair${organizationId}.com`;
+    const orgName = settings.companyName || 'Repair Shop';
+    
+    return {
+      enabled: emailSettings.enabled ?? true,
+      fromEmail: emailSettings.fromEmail || defaultFromEmail,
+      fromName: emailSettings.fromName || orgName,
+      replyTo: emailSettings.replyTo || emailSettings.fromEmail || defaultFromEmail,
+      footerText: emailSettings.footerText || `© ${new Date().getFullYear()} ${orgName}`,
+      provider: 'sendgrid'
+    };
+  } catch (error) {
+    console.error('Error fetching organization email settings:', error);
+    return null;
+  }
+}
+
+/**
+ * Send an email using SendGrid API with organization-specific settings
+ * @param emailData The email data to send including organizationId
  * @returns Promise resolving to a boolean indicating success
  */
 export async function sendEmail(emailData: EmailData): Promise<boolean> {
@@ -20,36 +74,60 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
     return false;
   }
 
-  // For development purposes, log success without actually sending
-  // This is useful when SendGrid API isn't fully set up yet
-  console.log('Email would be sent with the following data:');
-  console.log('To:', emailData.to);
-  console.log('From:', emailData.from);
-  console.log('Subject:', emailData.subject);
-  
-  // Temporarily skip actual sending for development
-  // Comment this return and uncomment the try/catch below when SendGrid is properly set up
-  return true;
-  
-  /*
   try {
+    // Get organization email settings
+    const orgSettings = await getOrganizationEmailSettings(emailData.organizationId);
+    
+    if (!orgSettings) {
+      console.error(`Failed to retrieve email settings for organization ${emailData.organizationId}`);
+      return false;
+    }
+    
+    if (!orgSettings.enabled) {
+      console.log(`Email sending is disabled for organization ${emailData.organizationId}`);
+      return false;
+    }
+    
+    // Construct the from field with name and email
+    const from = emailData.from || `${orgSettings.fromName} <${orgSettings.fromEmail}>`;
+    
+    // Log the email that will be sent
+    console.log('Sending email with the following data:');
+    console.log('To:', emailData.to);
+    console.log('From:', from);
+    console.log('Subject:', emailData.subject);
+    
+    // Create a clean HTML text version
+    const textContent = emailData.text || emailData.html.replace(/<[^>]*>/g, '');
+    
+    // Add footer if configured
+    let htmlContent = emailData.html;
+    if (orgSettings.footerText) {
+      htmlContent += `<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+        ${orgSettings.footerText}
+      </div>`;
+    }
+    
+    // Initialize SendGrid Mail Service
     const mailService = new MailService();
     mailService.setApiKey(process.env.SENDGRID_API_KEY);
     
+    // Send the email
     await mailService.send({
       to: emailData.to,
-      from: emailData.from,
+      from: from,
+      replyTo: orgSettings.replyTo,
       subject: emailData.subject,
-      text: emailData.text || emailData.html.replace(/<[^>]*>/g, ''), // Fallback plain text
-      html: emailData.html,
+      text: textContent,
+      html: htmlContent,
     });
     
+    console.log(`Email sent successfully to ${emailData.to} for organization ${emailData.organizationId}`);
     return true;
   } catch (error) {
     console.error('Failed to send email:', error);
     return false;
   }
-  */
 }
 
 /**

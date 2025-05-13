@@ -1664,9 +1664,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Setup email data
       const emailData: EmailData = {
         to: customer.email,
-        from: process.env.SENDGRID_FROM_EMAIL || "service@repairshop.com", // Should be configured in .env
         subject: `Quote #${quote.quoteNumber} for your repair`,
-        html: emailHtml
+        html: emailHtml,
+        organizationId: quote.organizationId || req.organizationId || 1 // Ensure organization ID is never null
       };
 
       // Send email
@@ -1740,9 +1740,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Setup email data
       const emailData: EmailData = {
         to: customer.email,
-        from: process.env.SENDGRID_FROM_EMAIL || "service@repairshop.com", // Should be configured in .env
         subject: `Invoice #${invoice.invoiceNumber} for your repair`,
-        html: emailHtml
+        html: emailHtml,
+        organizationId: invoice.organizationId || req.organizationId || 1 // Ensure organization ID is never null
       };
 
       // Send email
