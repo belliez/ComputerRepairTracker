@@ -232,33 +232,37 @@ const SettingsPage = () => {
   const onEmailFormSubmit = async (data: z.infer<typeof emailSettingsSchema>) => {
     if (!organization) return;
     
-    // Update organization settings with email configuration
-    const updatedSettings = {
-      ...organization.settings,
-      email: {
-        ...(organization.settings?.email || {}),
-        enabled: data.enabled,
-        fromEmail: data.fromEmail,
-        fromName: data.fromName,
-        replyTo: data.replyTo || '',
-        footerText: data.footerText || '',
-        
-        // Provider settings
-        provider: data.provider,
-        
-        // SendGrid specific settings
-        sendgridApiKey: data.sendgridApiKey || '',
-        
-        // SMTP specific settings
-        smtpHost: data.smtpHost || '',
-        smtpPort: typeof data.smtpPort === 'number' ? data.smtpPort : 587,
-        smtpUser: data.smtpUser || '',
-        smtpPassword: data.smtpPassword || '',
-        smtpSecure: data.smtpSecure || false
-      }
+    console.log('Submitting email settings form with data:', data);
+    
+    // Create a simpler object to send to the API - we don't need to merge with existing settings
+    // The API will do that for us
+    const emailSettings = {
+      enabled: data.enabled,
+      fromEmail: data.fromEmail,
+      fromName: data.fromName,
+      replyTo: data.replyTo || '',
+      footerText: data.footerText || '',
+      
+      // Provider settings - this is critical to save
+      provider: data.provider,
+      
+      // Include the appropriate provider-specific settings
+      ...(data.provider === 'sendgrid' 
+        ? { sendgridApiKey: data.sendgridApiKey || '' }
+        : {
+            smtpHost: data.smtpHost || '',
+            smtpPort: typeof data.smtpPort === 'number' ? data.smtpPort : 587,
+            smtpUser: data.smtpUser || '',
+            smtpPassword: data.smtpPassword || '',
+            smtpSecure: data.smtpSecure || false
+          }
+      )
     };
     
-    updateEmailSettingsMutation.mutate(updatedSettings);
+    console.log('Email settings being sent to API:', emailSettings);
+    
+    // Send only the email settings to be updated
+    updateEmailSettingsMutation.mutate(emailSettings);
   };
   
   // Handle sending test email
@@ -348,30 +352,12 @@ const SettingsPage = () => {
   // Mutation to update email settings
   const updateEmailSettingsMutation = useMutation({
     mutationFn: async (emailSettings: any) => {
+      console.log('Email settings mutation called with:', emailSettings);
+    
       // Explicitly structure the request to match server expectations
       return apiCall('/api/settings/organization', 'POST', {
         type: 'email',
-        settings: {
-          enabled: emailSettings.enabled,
-          fromEmail: emailSettings.fromEmail,
-          fromName: emailSettings.fromName,
-          replyTo: emailSettings.replyTo,
-          footerText: emailSettings.footerText,
-          provider: emailSettings.provider,
-          
-          // Include provider-specific settings
-          ...(emailSettings.provider === 'sendgrid' ? {
-            sendgridApiKey: emailSettings.sendgridApiKey
-          } : {}),
-          
-          ...(emailSettings.provider === 'smtp' ? {
-            smtpHost: emailSettings.smtpHost,
-            smtpPort: emailSettings.smtpPort,
-            smtpUser: emailSettings.smtpUser,
-            smtpPassword: emailSettings.smtpPassword,
-            smtpSecure: emailSettings.smtpSecure
-          } : {})
-        }
+        settings: emailSettings  // Send the entire emailSettings object directly
       });
     },
     onSuccess: () => {
@@ -841,28 +827,59 @@ const SettingsPage = () => {
       });
       
       // Also populate email settings form
-      const emailSettings = organization.settings?.email || {};
+      let emailSettings = {};
       
+      // Check if email settings is an object with numeric keys (array-like object)
+      if (organization.settings?.email && typeof organization.settings.email === 'object') {
+        // Check if it's an array-like object with numeric keys (malformed email)
+        if (Object.keys(organization.settings.email).every(key => !isNaN(Number(key)))) {
+          const emailString = Object.values(organization.settings.email).join('');
+          console.log('Converting array-like email to string:', emailString);
+          
+          // Create proper email settings object
+          emailSettings = {
+            enabled: true,
+            provider: 'sendgrid',
+            fromEmail: emailString,
+            fromName: organization.name || '',
+          };
+        } else {
+          // It's already a proper object
+          emailSettings = organization.settings.email;
+        }
+      } else if (typeof organization.settings?.email === 'string') {
+        // If it's just a string, create a proper object
+        emailSettings = {
+          enabled: true,
+          provider: 'sendgrid',
+          fromEmail: organization.settings.email,
+          fromName: organization.name || '',
+        };
+      }
+      
+      console.log('Setting email form with data:', emailSettings);
+      
+      // Set default email form values using the email settings object
       emailForm.reset({
         // Basic email settings
-        enabled: emailSettings.enabled !== false, // Default to true
-        fromEmail: emailSettings.fromEmail || (organization.settings?.email as string) || '',
-        fromName: emailSettings.fromName || organization.name || '',
-        replyTo: emailSettings.replyTo || '',
-        footerText: emailSettings.footerText || `© ${new Date().getFullYear()} ${organization.name}`,
+        enabled: (emailSettings as any).enabled !== false, // Default to true
+        fromEmail: (emailSettings as any).fromEmail || '',
+        fromName: (emailSettings as any).fromName || organization.name || '',
+        replyTo: (emailSettings as any).replyTo || '',
+        footerText: (emailSettings as any).footerText || `© ${new Date().getFullYear()} ${organization.name}`,
         
         // Provider selection
-        provider: emailSettings.provider || 'sendgrid',
+        provider: (emailSettings as any).provider || 'sendgrid',
         
         // SendGrid settings
-        sendgridApiKey: emailSettings.sendgridApiKey || '',
+        sendgridApiKey: (emailSettings as any).sendgridApiKey || '',
         
         // SMTP settings
-        smtpHost: emailSettings.smtpHost || '',
-        smtpPort: emailSettings.smtpPort || 587,
-        smtpUser: emailSettings.smtpUser || '',
-        smtpPassword: emailSettings.smtpPassword || '',
-        smtpSecure: emailSettings.smtpSecure === true
+        smtpHost: (emailSettings as any).smtpHost || '',
+        smtpPort: (emailSettings as any).smtpPort || 587,
+        smtpUser: (emailSettings as any).smtpUser || '',
+        smtpPassword: (emailSettings as any).smtpPassword || '',
+        smtpSecure: (emailSettings as any).smtpSecure === true
       });
     }
   }, [organization, emailForm]);
