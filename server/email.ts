@@ -1,6 +1,8 @@
 import { MailService } from '@sendgrid/mail';
 import nodemailer, { TransportOptions, Transport } from 'nodemailer';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
+import FormData from 'form-data';
+import Mailgun from 'mailgun.js';
 import { db } from './db';
 import { eq } from 'drizzle-orm';
 import { organizations } from '@shared/schema';
@@ -22,7 +24,7 @@ export interface EmailSettings {
   fromName: string;
   replyTo?: string;
   footerText?: string;
-  provider: 'sendgrid' | 'smtp'; // Support both SendGrid and SMTP
+  provider: 'sendgrid' | 'smtp' | 'mailgun'; // Support SendGrid, SMTP, and Mailgun
   
   // SendGrid specific settings
   sendgridApiKey?: string;
@@ -33,6 +35,11 @@ export interface EmailSettings {
   smtpUser?: string;
   smtpPassword?: string;
   smtpSecure?: boolean;
+  
+  // Mailgun specific settings
+  mailgunApiKey?: string;
+  mailgunDomain?: string;
+  mailgunRegion?: 'us' | 'eu'; // Mailgun supports US and EU regions
 }
 
 /**
@@ -158,6 +165,8 @@ export async function sendEmailWithOverride(emailData: EmailData, overrideSettin
     // Send using the appropriate provider
     if (settings.provider === 'smtp') {
       return await sendWithSMTP(mailContent, settings);
+    } else if (settings.provider === 'mailgun') {
+      return await sendWithMailgun(mailContent, settings);
     } else {
       // Default to SendGrid
       return await sendWithSendGrid(mailContent, settings);
@@ -190,6 +199,61 @@ async function sendWithSendGrid(mailContent: any, settings: EmailSettings): Prom
     return true;
   } catch (error) {
     console.error('SendGrid error:', error);
+    throw error; // Re-throw to be caught by the main function
+  }
+}
+
+/**
+ * Send email using Mailgun
+ */
+async function sendWithMailgun(mailContent: any, settings: EmailSettings): Promise<boolean> {
+  try {
+    // Use custom API key if provided in settings, otherwise use environment variable
+    const apiKey = settings.mailgunApiKey || process.env.MAILGUN_API_KEY;
+    const domain = settings.mailgunDomain || process.env.MAILGUN_DOMAIN;
+    const region = settings.mailgunRegion || 'us';
+    
+    if (!apiKey) {
+      throw new Error('Missing Mailgun API key. Please provide it in the settings or as MAILGUN_API_KEY environment variable.');
+    }
+    
+    if (!domain) {
+      throw new Error('Missing Mailgun domain. Please provide it in the settings or as MAILGUN_DOMAIN environment variable.');
+    }
+    
+    // Initialize Mailgun client
+    const mailgun = new Mailgun(FormData);
+    const mg = mailgun.client({
+      username: 'api',
+      key: apiKey,
+      url: region === 'eu' ? 'https://api.eu.mailgun.net' : 'https://api.mailgun.net'
+    });
+    
+    // Prepare Mailgun message format
+    const mgMessage = {
+      from: mailContent.from,
+      to: mailContent.to,
+      subject: mailContent.subject,
+      html: mailContent.html,
+      text: mailContent.text
+    };
+    
+    // Add reply-to if specified
+    if (mailContent.replyTo) {
+      mgMessage['h:Reply-To'] = mailContent.replyTo;
+    }
+    
+    // Add CC and BCC if they exist
+    if (mailContent.cc) mgMessage.cc = mailContent.cc;
+    if (mailContent.bcc) mgMessage.bcc = mailContent.bcc;
+    
+    // Send the message
+    console.log(`Sending email via Mailgun to ${mailContent.to} using domain ${domain}`);
+    await mg.messages.create(domain, mgMessage);
+    console.log('Email sent successfully using Mailgun');
+    return true;
+  } catch (error) {
+    console.error('Mailgun error:', error);
     throw error; // Re-throw to be caught by the main function
   }
 }
