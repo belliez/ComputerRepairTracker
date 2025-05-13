@@ -276,15 +276,27 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
         if (matchingCurrency) {
           currency = matchingCurrency;
           console.log("PRINT DOCUMENT: Using matching currency:", matchingCurrency.code, "with symbol:", matchingCurrency.symbol);
+          
+          // Check if this currency is the organization default
+          const defaultCurrency = allCurrencies.find((c: Currency) => c.isDefault);
+          if (defaultCurrency && defaultCurrency.code === matchingCurrency.code) {
+            currency.isDefault = true;
+            console.log("PRINT DOCUMENT: This is the organization default currency");
+          } else {
+            currency.isDefault = false;
+            console.log("PRINT DOCUMENT: This is NOT the organization default currency");
+          }
         } else {
           console.log("PRINT DOCUMENT: Currency not found in list:", quoteCurrencyCode);
           // Use our initialized currency object with the correct symbol
+          currency.isDefault = false;
         }
       } else {
         // If no currency code on quote, use the default currency from the API
         const defaultCurrency = allCurrencies.find((c: Currency) => c.isDefault);
         if (defaultCurrency) {
           currency = defaultCurrency;
+          currency.isDefault = true; 
           console.log("PRINT DOCUMENT: Using organization default currency:", defaultCurrency.code, "with symbol:", defaultCurrency.symbol);
           
           // Update the name with human-readable format
