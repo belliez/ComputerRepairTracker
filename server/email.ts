@@ -1,5 +1,6 @@
 import { MailService } from '@sendgrid/mail';
-import nodemailer from 'nodemailer';
+import nodemailer, { TransportOptions, Transport } from 'nodemailer';
+import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { db } from './db';
 import { eq } from 'drizzle-orm';
 import { organizations } from '@shared/schema';
@@ -202,46 +203,38 @@ async function sendWithSMTP(mailContent: any, settings: EmailSettings): Promise<
       throw new Error('Missing SMTP configuration. Please provide host and port in settings.');
     }
     
-    // Special handling for Gmail
+    // Special handling for different email providers
     const isGmail = settings.smtpHost?.includes('gmail.com');
-    let transportConfig;
+    let transportConfig: any;
     
+    // Gmail-specific configuration
     if (isGmail) {
       console.log('Using Gmail-specific SMTP configuration');
       
-      // Import nodemailer transport properly
-      const SMTPTransport = require('nodemailer/lib/smtp-transport');
+      // Gmail requires different configuration based on port
+      transportConfig = {
+        host: 'smtp.gmail.com',
+        port: settings.smtpPort, 
+        secure: settings.smtpPort === 465, // true for 465, false for other ports
+        requireTLS: true, // Force TLS for Gmail
+        auth: {
+          user: settings.smtpUser,
+          pass: settings.smtpPassword || '',
+          // Add XOAuth2 option for older Gmail setups
+          type: 'login'
+        },
+        tls: {
+          // Gmail often requires these settings for proper TLS support
+          rejectUnauthorized: false,
+        },
+        debug: true, // Enable debug output for troubleshooting
+        logger: true  // Use console for logging
+      };
       
-      // Gmail requires specific configuration
-      if (settings.smtpPort === 465) {
-        // SSL configuration for port 465
-        transportConfig = {
-          host: 'smtp.gmail.com', // Use host instead of service
-          port: 465,
-          secure: true,
-          auth: {
-            user: settings.smtpUser,
-            pass: settings.smtpPassword || '',
-          },
-          tls: {
-            rejectUnauthorized: false
-          }
-        };
-      } else {
-        // TLS configuration for port 587
-        transportConfig = {
-          host: 'smtp.gmail.com', // Use host instead of service
-          port: 587,
-          secure: false,
-          auth: {
-            user: settings.smtpUser,
-            pass: settings.smtpPassword || '',
-          },
-          tls: {
-            rejectUnauthorized: false
-          }
-        };
-      }
+      // Log important info about the connection
+      console.log(`Gmail configuration: Using port ${settings.smtpPort} with secure=${settings.smtpPort === 465}, username: ${settings.smtpUser}`);
+      console.log(`Note: For Gmail to work, you need to use an app-specific password if 2FA is enabled`);
+      
     } else {
       // Regular SMTP config for non-Gmail servers
       const isSecure = settings.smtpSecure === true || settings.smtpPort === 465;
@@ -264,16 +257,21 @@ async function sendWithSMTP(mailContent: any, settings: EmailSettings): Promise<
       };
     }
     
+    // Safely log config without exposing passwords
     console.log('Using SMTP transport config:', JSON.stringify({
-      ...transportConfig,
+      host: transportConfig.host,
+      port: transportConfig.port,
+      secure: transportConfig.secure,
       auth: transportConfig.auth ? { 
         user: transportConfig.auth.user,
         pass: '********' // Mask password in logs
-      } : undefined
+      } : undefined,
+      tls: transportConfig.tls ? { ...transportConfig.tls } : undefined
     }, null, 2));
     
     // Create SMTP transport with the determined configuration
-    const transport = nodemailer.createTransport(transportConfig);
+    // Cast to SMTPTransport.Options to fix TypeScript issues
+    const transport = nodemailer.createTransport(transportConfig as SMTPTransport.Options);
     
     // Enhanced error handling for connection verification
     try {

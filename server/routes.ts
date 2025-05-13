@@ -1765,9 +1765,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("Error sending test email:", error);
+      
+      let errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      let errorDetails = errorMessage;
+      
+      // Special handling for Gmail authentication errors
+      if (emailSettings.provider === 'smtp' && emailSettings.smtpHost?.includes('gmail.com')) {
+        const errorString = String(error).toLowerCase();
+        
+        if (errorString.includes('auth') || errorString.includes('credentials') || 
+            errorString.includes('login') || errorString.includes('535')) {
+          errorDetails = "Gmail authentication failed. If you're using Gmail with 2-Step Verification, " +
+            "you need to use an App Password instead of your regular password. " +
+            "Go to your Google Account > Security > App Passwords to generate one.";
+        } else if (errorString.includes('ssl') || errorString.includes('tls')) {
+          errorDetails = "TLS/SSL connection to Gmail failed. Try changing the port to 465 (for SSL) " +
+            "or 587 (for TLS) and make sure SSL/TLS is enabled.";
+        }
+      }
+      
       return res.status(500).json({ 
         error: "Failed to send test email", 
-        details: error instanceof Error ? error.message : "Unknown error occurred",
+        details: errorDetails,
         stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
       });
     }
