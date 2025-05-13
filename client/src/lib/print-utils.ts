@@ -559,12 +559,28 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
   let statusLabel = 'Unpaid';
   let statusColor = 'text-red-500';
   
-  if (invoice.status === 'paid') {
+  // Variable to hold payment info for partially paid invoices
+  let paymentInfo = '';
+  
+  if (invoice.paymentStatus === 'paid') {
     statusLabel = 'Paid';
     statusColor = 'text-green-500';
-  } else if (invoice.status === 'partial') {
+  } else if (invoice.paymentStatus === 'partial') {
     statusLabel = 'Partially Paid';
     statusColor = 'text-yellow-500';
+    
+    // Add payment info for partial payments
+    if (invoice.amountPaid != null) {
+      const amountPaid = invoice.amountPaid || 0;
+      const amountDue = invoice.total - amountPaid;
+      paymentInfo = `
+        <div class="payment-info" style="margin-top: 20px; padding: 10px; background-color: #fff9e6; border-radius: 5px; border: 1px solid #ffe580;">
+          <h3>Payment Information</h3>
+          <p><strong>Amount Paid:</strong> ${currencySymbol}${formatNumber(amountPaid, decimalPlaces)}</p>
+          <p><strong>Amount Due:</strong> ${currencySymbol}${formatNumber(amountDue > 0 ? amountDue : 0, decimalPlaces)}</p>
+        </div>
+      `;
+    }
   }
 
   // Create the document content
@@ -614,6 +630,8 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
         </tr>
       </table>
     </div>
+    
+    ${paymentInfo}
     
     ${invoice.notes ? `
       <div class="notes">
