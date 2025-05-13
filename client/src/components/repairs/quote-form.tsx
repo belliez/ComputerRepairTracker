@@ -36,6 +36,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrency } from "@/hooks/use-currency";
 import EditableLineItems from "./editable-line-items";
 
 interface QuoteFormProps {
@@ -48,6 +49,7 @@ interface QuoteFormProps {
 export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteFormProps) {
   console.log("DEBUG: QuoteForm rendered with props:", { repairId, quoteId, isOpen });
   const { toast } = useToast();
+  const { formatCurrency } = useCurrency();
 
   // Get repair items to calculate the quote - always fetch for both new and edit
   const { data: repairItems, isLoading: isLoadingItems } = useQuery<RepairItem[]>({
@@ -107,7 +109,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
     queryKey: ['/api/public-settings/currencies'],
   });
   
-  const { data: defaultCurrency, isLoading: isLoadingDefaultCurrency } = useQuery<Currency>({
+  const { data: defaultCurrencyData, isLoading: isLoadingDefaultCurrency } = useQuery<Currency>({
     queryKey: ['/api/public-settings/currencies/default'],
   });
   
