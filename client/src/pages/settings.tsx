@@ -129,7 +129,18 @@ const emailSettingsSchema = z.object({
   fromEmail: z.string().email('Please enter a valid email address').min(1, 'From email is required'),
   fromName: z.string().min(1, 'From name is required'),
   replyTo: z.string().email('Please enter a valid email address').optional().or(z.literal('')),
-  footerText: z.string().optional().or(z.literal(''))
+  footerText: z.string().optional().or(z.literal('')),
+  provider: z.enum(['sendgrid', 'smtp']).default('sendgrid'),
+  
+  // SendGrid specific settings
+  sendgridApiKey: z.string().optional().or(z.literal('')),
+  
+  // SMTP specific settings
+  smtpHost: z.string().optional().or(z.literal('')),
+  smtpPort: z.number().int().positive().optional().or(z.literal('')).transform(v => v === '' ? 587 : Number(v)),
+  smtpUser: z.string().optional().or(z.literal('')),
+  smtpPassword: z.string().optional().or(z.literal('')),
+  smtpSecure: z.boolean().optional().default(false)
 });
 
 const SettingsPage = () => {
@@ -161,7 +172,14 @@ const SettingsPage = () => {
       fromEmail: '',
       fromName: '',
       replyTo: '',
-      footerText: ''
+      footerText: '',
+      provider: 'sendgrid',
+      sendgridApiKey: '',
+      smtpHost: '',
+      smtpPort: 587,
+      smtpUser: '',
+      smtpPassword: '',
+      smtpSecure: false
     }
   });
   
@@ -179,6 +197,19 @@ const SettingsPage = () => {
         fromName: data.fromName,
         replyTo: data.replyTo || '',
         footerText: data.footerText || '',
+        
+        // Provider settings
+        provider: data.provider,
+        
+        // SendGrid specific settings
+        sendgridApiKey: data.sendgridApiKey || '',
+        
+        // SMTP specific settings
+        smtpHost: data.smtpHost || '',
+        smtpPort: typeof data.smtpPort === 'number' ? data.smtpPort : 587,
+        smtpUser: data.smtpUser || '',
+        smtpPassword: data.smtpPassword || '',
+        smtpSecure: data.smtpSecure || false
       }
     };
     
@@ -718,11 +749,25 @@ const SettingsPage = () => {
       const emailSettings = organization.settings?.email || {};
       
       emailForm.reset({
+        // Basic email settings
         enabled: emailSettings.enabled !== false, // Default to true
         fromEmail: emailSettings.fromEmail || (organization.settings?.email as string) || '',
         fromName: emailSettings.fromName || organization.name || '',
         replyTo: emailSettings.replyTo || '',
-        footerText: emailSettings.footerText || `© ${new Date().getFullYear()} ${organization.name}`
+        footerText: emailSettings.footerText || `© ${new Date().getFullYear()} ${organization.name}`,
+        
+        // Provider selection
+        provider: emailSettings.provider || 'sendgrid',
+        
+        // SendGrid settings
+        sendgridApiKey: emailSettings.sendgridApiKey || '',
+        
+        // SMTP settings
+        smtpHost: emailSettings.smtpHost || '',
+        smtpPort: emailSettings.smtpPort || 587,
+        smtpUser: emailSettings.smtpUser || '',
+        smtpPassword: emailSettings.smtpPassword || '',
+        smtpSecure: emailSettings.smtpSecure === true
       });
     }
   }, [organization, emailForm]);
@@ -1726,6 +1771,163 @@ const SettingsPage = () => {
                           </FormItem>
                         )}
                       />
+                      
+                      <div className="border p-4 rounded-lg space-y-4">
+                        <h3 className="text-lg font-medium">Email Provider Settings</h3>
+                        
+                        <FormField
+                          control={emailForm.control}
+                          name="provider"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email Provider</FormLabel>
+                              <Select 
+                                onValueChange={field.onChange} 
+                                defaultValue={field.value}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select email provider" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="sendgrid">SendGrid API</SelectItem>
+                                  <SelectItem value="smtp">SMTP Server</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormDescription>
+                                Choose how you want to send emails
+                              </FormDescription>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        {emailForm.watch('provider') === 'sendgrid' && (
+                          <div className="space-y-4 border-t pt-4">
+                            <h4 className="font-medium">SendGrid Settings</h4>
+                            
+                            <FormField
+                              control={emailForm.control}
+                              name="sendgridApiKey"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>SendGrid API Key</FormLabel>
+                                  <FormControl>
+                                    <Input 
+                                      type="password" 
+                                      placeholder="SG.xxxxxxxxxxxxxxxxxxxx"
+                                      {...field} 
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    Leave blank to use system-wide SendGrid API key
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
+                        
+                        {emailForm.watch('provider') === 'smtp' && (
+                          <div className="space-y-4 border-t pt-4">
+                            <h4 className="font-medium">SMTP Server Settings</h4>
+                            
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                              <FormField
+                                control={emailForm.control}
+                                name="smtpHost"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>SMTP Host</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="smtp.example.com" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={emailForm.control}
+                                name="smtpPort"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>SMTP Port</FormLabel>
+                                    <FormControl>
+                                      <Input 
+                                        type="number" 
+                                        placeholder="587" 
+                                        {...field}
+                                        onChange={(e) => field.onChange(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                                      />
+                                    </FormControl>
+                                    <FormDescription>
+                                      Common ports: 25, 465, 587
+                                    </FormDescription>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                              <FormField
+                                control={emailForm.control}
+                                name="smtpUser"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>SMTP Username</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="username@example.com" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              
+                              <FormField
+                                control={emailForm.control}
+                                name="smtpPassword"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>SMTP Password</FormLabel>
+                                    <FormControl>
+                                      <Input type="password" placeholder="●●●●●●●●" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                            
+                            <FormField
+                              control={emailForm.control}
+                              name="smtpSecure"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                  <div className="space-y-0.5">
+                                    <FormLabel className="text-base">
+                                      Use SSL/TLS
+                                    </FormLabel>
+                                    <FormDescription>
+                                      Enable secure connection (usually for port 465)
+                                    </FormDescription>
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
+                      </div>
                       
                       <div className="flex justify-between">
                         <Button type="submit" disabled={updateEmailSettingsMutation.isPending}>

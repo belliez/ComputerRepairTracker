@@ -66,7 +66,19 @@ export async function getOrganizationEmailSettings(organizationId: number): Prom
       fromName: emailSettings.fromName || orgName,
       replyTo: emailSettings.replyTo || emailSettings.fromEmail || defaultFromEmail,
       footerText: emailSettings.footerText || `© ${new Date().getFullYear()} ${orgName}`,
-      provider: 'sendgrid'
+      
+      // Email provider settings
+      provider: emailSettings.provider || 'sendgrid',
+      
+      // SendGrid settings
+      sendgridApiKey: emailSettings.sendgridApiKey || '',
+      
+      // SMTP settings
+      smtpHost: emailSettings.smtpHost || '',
+      smtpPort: emailSettings.smtpPort || 587,
+      smtpUser: emailSettings.smtpUser || '',
+      smtpPassword: emailSettings.smtpPassword || '',
+      smtpSecure: emailSettings.smtpSecure || false
     };
   } catch (error) {
     console.error('Error fetching organization email settings:', error);
@@ -86,17 +98,12 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
 }
 
 /**
- * Send an email using SendGrid API with explicitly provided settings
+ * Send an email using the configured provider (SendGrid or SMTP) with explicitly provided settings
  * @param emailData The email data to send
  * @param overrideSettings Email settings to use, overriding organization settings
  * @returns Promise resolving to a boolean indicating success
  */
 export async function sendEmailWithOverride(emailData: EmailData, overrideSettings: EmailSettings | null): Promise<boolean> {
-  if (!process.env.SENDGRID_API_KEY) {
-    console.error('Missing SENDGRID_API_KEY environment variable');
-    return false;
-  }
-
   try {
     // Use override settings if provided, otherwise fall back to organization settings
     let settings: EmailSettings | null = overrideSettings;
@@ -124,6 +131,7 @@ export async function sendEmailWithOverride(emailData: EmailData, overrideSettin
     console.log('To:', emailData.to);
     console.log('From:', from);
     console.log('Subject:', emailData.subject);
+    console.log('Provider:', settings.provider);
     
     // Create a clean HTML text version
     const textContent = emailData.text || emailData.html.replace(/<[^>]*>/g, '');
@@ -136,25 +144,85 @@ export async function sendEmailWithOverride(emailData: EmailData, overrideSettin
       </div>`;
     }
     
-    // Initialize SendGrid Mail Service
-    const mailService = new MailService();
-    mailService.setApiKey(process.env.SENDGRID_API_KEY);
-    
-    // Send the email
-    await mailService.send({
+    // Create email content object for both providers
+    const mailContent = {
       to: emailData.to,
       from: from,
       replyTo: settings.replyTo,
       subject: emailData.subject,
       text: textContent,
       html: htmlContent,
-    });
+    };
     
-    console.log(`Email sent successfully to ${emailData.to} for organization ${emailData.organizationId}`);
-    return true;
+    // Send using the appropriate provider
+    if (settings.provider === 'smtp') {
+      return await sendWithSMTP(mailContent, settings);
+    } else {
+      // Default to SendGrid
+      return await sendWithSendGrid(mailContent, settings);
+    }
   } catch (error) {
     console.error('Failed to send email:', error);
     return false;
+  }
+}
+
+/**
+ * Send email using SendGrid
+ */
+async function sendWithSendGrid(mailContent: any, settings: EmailSettings): Promise<boolean> {
+  try {
+    // Use custom API key if provided in settings, otherwise use environment variable
+    const apiKey = settings.sendgridApiKey || process.env.SENDGRID_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error('Missing SendGrid API key. Please provide it in the settings or as SENDGRID_API_KEY environment variable.');
+    }
+    
+    // Initialize SendGrid Mail Service
+    const mailService = new MailService();
+    mailService.setApiKey(apiKey);
+    
+    // Send the email
+    await mailService.send(mailContent);
+    console.log('Email sent successfully using SendGrid');
+    return true;
+  } catch (error) {
+    console.error('SendGrid error:', error);
+    throw error; // Re-throw to be caught by the main function
+  }
+}
+
+/**
+ * Send email using SMTP
+ */
+async function sendWithSMTP(mailContent: any, settings: EmailSettings): Promise<boolean> {
+  try {
+    if (!settings.smtpHost || !settings.smtpPort) {
+      throw new Error('Missing SMTP configuration. Please provide host and port in settings.');
+    }
+    
+    // Create SMTP transport
+    const transport = nodemailer.createTransport({
+      host: settings.smtpHost,
+      port: settings.smtpPort,
+      secure: settings.smtpSecure === true, // Use TLS if set to true
+      auth: settings.smtpUser ? {
+        user: settings.smtpUser,
+        pass: settings.smtpPassword || '',
+      } : undefined,
+    });
+    
+    // Verify connection
+    await transport.verify();
+    
+    // Send mail
+    await transport.sendMail(mailContent);
+    console.log('Email sent successfully using SMTP');
+    return true;
+  } catch (error) {
+    console.error('SMTP error:', error);
+    throw error; // Re-throw to be caught by the main function
   }
 }
 
