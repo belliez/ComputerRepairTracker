@@ -323,6 +323,17 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
   
   console.log("PRINT DOCUMENT: Final currency being used for formatting:", currency);
   
+  // Override currency to GBP for hardcoded USD quotes (temporary fix for existing quotes)
+  if (currency.code === 'USD') {
+    console.log("PRINT DOCUMENT: Detected USD in an existing quote, forcing to GBP which is the current default");
+    currency = {
+      code: 'GBP',
+      name: 'British Pound',
+      symbol: '£',
+      isDefault: true
+    };
+  }
+  
   // Define decimal places based on currency
   const decimalPlaces = currency.code === 'JPY' ? 0 : 2;
   
@@ -549,6 +560,17 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
   }
   
   console.log("PRINT DOCUMENT: Final currency being used for formatting:", currency);
+  
+  // Override currency to GBP for hardcoded USD invoices (temporary fix for existing invoices)
+  if (currency.code === 'USD') {
+    console.log("PRINT DOCUMENT: Detected USD in an existing invoice, forcing to GBP which is the current default");
+    currency = {
+      code: 'GBP',
+      name: 'British Pound',
+      symbol: '£',
+      isDefault: true
+    };
+  }
   
   // Use itemsData from invoice if available, otherwise fall back to passed items
   let itemsToDisplay = itemsFromRepair;
