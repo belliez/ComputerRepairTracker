@@ -168,7 +168,7 @@ const SettingsPage = () => {
   // Fetch email settings from the API
   const { data: emailSettingsData, isLoading: isLoadingEmailSettings } = useQuery({
     queryKey: ['/api/settings/email'],
-    queryFn: getQueryFn(),
+    queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: activeTab === 'email'
   });
   
@@ -193,27 +193,30 @@ const SettingsPage = () => {
   
   // Update email form when settings are loaded from API
   useEffect(() => {
-    if (emailSettingsData) {
+    if (emailSettingsData && typeof emailSettingsData === 'object') {
       console.log('Updating email form with data from API:', emailSettingsData);
+      // Cast to any to avoid TypeScript errors with the API response
+      const settings = emailSettingsData as any;
+      
       emailForm.reset({
-        enabled: emailSettingsData.enabled ?? true,
-        fromEmail: emailSettingsData.fromEmail ?? '',
-        fromName: emailSettingsData.fromName ?? '',
-        replyTo: emailSettingsData.replyTo ?? '',
-        footerText: emailSettingsData.footerText ?? '',
-        provider: emailSettingsData.provider ?? 'sendgrid',
+        enabled: settings.enabled ?? true,
+        fromEmail: settings.fromEmail ?? '',
+        fromName: settings.fromName ?? '',
+        replyTo: settings.replyTo ?? '',
+        footerText: settings.footerText ?? '',
+        provider: settings.provider ?? 'sendgrid',
         
         // Provider-specific settings
-        sendgridApiKey: emailSettingsData.sendgridApiKey ?? '',
+        sendgridApiKey: settings.sendgridApiKey ?? '',
         
-        smtpHost: emailSettingsData.smtpHost ?? '',
-        smtpPort: emailSettingsData.smtpPort ?? 587,
-        smtpUser: emailSettingsData.smtpUser ?? '',
-        smtpPassword: emailSettingsData.smtpPassword ?? '',
-        smtpSecure: emailSettingsData.smtpSecure ?? false
+        smtpHost: settings.smtpHost ?? '',
+        smtpPort: settings.smtpPort ?? 587,
+        smtpUser: settings.smtpUser ?? '',
+        smtpPassword: settings.smtpPassword ?? '',
+        smtpSecure: settings.smtpSecure ?? false
       });
     }
-  }, [emailSettingsData]);
+  }, [emailSettingsData, emailForm]);
   
   // Handle email form submission
   const onEmailFormSubmit = async (data: z.infer<typeof emailSettingsSchema>) => {
@@ -366,7 +369,9 @@ const SettingsPage = () => {
         title: 'Email Settings Updated',
         description: 'Your email configuration has been saved successfully.'
       });
+      // Refetch both organization and email settings data
       fetchOrganization();
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/email'] });
     },
     onError: (error) => {
       toast({
