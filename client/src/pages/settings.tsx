@@ -165,6 +165,107 @@ const SettingsPage = () => {
     }
   });
   
+  // Handle email form submission
+  const onEmailFormSubmit = async (data: z.infer<typeof emailSettingsSchema>) => {
+    if (!organization) return;
+    
+    // Update organization settings with email configuration
+    const updatedSettings = {
+      ...organization.settings,
+      email: {
+        ...(organization.settings?.email || {}),
+        enabled: data.enabled,
+        fromEmail: data.fromEmail,
+        fromName: data.fromName,
+        replyTo: data.replyTo || '',
+        footerText: data.footerText || '',
+      }
+    };
+    
+    updateEmailSettingsMutation.mutate(updatedSettings);
+  };
+  
+  // Handle sending test email
+  const handleSendTestEmail = async () => {
+    if (!testEmailAddress || !emailForm.getValues('enabled')) return;
+    
+    setIsSendingTestEmail(true);
+    
+    try {
+      const headers = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': '2', // Hardcoded ID for now
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await fetch('/api/test-email', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({
+          to: testEmailAddress,
+          emailSettings: emailForm.getValues()
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to send test email: ${response.status}`);
+      }
+      
+      toast({
+        title: 'Test Email Sent',
+        description: `A test email has been sent to ${testEmailAddress}`,
+      });
+    } catch (error) {
+      console.error('Error sending test email:', error);
+      toast({
+        title: 'Failed to Send Email',
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsSendingTestEmail(false);
+    }
+  };
+  
+  // Mutation to update email settings
+  const updateEmailSettingsMutation = useMutation({
+    mutationFn: async (settings: any) => {
+      const headers = {
+        'X-Debug-Client': 'RepairTrackerClient',
+        'X-Organization-ID': '2', // Hardcoded ID for now
+        'Content-Type': 'application/json'
+      };
+      
+      const response = await fetch('/api/settings/organization', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify({ settings })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error updating email settings: ${response.status}`);
+      }
+      
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Email Settings Updated',
+        description: 'Your email configuration has been saved successfully.'
+      });
+      fetchOrganization();
+    },
+    onError: (error) => {
+      toast({
+        title: 'Update Failed',
+        description: error instanceof Error ? error.message : 'An unknown error occurred',
+        variant: 'destructive'
+      });
+    }
+  });
+  
   // Define types for our queries
   interface Organization {
     id: number;

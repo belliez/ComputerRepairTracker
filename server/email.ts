@@ -69,27 +69,44 @@ export async function getOrganizationEmailSettings(organizationId: number): Prom
  * @returns Promise resolving to a boolean indicating success
  */
 export async function sendEmail(emailData: EmailData): Promise<boolean> {
+  // Get organization email settings and use them
+  const orgSettings = await getOrganizationEmailSettings(emailData.organizationId);
+  return sendEmailWithOverride(emailData, orgSettings);
+}
+
+/**
+ * Send an email using SendGrid API with explicitly provided settings
+ * @param emailData The email data to send
+ * @param overrideSettings Email settings to use, overriding organization settings
+ * @returns Promise resolving to a boolean indicating success
+ */
+export async function sendEmailWithOverride(emailData: EmailData, overrideSettings: EmailSettings | null): Promise<boolean> {
   if (!process.env.SENDGRID_API_KEY) {
     console.error('Missing SENDGRID_API_KEY environment variable');
     return false;
   }
 
   try {
-    // Get organization email settings
-    const orgSettings = await getOrganizationEmailSettings(emailData.organizationId);
+    // Use override settings if provided, otherwise fall back to organization settings
+    let settings: EmailSettings | null = overrideSettings;
     
-    if (!orgSettings) {
+    // If no override settings provided, get from database
+    if (!settings) {
+      settings = await getOrganizationEmailSettings(emailData.organizationId);
+    }
+    
+    if (!settings) {
       console.error(`Failed to retrieve email settings for organization ${emailData.organizationId}`);
       return false;
     }
     
-    if (!orgSettings.enabled) {
+    if (!settings.enabled) {
       console.log(`Email sending is disabled for organization ${emailData.organizationId}`);
       return false;
     }
     
     // Construct the from field with name and email
-    const from = emailData.from || `${orgSettings.fromName} <${orgSettings.fromEmail}>`;
+    const from = emailData.from || `${settings.fromName} <${settings.fromEmail}>`;
     
     // Log the email that will be sent
     console.log('Sending email with the following data:');
@@ -102,9 +119,9 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
     
     // Add footer if configured
     let htmlContent = emailData.html;
-    if (orgSettings.footerText) {
+    if (settings.footerText) {
       htmlContent += `<div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
-        ${orgSettings.footerText}
+        ${settings.footerText}
       </div>`;
     }
     
@@ -116,7 +133,7 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
     await mailService.send({
       to: emailData.to,
       from: from,
-      replyTo: orgSettings.replyTo,
+      replyTo: settings.replyTo,
       subject: emailData.subject,
       text: textContent,
       html: htmlContent,

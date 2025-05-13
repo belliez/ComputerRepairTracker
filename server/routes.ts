@@ -1690,6 +1690,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Email Invoice to Customer
+  // Test email endpoint
+  apiRouter.post("/test-email", async (req: Request, res: Response) => {
+    try {
+      const { to, emailSettings } = req.body;
+      
+      if (!to || !emailSettings) {
+        return res.status(400).json({ error: "Missing required parameters" });
+      }
+      
+      // Create a test email using the provided settings
+      const emailData: EmailData = {
+        to,
+        subject: "Test Email from RepairTrack",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 5px;">
+            <h1 style="color: #2563eb; margin-bottom: 20px;">Test Email</h1>
+            <p>This is a test email from your RepairTrack system to verify your email settings.</p>
+            <p>If you're receiving this email, your email configuration is working correctly!</p>
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+              <h3>Your Email Configuration</h3>
+              <p><strong>From Email:</strong> ${emailSettings.fromEmail}</p>
+              <p><strong>From Name:</strong> ${emailSettings.fromName}</p>
+              <p><strong>Reply-To:</strong> ${emailSettings.replyTo || 'Same as From Email'}</p>
+              <p><strong>Footer Text:</strong> ${emailSettings.footerText || 'Not set'}</p>
+            </div>
+          </div>
+        `,
+        organizationId: req.organizationId || 0
+      };
+      
+      // Override global settings with the provided test settings
+      const overrideSettings: EmailSettings = {
+        enabled: emailSettings.enabled,
+        fromEmail: emailSettings.fromEmail,
+        fromName: emailSettings.fromName,
+        replyTo: emailSettings.replyTo || '',
+        footerText: emailSettings.footerText || '',
+        provider: 'sendgrid'
+      };
+      
+      // Send the test email with overridden settings
+      const success = await sendEmailWithOverride(emailData, overrideSettings);
+      
+      if (success) {
+        return res.status(200).json({ message: "Test email sent successfully" });
+      } else {
+        return res.status(500).json({ error: "Failed to send test email" });
+      }
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      return res.status(500).json({ error: "Failed to send test email" });
+    }
+  });
+
   apiRouter.post("/invoices/:id/email", async (req: Request, res: Response) => {
     try {
       const id = parseInt(req.params.id);
