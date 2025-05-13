@@ -1770,7 +1770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let errorDetails = errorMessage;
       
       // Special handling for Gmail authentication errors
-      if (emailSettings.provider === 'smtp' && emailSettings.smtpHost?.includes('gmail.com')) {
+      if (overrideSettings.provider === 'smtp' && overrideSettings.smtpHost?.includes('gmail.com')) {
         const errorString = String(error).toLowerCase();
         
         if (errorString.includes('auth') || errorString.includes('credentials') || 

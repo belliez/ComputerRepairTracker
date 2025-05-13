@@ -293,13 +293,33 @@ const SettingsPage = () => {
         console.error('Test email error response:', errorData);
         
         let errorMessage = `Failed to send test email: ${response.status}`;
+        let errorDetails = '';
+        
         if (errorData.details) {
           errorMessage = errorData.details;
         } else if (errorData.error) {
           errorMessage = errorData.error;
         }
         
-        throw new Error(errorMessage);
+        // Check for Gmail-specific issues in the error message
+        const isGmail = emailForm.getValues('smtpHost')?.includes('gmail.com');
+        const lowerErrorMsg = errorMessage.toLowerCase();
+        
+        if (isGmail) {
+          // Add helpful context for Gmail-specific errors
+          if (lowerErrorMsg.includes('invalid login') || 
+              lowerErrorMsg.includes('auth') || 
+              lowerErrorMsg.includes('535') ||
+              lowerErrorMsg.includes('credentials')) {
+            
+            errorDetails = "Note: If you're using Gmail with 2-Step Verification, you need to use an App Password " +
+              "instead of your regular password. Go to your Google Account > Security > App Passwords to generate one.";
+          }
+        }
+        
+        // Combine the error message with any additional details
+        const fullErrorMessage = errorDetails ? `${errorMessage}\n\n${errorDetails}` : errorMessage;
+        throw new Error(fullErrorMessage);
       }
       
       toast({
@@ -308,9 +328,17 @@ const SettingsPage = () => {
       });
     } catch (error) {
       console.error('Error sending test email:', error);
+      // Convert error message to format that can display line breaks in toast
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      const formattedMessage = errorMessage.split('\n\n').map((line, i) => (
+        <p key={i} className={i > 0 ? "mt-2 text-sm" : "text-sm"}>{line}</p>
+      ));
+      
       toast({
         title: 'Failed to Send Email',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        description: (
+          <div className="whitespace-pre-line">{formattedMessage}</div>
+        ),
         variant: 'destructive'
       });
     } finally {
