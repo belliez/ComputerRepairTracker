@@ -543,6 +543,12 @@ export function generateInvoiceEmail(invoice: any, customer: any, repair: any, i
   const datePaid = invoice.datePaid
     ? new Date(invoice.datePaid).toLocaleDateString()
     : 'Not paid';
+    
+  // Determine the currency symbol based on the invoice's currencyCode
+  const currencySymbol = getCurrencySymbol(invoice.currencyCode);
+  
+  // Define decimal places based on currency
+  const decimalPlaces = invoice.currencyCode === 'JPY' ? 0 : 2;
   
   // Use itemsData from invoice if available, otherwise fall back to passed items
   let itemsToDisplay = itemsFromRepair;
@@ -659,11 +665,11 @@ export function generateInvoiceEmail(invoice: any, customer: any, repair: any, i
           </tr>
           <tr>
             <th style="border: 1px solid #ddd; padding: 5px 12px; text-align: left; background-color: #f2f7ff;">Tax</th>
-            <td style="border: 1px solid #ddd; padding: 5px 12px; text-align: right;">$${(invoice.tax || 0).toFixed(2)}</td>
+            <td style="border: 1px solid #ddd; padding: 5px 12px; text-align: right;">${currencySymbol}${(invoice.tax || 0).toFixed(decimalPlaces)}</td>
           </tr>
           <tr>
             <th style="border: 1px solid #ddd; padding: 5px 12px; text-align: left; background-color: #f2f7ff;">Total</th>
-            <td style="border: 1px solid #ddd; padding: 5px 12px; text-align: right;"><strong>$${invoice.total.toFixed(2)}</strong></td>
+            <td style="border: 1px solid #ddd; padding: 5px 12px; text-align: right;"><strong>${currencySymbol}${invoice.total.toFixed(decimalPlaces)}</strong></td>
           </tr>
         </table>
       </div>
