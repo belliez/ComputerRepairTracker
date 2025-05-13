@@ -111,19 +111,19 @@ export default function InvoiceForm({
 
   // Get currencies and tax rates
   const { data: currencies, isLoading: isLoadingCurrencies } = useQuery<Currency[]>({
-    queryKey: ['/api/public-settings/currencies'],
+    queryKey: ['/api/settings/currencies'],
   });
   
   const { data: defaultCurrency, isLoading: isLoadingDefaultCurrency } = useQuery<Currency>({
-    queryKey: ['/api/public-settings/currencies/default'],
+    queryKey: ['/api/settings/currencies/default'],
   });
   
   const { data: taxRates, isLoading: isLoadingTaxRates } = useQuery<TaxRate[]>({
-    queryKey: ['/api/public-settings/tax-rates'],
+    queryKey: ['/api/settings/tax-rates'],
   });
   
   const { data: defaultTaxRate, isLoading: isLoadingDefaultTaxRate } = useQuery<TaxRate>({
-    queryKey: ['/api/public-settings/tax-rates/default'],
+    queryKey: ['/api/settings/tax-rates/default'],
   });
   
   // Get organization data to check if tax is enabled
@@ -135,6 +135,26 @@ export default function InvoiceForm({
   // State for selected currency and tax rate
   const [selectedCurrencyCode, setSelectedCurrencyCode] = useState<string>("");
   const [selectedTaxRateId, setSelectedTaxRateId] = useState<number | null>(null);
+
+  // Debug logging for currency and tax rate data
+  useEffect(() => {
+    console.log("INVOICE FORM DEBUG: Default currency data:", defaultCurrency);
+    console.log("INVOICE FORM DEBUG: Selected currency code:", selectedCurrencyCode);
+    console.log("INVOICE FORM DEBUG: All currencies:", currencies);
+    console.log("INVOICE FORM DEBUG: Selected currency object:", 
+      currencies?.find(c => c.code === selectedCurrencyCode)
+    );
+  }, [defaultCurrency, currencies, selectedCurrencyCode]);
+  
+  // Debug tax rate data
+  useEffect(() => {
+    console.log("INVOICE FORM DEBUG: Default tax rate:", defaultTaxRate);
+    console.log("INVOICE FORM DEBUG: Selected tax rate ID:", selectedTaxRateId);
+    console.log("INVOICE FORM DEBUG: All tax rates:", taxRates);
+    console.log("INVOICE FORM DEBUG: Selected tax rate object:", 
+      taxRates?.find(r => r.id === selectedTaxRateId)
+    );
+  }, [defaultTaxRate, taxRates, selectedTaxRateId]);
   
   // Set defaults when data loads
   useEffect(() => {
@@ -228,7 +248,7 @@ export default function InvoiceForm({
       status: "unpaid",
       notes: "",
       currencyCode: selectedCurrencyCode || (defaultCurrency?.code || "GBP"),
-      taxRateId: selectedTaxRateId || (defaultTaxRate?.id || 1),
+      taxRateId: selectedTaxRateId || (defaultTaxRate?.id || 25), // Using ID 25 which exists in the DB
       paymentDate: null,
       paymentMethod: null,
     },
@@ -315,6 +335,17 @@ export default function InvoiceForm({
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     try {
+      console.log("INVOICE FORM DEBUG: Form values before submission:", values);
+      
+      // Ensure taxRateId is valid by checking available tax rates
+      if (!taxRates?.some(rate => rate.id === values.taxRateId)) {
+        console.log("INVOICE FORM DEBUG: Tax rate ID is invalid, using first available tax rate");
+        if (taxRates && taxRates.length > 0) {
+          values.taxRateId = taxRates[0].id;
+          console.log("INVOICE FORM DEBUG: Updated tax rate ID to", values.taxRateId);
+        }
+      }
+      
       // Ensure dates are in ISO string format
       const formattedValues = {
         ...values,
@@ -323,6 +354,7 @@ export default function InvoiceForm({
         paymentDate: values.paymentDate ? new Date(values.paymentDate).toISOString() : null,
       };
       
+      console.log("INVOICE FORM DEBUG: Final formatted values:", formattedValues);
       mutation.mutate(formattedValues);
     } catch (error) {
       console.error("DEBUG: Error in onSubmit function:", error);
@@ -336,7 +368,7 @@ export default function InvoiceForm({
   
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[90vh] overflow-y-auto p-3 sm:p-6">
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{invoiceId ? "Edit Invoice" : "Create Invoice"}</DialogTitle>
           <DialogDescription>
