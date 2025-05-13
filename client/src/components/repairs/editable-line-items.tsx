@@ -34,13 +34,15 @@ interface EditableLineItemsProps {
   onChange: (updatedItems: LineItem[]) => void;
   readOnly?: boolean;
   showEditControls?: boolean;
+  currencyCode?: string;
 }
 
 export default function EditableLineItems({
   items,
   onChange,
   readOnly = false,
-  showEditControls = true
+  showEditControls = true,
+  currencyCode
 }: EditableLineItemsProps) {
   const { formatCurrency } = useCurrency();
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);

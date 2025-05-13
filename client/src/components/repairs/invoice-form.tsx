@@ -158,15 +158,15 @@ export default function InvoiceForm({
   
   // Set defaults when data loads
   useEffect(() => {
-    if (defaultCurrency && !selectedCurrencyCode) {
+    if (defaultCurrency?.code && !selectedCurrencyCode && !invoiceId) {
       console.log("INVOICE FORM DEBUG: Setting default currency code to", defaultCurrency.code, "with symbol", defaultCurrency.symbol);
       setSelectedCurrencyCode(defaultCurrency.code);
     }
-    if (defaultTaxRate && !selectedTaxRateId) {
+    if (defaultTaxRate?.id && !selectedTaxRateId && !invoiceId) {
       console.log("INVOICE FORM DEBUG: Setting default tax rate ID to", defaultTaxRate.id, "with rate", defaultTaxRate.rate);
       setSelectedTaxRateId(defaultTaxRate.id);
     }
-  }, [defaultCurrency, defaultTaxRate, selectedCurrencyCode, selectedTaxRateId]);
+  }, [defaultCurrency, defaultTaxRate, selectedCurrencyCode, selectedTaxRateId, invoiceId]);
 
   // Get the selected currency
   const selectedCurrency = selectedCurrencyCode

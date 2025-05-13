@@ -131,6 +131,14 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   const [selectedCurrencyCode, setSelectedCurrencyCode] = useState<string>("");
   const [selectedTaxRateId, setSelectedTaxRateId] = useState<number | null>(null);
   
+  // Initialize default currency and tax rate when data is loaded
+  useEffect(() => {
+    if (defaultCurrencyData?.code && !selectedCurrencyCode && !quoteId) {
+      console.log("QUOTE FORM: Setting default currency to:", defaultCurrencyData.code);
+      setSelectedCurrencyCode(defaultCurrencyData.code);
+    }
+  }, [defaultCurrencyData, selectedCurrencyCode, quoteId]);
+  
   // Debug currency data
   useEffect(() => {
     console.log("QUOTE FORM DEBUG: Default currency data:", defaultCurrencyData);
