@@ -1,6 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useCurrency } from '@/hooks/use-currency';
 
 type Currency = {
   code: string;
@@ -37,6 +38,41 @@ export function CurrencySettingsForm({ data, onChange }: CurrencySettingsFormPro
 
   const handleCustomChange = (field: keyof Currency, value: string) => {
     onChange({ ...data, [field]: value });
+  };
+  
+  // Format currency for preview display
+  const formatCurrencyPreview = (amount: number, currencyCode: string, symbol: string) => {
+    // Choose locale based on the currency code
+    let locale: string;
+    switch(currencyCode) {
+      case 'GBP':
+        locale = 'en-GB';
+        break;
+      case 'JPY':
+        locale = 'ja-JP';
+        break;
+      case 'EUR':
+        locale = 'de-DE';
+        break;
+      default:
+        locale = 'en-US';
+    }
+    
+    // Set decimal digit options based on currency
+    const minimumFractionDigits = currencyCode === 'JPY' ? 0 : 2;
+    const maximumFractionDigits = currencyCode === 'JPY' ? 0 : 2;
+    
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: currencyCode,
+        minimumFractionDigits,
+        maximumFractionDigits
+      }).format(amount);
+    } catch (error) {
+      // Fallback if there's an issue with the currency code
+      return `${symbol}${amount.toFixed(minimumFractionDigits)} ${currencyCode}`;
+    }
   };
 
   return (
@@ -112,7 +148,7 @@ export function CurrencySettingsForm({ data, onChange }: CurrencySettingsFormPro
         <div className="bg-muted p-4 rounded-md">
           <p className="font-medium mb-2">Preview:</p>
           <p>
-            Price: {data.symbol}100.00 {data.code}
+            Price: {formatCurrencyPreview(100, data.code, data.symbol)}
           </p>
         </div>
       </div>
