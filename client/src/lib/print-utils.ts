@@ -331,8 +331,8 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
   
   // Override currency for hardcoded old quotes to match the current organization default
   if (currency.code === 'USD' || currency.code === 'GBP') {
-    // Find the default currency from our API response
-    const defaultCurrency = allCurrencies?.find((c: Currency) => c.isDefault);
+    // Try to find the default currency from our earlier API response (if available)
+    const defaultCurrency = typeof allCurrencies !== 'undefined' ? allCurrencies?.find((c: Currency) => c.isDefault) : null;
     
     if (defaultCurrency) {
       console.log(`PRINT DOCUMENT: Detected old ${currency.code} in an existing quote, using current org default currency:`, defaultCurrency.code);
@@ -615,15 +615,50 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
   
   console.log("PRINT DOCUMENT: Final currency being used for formatting:", currency);
   
-  // Override currency to GBP for hardcoded USD invoices (temporary fix for existing invoices)
-  if (currency.code === 'USD') {
-    console.log("PRINT DOCUMENT: Detected USD in an existing invoice, forcing to GBP which is the current default");
-    currency = {
-      code: 'GBP',
-      name: 'British Pound',
-      symbol: '£',
-      isDefault: true
-    };
+  // Override currency for hardcoded old invoices to match the current organization default
+  if (currency.code === 'USD' || currency.code === 'GBP') {
+    // Try to find the default currency from our earlier API response (if available)
+    const defaultCurrency = typeof allCurrencies !== 'undefined' ? allCurrencies?.find((c: Currency) => c.isDefault) : null;
+    
+    if (defaultCurrency) {
+      console.log(`PRINT DOCUMENT: Detected old ${currency.code} in an existing invoice, using current org default currency:`, defaultCurrency.code);
+      
+      // Get a human-readable name for the currency
+      const defaultCurrencyName = 
+        defaultCurrency.code === 'USD' ? 'US Dollar' : 
+        defaultCurrency.code === 'EUR' ? 'Euro' : 
+        defaultCurrency.code === 'GBP' ? 'British Pound' : 
+        defaultCurrency.code === 'JPY' ? 'Japanese Yen' : 
+        defaultCurrency.code === 'AUD' ? 'Australian Dollar' : 
+        defaultCurrency.code === 'CAD' ? 'Canadian Dollar' : 
+        defaultCurrency.name || `${defaultCurrency.code} Currency`;
+      
+      // Get the correct symbol
+      const defaultCurrencySymbol = 
+        defaultCurrency.code === 'EUR' ? '€' : 
+        defaultCurrency.code === 'GBP' ? '£' : 
+        defaultCurrency.code === 'USD' ? '$' : 
+        defaultCurrency.code === 'JPY' ? '¥' : 
+        defaultCurrency.code === 'AUD' ? 'A$' : 
+        defaultCurrency.code === 'CAD' ? 'C$' : 
+        defaultCurrency.symbol;
+      
+      currency = {
+        code: defaultCurrency.code,
+        name: defaultCurrencyName,
+        symbol: defaultCurrencySymbol,
+        isDefault: true
+      };
+    } else {
+      // Fallback to EUR if we can't determine the default
+      console.log(`PRINT DOCUMENT: No default currency found, using fallback EUR for this ${currency.code} invoice`);
+      currency = {
+        code: 'EUR',
+        name: 'Euro',
+        symbol: '€',
+        isDefault: true
+      };
+    }
   }
   
   // Use itemsData from invoice if available, otherwise fall back to passed items
