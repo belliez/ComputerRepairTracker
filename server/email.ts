@@ -7,6 +7,23 @@ import { db } from './db';
 import { eq } from 'drizzle-orm';
 import { organizations } from '@shared/schema';
 
+/**
+ * Helper function to get the correct currency symbol based on currency code
+ */
+function getCurrencySymbol(currencyCode?: string): string {
+  if (!currencyCode) return '£'; // Default to GBP
+  
+  switch (currencyCode.toUpperCase()) {
+    case 'EUR': return '€';
+    case 'GBP': return '£';
+    case 'USD': return '$';
+    case 'JPY': return '¥';
+    case 'AUD': return 'A$';
+    case 'CAD': return 'C$';
+    default: return currencyCode; // Fall back to currency code if no symbol found
+  }
+}
+
 // Types for email data
 export interface EmailData {
   to: string;
