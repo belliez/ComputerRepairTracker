@@ -140,6 +140,16 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
       currencies?.find(c => c.code === selectedCurrencyCode)
     );
   }, [defaultCurrencyData, currencies, selectedCurrencyCode]);
+  
+  // Debug tax rate data
+  useEffect(() => {
+    console.log("QUOTE FORM DEBUG: Default tax rate:", defaultTaxRate);
+    console.log("QUOTE FORM DEBUG: Selected tax rate ID:", selectedTaxRateId);
+    console.log("QUOTE FORM DEBUG: All tax rates:", taxRates);
+    console.log("QUOTE FORM DEBUG: Selected tax rate object:", 
+      taxRates?.find(r => r.id === selectedTaxRateId)
+    );
+  }, [defaultTaxRate, taxRates, selectedTaxRateId]);
 
   // Set defaults when data loads
   useEffect(() => {
@@ -227,7 +237,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
       status: "pending",
       notes: "",
       currencyCode: selectedCurrencyCode || (defaultCurrencyData?.code || "USD"),
-      taxRateId: selectedTaxRateId || (defaultTaxRate?.id || 1),
+      taxRateId: selectedTaxRateId || (defaultTaxRate?.id || 25), // Using ID 25 which exists in the DB
     },
   });
 
@@ -285,7 +295,18 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
         const endpoint = quoteId ? `/api/quotes/${quoteId}` : "/api/quotes";
         const method = quoteId ? "PUT" : "POST";
         
+        // Ensure taxRateId is valid by checking available tax rates
+        if (!taxRates?.some(rate => rate.id === values.taxRateId)) {
+          console.log("QUOTE FORM DEBUG: Tax rate ID is invalid, using first available tax rate");
+          if (taxRates && taxRates.length > 0) {
+            values.taxRateId = taxRates[0].id;
+            console.log("QUOTE FORM DEBUG: Updated tax rate ID to", values.taxRateId);
+          }
+        }
+        
         console.log(`DEBUG: Making ${method} request to ${endpoint} with data:`, values);
+        console.log("QUOTE FORM DEBUG: Available tax rates:", taxRates);
+        console.log("QUOTE FORM DEBUG: Selected tax rate ID:", values.taxRateId);
         
         const response = await apiRequest(method, endpoint, values);
         
