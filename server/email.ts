@@ -202,27 +202,78 @@ async function sendWithSMTP(mailContent: any, settings: EmailSettings): Promise<
       throw new Error('Missing SMTP configuration. Please provide host and port in settings.');
     }
     
-    // Determine if secure connection should be used based on port and setting
-    const isSecure = settings.smtpSecure === true || settings.smtpPort === 465;
-    console.log(`SMTP Configuration: Host=${settings.smtpHost}, Port=${settings.smtpPort}, Secure=${isSecure}`);
-
-    // Create SMTP transport
-    const transport = nodemailer.createTransport({
-      host: settings.smtpHost,
-      port: settings.smtpPort,
-      secure: isSecure, // true for 465, false for other ports
-      auth: settings.smtpUser ? {
-        user: settings.smtpUser,
-        pass: settings.smtpPassword || '',
-      } : undefined,
-      // Add additional configuration to handle TLS issues with Gmail
-      tls: {
-        // Do not fail on invalid certs
-        rejectUnauthorized: false,
-        // Force specific TLS version for Gmail
-        minVersion: 'TLSv1.2'
+    // Special handling for Gmail
+    const isGmail = settings.smtpHost?.includes('gmail.com');
+    let transportConfig;
+    
+    if (isGmail) {
+      console.log('Using Gmail-specific SMTP configuration');
+      
+      // Import nodemailer transport properly
+      const SMTPTransport = require('nodemailer/lib/smtp-transport');
+      
+      // Gmail requires specific configuration
+      if (settings.smtpPort === 465) {
+        // SSL configuration for port 465
+        transportConfig = {
+          host: 'smtp.gmail.com', // Use host instead of service
+          port: 465,
+          secure: true,
+          auth: {
+            user: settings.smtpUser,
+            pass: settings.smtpPassword || '',
+          },
+          tls: {
+            rejectUnauthorized: false
+          }
+        };
+      } else {
+        // TLS configuration for port 587
+        transportConfig = {
+          host: 'smtp.gmail.com', // Use host instead of service
+          port: 587,
+          secure: false,
+          auth: {
+            user: settings.smtpUser,
+            pass: settings.smtpPassword || '',
+          },
+          tls: {
+            rejectUnauthorized: false
+          }
+        };
       }
-    });
+    } else {
+      // Regular SMTP config for non-Gmail servers
+      const isSecure = settings.smtpSecure === true || settings.smtpPort === 465;
+      console.log(`SMTP Configuration: Host=${settings.smtpHost}, Port=${settings.smtpPort}, Secure=${isSecure}`);
+      
+      transportConfig = {
+        host: settings.smtpHost,
+        port: settings.smtpPort,
+        secure: isSecure, // true for 465, false for other ports
+        auth: settings.smtpUser ? {
+          user: settings.smtpUser,
+          pass: settings.smtpPassword || '',
+        } : undefined,
+        tls: {
+          // Do not fail on invalid certs
+          rejectUnauthorized: false,
+          // Force TLS version
+          minVersion: 'TLSv1.2'
+        }
+      };
+    }
+    
+    console.log('Using SMTP transport config:', JSON.stringify({
+      ...transportConfig,
+      auth: transportConfig.auth ? { 
+        user: transportConfig.auth.user,
+        pass: '********' // Mask password in logs
+      } : undefined
+    }, null, 2));
+    
+    // Create SMTP transport with the determined configuration
+    const transport = nodemailer.createTransport(transportConfig);
     
     // Enhanced error handling for connection verification
     try {

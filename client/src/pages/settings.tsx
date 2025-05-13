@@ -289,7 +289,17 @@ const SettingsPage = () => {
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to send test email: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Test email error response:', errorData);
+        
+        let errorMessage = `Failed to send test email: ${response.status}`;
+        if (errorData.details) {
+          errorMessage = errorData.details;
+        } else if (errorData.error) {
+          errorMessage = errorData.error;
+        }
+        
+        throw new Error(errorMessage);
       }
       
       toast({
