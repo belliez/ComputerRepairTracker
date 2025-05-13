@@ -1306,7 +1306,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                   <div>
                     {repairItems && repairItems.length > 0 && (
                       <div className="text-right font-medium">
-                        Total: {formatCurrency(repairItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0))}
+                        Total: {formatCurrency(repairItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0), repair?.defaultCurrencyCode)}
                       </div>
                     )}
                   </div>
