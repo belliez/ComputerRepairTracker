@@ -1378,12 +1378,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Invoices
   apiRouter.get("/invoices", async (req: Request, res: Response) => {
     try {
-      const orgId = (global as any).currentOrganizationId || 2;
+      // Add special handling for bypassing auth check when needed (similar to /api/customers)
       console.log(`INVOICES DEBUG: Request URL: ${req.path}, Path: ${req.path}, BaseURL: ${req.baseUrl}, OriginalURL: ${req.originalUrl}`);
       console.log(`INVOICES DEBUG: Organization ID Header: ${req.headers['x-organization-id']}`);
-      console.log(`INVOICES DEBUG: Using organization ID from request context: ${orgId}`);
       console.log(`INVOICES DEBUG: Authorization Header: ${req.headers.authorization ? 'present' : 'missing'}`);
       console.log(`INVOICES DEBUG: Debug client header: ${req.headers['x-debug-client']}`);
+      
+      // Set organization context from header if it exists
+      let orgId = (global as any).currentOrganizationId || 2;
+      const orgIdHeader = req.headers['x-organization-id'];
+      
+      if (orgIdHeader) {
+        const parsedOrgId = parseInt(orgIdHeader as string);
+        if (!isNaN(parsedOrgId)) {
+          console.log(`INVOICES DEBUG: Setting organization ID from header: ${parsedOrgId}`);
+          (global as any).currentOrganizationId = parsedOrgId;
+          orgId = parsedOrgId;
+        }
+      }
+      
+      console.log(`INVOICES DEBUG: Using organization ID from request context: ${orgId}`);
       
       const repairId = req.query.repairId ? parseInt(req.query.repairId as string) : undefined;
       

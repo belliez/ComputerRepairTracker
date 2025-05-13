@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Invoice, Repair } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -29,17 +29,87 @@ export default function Invoices() {
   const [showInvoiceForm, setShowInvoiceForm] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
   const [selectedRepairId, setSelectedRepairId] = useState<number | null>(null);
+  const [manualInvoices, setManualInvoices] = useState<Invoice[]>([]);
+  const [invoiceLoading, setInvoiceLoading] = useState(true);
+  const [invoiceError, setInvoiceError] = useState<Error | null>(null);
   const { toast } = useToast();
   const { formatCurrency } = useCurrency();
 
+  // Manual fetch for invoices to debug
+  useEffect(() => {
+    console.log("MANUAL FETCH: Starting manual fetch for invoices...");
+    
+    const fetchInvoices = async () => {
+      try {
+        setInvoiceLoading(true);
+        
+        console.log("MANUAL FETCH: Making direct fetch to /api/invoices");
+        
+        // Get auth token
+        const firebaseToken = localStorage.getItem('firebase_token');
+        const devMode = localStorage.getItem('dev_mode') === 'true';
+        
+        const headers: Record<string, string> = {
+          'X-Organization-ID': localStorage.getItem('currentOrganizationId') || '2',
+          'X-Debug-Client': 'RepairTrackerClient'
+        };
+        
+        // Add Authorization header
+        if (firebaseToken) {
+          console.log('Adding auth token to manual fetch headers');
+          headers["Authorization"] = `Bearer ${firebaseToken}`;
+        } else if (devMode || import.meta.env.MODE === 'development') {
+          console.log('Creating dev token for manual fetch');
+          const newDevToken = 'dev-token-' + Date.now();
+          localStorage.setItem('firebase_token', newDevToken);
+          localStorage.setItem('dev_mode', 'true');
+          headers["Authorization"] = `Bearer ${newDevToken}`;
+          headers["X-Debug-Mode"] = "true";
+        }
+        
+        console.log('Manual fetch headers:', headers);
+        
+        const response = await fetch('/api/invoices', {
+          headers,
+          credentials: 'include'
+        });
+        
+        console.log(`MANUAL FETCH: Response status: ${response.status}`);
+        const responseText = await response.text();
+        console.log(`MANUAL FETCH: Raw response: ${responseText}`);
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status} ${responseText}`);
+        }
+        
+        if (responseText) {
+          const data = JSON.parse(responseText) as Invoice[];
+          console.log("MANUAL FETCH: Successfully parsed invoices:", data);
+          setManualInvoices(data);
+        } else {
+          console.log("MANUAL FETCH: Empty response, setting empty array");
+          setManualInvoices([]);
+        }
+      } catch (err) {
+        console.error("MANUAL FETCH: Error fetching invoices:", err);
+        setInvoiceError(err instanceof Error ? err : new Error(String(err)));
+      } finally {
+        setInvoiceLoading(false);
+      }
+    };
+    
+    fetchInvoices();
+  }, []);
+
+  // For comparison, keep the React Query version
   const { data: invoices, isLoading, isError, error } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
     retry: 1,
     onError: (err) => {
-      console.error("Error fetching invoices:", err);
+      console.error("REACT QUERY: Error fetching invoices:", err);
     },
     onSuccess: (data) => {
-      console.log("Successfully fetched invoices:", data);
+      console.log("REACT QUERY: Successfully fetched invoices:", data);
     }
   });
 
@@ -83,8 +153,11 @@ export default function Invoices() {
     }
   };
 
+  // Combine our data sources, prioritizing manual fetch results for debugging
+  const combinedInvoices = manualInvoices.length > 0 ? manualInvoices : (invoices || []);
+  
   // Find repair info for each invoice
-  const invoicesWithRepairInfo = (invoices || []).map(invoice => {
+  const invoicesWithRepairInfo = combinedInvoices.map(invoice => {
     const repair = repairs?.find(r => r.id === invoice.repairId);
     return { ...invoice, repair };
   });
@@ -95,15 +168,15 @@ export default function Invoices() {
     return (
       invoice.invoiceNumber.toLowerCase().includes(searchLower) ||
       String(invoice.total).includes(searchLower) ||
-      invoice.repair?.ticketNumber.toLowerCase().includes(searchLower)
+      invoice.repair?.ticketNumber?.toLowerCase().includes(searchLower) || false
     );
   });
 
   // Calculate totals for the summary cards
-  const totalInvoices = invoices?.length || 0;
-  const totalPaid = invoices?.filter(inv => inv.status === "paid").length || 0;
-  const totalUnpaid = invoices?.filter(inv => inv.status === "unpaid").length || 0;
-  const totalRevenue = invoices?.reduce((acc, inv) => acc + (inv.status === "paid" ? inv.total : 0), 0) || 0;
+  const totalInvoices = combinedInvoices.length;
+  const totalPaid = combinedInvoices.filter(inv => inv.status === "paid").length;
+  const totalUnpaid = combinedInvoices.filter(inv => inv.status === "unpaid").length;
+  const totalRevenue = combinedInvoices.reduce((acc, inv) => acc + (inv.status === "paid" ? (inv.total || 0) : 0), 0);
 
   return (
     <>
