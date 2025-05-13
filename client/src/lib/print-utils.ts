@@ -11,10 +11,10 @@ export interface PrintableDocument {
 
 /**
  * Format a currency value based on the provided currency
- * This is a non-hook version of formatCurrency from use-currency.ts
+ * This is a special version for print documents that ensures proper currency symbol display
  * 
- * IMPORTANT: This version has been updated to match the useCurrency hook
- * with consistent locale handling and decimal place formatting
+ * IMPORTANT: This version has been updated to manually handle currency symbols
+ * to ensure correct display in print previews
  */
 export function formatCurrency(
   amount: number | string | null | undefined,
@@ -34,51 +34,57 @@ export function formatCurrency(
   }
   
   // Use the provided currency, or fallback to GBP (previously USD)
-  // This should match the default in the useCurrency hook
   const currencyCode = currency?.code || 'GBP';
   
-  // Choose locale based on the currency code - same logic as in useCurrency hook
-  let locale: string;
+  // Manually determine the currency symbol based on the currency code
+  let symbol: string;
   switch(currencyCode) {
-    case 'GBP':
-      locale = 'en-GB';
+    case 'USD':
+      symbol = '$';
       break;
-    case 'JPY':
-      locale = 'ja-JP';
+    case 'GBP':
+      symbol = '£';
       break;
     case 'EUR':
-      locale = 'de-DE';
+      symbol = '€';
+      break;
+    case 'JPY':
+      symbol = '¥';
+      break;
+    case 'AUD':
+      symbol = 'A$';
+      break;
+    case 'CAD':
+      symbol = 'C$';
       break;
     default:
-      locale = 'en-US';
+      // Use the symbol from the currency object if available
+      symbol = currency?.symbol || '$';
   }
   
-  // Set decimal digit options based on currency - same as useCurrency hook
-  const minimumFractionDigits = currencyCode === 'JPY' ? 0 : 2;
-  const maximumFractionDigits = currencyCode === 'JPY' ? 0 : 2;
+  // Determine decimal places based on currency
+  const decimalPlaces = currencyCode === 'JPY' ? 0 : 2;
+  
+  // Format the number with the correct decimal places
+  const formattedNumber = numericAmount.toFixed(decimalPlaces);
   
   // Output enhanced debug info for currency formatting in print documents
   console.log("PRINT FORMAT CURRENCY:", 
     "Amount:", numericAmount,
     "| Using", currencyCode, 
-    "with locale", locale, 
+    "| Symbol:", symbol,
     "| Currency object:", currency);
   
-  try {
-    const formatted = new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: currencyCode,
-      minimumFractionDigits,
-      maximumFractionDigits
-    }).format(numericAmount);
-    
-    console.log("PRINT FORMAT CURRENCY: Formatted result:", formatted);
-    return formatted;
-  } catch (error) {
-    console.error("PRINT FORMAT CURRENCY: Error formatting currency:", error);
-    // Fallback to a basic currency format
-    return `${currency?.symbol || '$'}${numericAmount.toFixed(minimumFractionDigits)}`;
-  }
+  // Add thousand separators for better readability
+  const parts = formattedNumber.split('.');
+  const wholePart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const decimalPart = parts.length > 1 ? '.' + parts[1] : '';
+  
+  // Combine the parts with the currency symbol
+  const formatted = symbol + wholePart + decimalPart;
+  console.log("PRINT FORMAT CURRENCY: Manually formatted result:", formatted);
+  
+  return formatted;
 }
 
 /**
