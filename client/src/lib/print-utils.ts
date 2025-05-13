@@ -331,8 +331,32 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
   
   // Override currency for hardcoded old quotes to match the current organization default
   if (currency.code === 'USD' || currency.code === 'GBP') {
-    // Try to find the default currency from our earlier API response (if available)
-    const defaultCurrency = typeof allCurrencies !== 'undefined' ? allCurrencies?.find((c: Currency) => c.isDefault) : null;
+    // Try to get the default currency directly from the API again if needed
+    let defaultCurrency = null;
+    
+    // First try getting the default currency from our local variables
+    try {
+      // Make direct API call to get the current default currency
+      console.log("PRINT DOCUMENT: Making fresh API call for default currency (quote)");
+      const currencyResponse = await fetch('/api/settings/currencies', {
+        method: 'GET',
+        headers: {
+          'X-Debug-Client': 'RepairTrackerClient',
+          'X-Organization-ID': '2',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        },
+        cache: 'no-store'
+      });
+      
+      if (currencyResponse.ok) {
+        const currencies = await currencyResponse.json();
+        defaultCurrency = currencies.find((c: Currency) => c.isDefault);
+        console.log("PRINT DOCUMENT: Fresh API call found default currency:", defaultCurrency?.code);
+      }
+    } catch (error) {
+      console.error("PRINT DOCUMENT: Error getting fresh default currency:", error);
+    }
     
     if (defaultCurrency) {
       console.log(`PRINT DOCUMENT: Detected old ${currency.code} in an existing quote, using current org default currency:`, defaultCurrency.code);
@@ -617,8 +641,32 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
   
   // Override currency for hardcoded old invoices to match the current organization default
   if (currency.code === 'USD' || currency.code === 'GBP') {
-    // Try to find the default currency from our earlier API response (if available)
-    const defaultCurrency = typeof allCurrencies !== 'undefined' ? allCurrencies?.find((c: Currency) => c.isDefault) : null;
+    // Try to get the default currency directly from the API again if needed
+    let defaultCurrency = null;
+    
+    // First try getting the default currency from our local variables
+    try {
+      // Make direct API call to get the current default currency
+      console.log("PRINT DOCUMENT: Making fresh API call for default currency (invoice)");
+      const currencyResponse = await fetch('/api/settings/currencies', {
+        method: 'GET',
+        headers: {
+          'X-Debug-Client': 'RepairTrackerClient',
+          'X-Organization-ID': '2',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        },
+        cache: 'no-store'
+      });
+      
+      if (currencyResponse.ok) {
+        const currencies = await currencyResponse.json();
+        defaultCurrency = currencies.find((c: Currency) => c.isDefault);
+        console.log("PRINT DOCUMENT: Fresh API call found default currency:", defaultCurrency?.code);
+      }
+    } catch (error) {
+      console.error("PRINT DOCUMENT: Error getting fresh default currency:", error);
+    }
     
     if (defaultCurrency) {
       console.log(`PRINT DOCUMENT: Detected old ${currency.code} in an existing invoice, using current org default currency:`, defaultCurrency.code);
