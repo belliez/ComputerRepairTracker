@@ -398,7 +398,7 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
           <p><strong>Date Created:</strong> ${dateCreated}</p>
           <p><strong>Expiration Date:</strong> ${expirationDate}</p>
           <p><strong>Repair Ticket:</strong> ${repair.ticketNumber}</p>
-          <p><strong>Currency:</strong> ${currency.name}</p>
+          <p><strong>Currency:</strong> ${currency.name} ${!currency.isDefault ? `<span style="color: #cc0000; font-size: 0.9em;">(not organization default)</span>` : ''}</p>
         </div>
       </div>
     </div>
@@ -502,18 +502,31 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
         if (matchingCurrency) {
           currency = matchingCurrency;
           console.log("PRINT DOCUMENT: Using matching currency:", matchingCurrency.code, "with symbol:", matchingCurrency.symbol);
+          
+          // Check if this currency is the organization default
+          const defaultCurrency = allCurrencies.find((c: Currency) => c.isDefault);
+          if (defaultCurrency && defaultCurrency.code === matchingCurrency.code) {
+            currency.isDefault = true;
+            console.log("PRINT DOCUMENT: This is the organization default currency");
+          } else {
+            currency.isDefault = false;
+            console.log("PRINT DOCUMENT: This is NOT the organization default currency");
+          }
         } else {
           console.log("PRINT DOCUMENT: Currency not found in list:", invoiceCurrencyCode);
           // Use our initialized currency object with the correct symbol
+          currency.isDefault = false;
         }
       } else {
         // If no currency code on invoice, use the default currency
         const defaultCurrency = allCurrencies.find((c: Currency) => c.isDefault);
         if (defaultCurrency) {
           currency = defaultCurrency;
+          currency.isDefault = true;
           console.log("PRINT DOCUMENT: Using default currency:", defaultCurrency.code, "with symbol:", defaultCurrency.symbol);
         } else {
           console.log("PRINT DOCUMENT: No default currency found, using:", currency.code);
+          currency.isDefault = false;
         }
       }
     } else {
@@ -641,7 +654,7 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
           <p><strong>Date Paid:</strong> ${datePaid}</p>
           <p><strong>Payment Method:</strong> ${invoice.paymentMethod === 'none' ? 'Not Paid Yet' : invoice.paymentMethod}</p>
           <p><strong>Repair Ticket:</strong> ${repair.ticketNumber}</p>
-          <p><strong>Currency:</strong> ${currency.name}</p>
+          <p><strong>Currency:</strong> ${currency.name} ${!currency.isDefault ? `<span style="color: #cc0000; font-size: 0.9em;">(not organization default)</span>` : ''}</p>
         </div>
       </div>
     </div>
