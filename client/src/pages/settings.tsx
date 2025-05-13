@@ -1968,7 +1968,15 @@ const SettingsPage = () => {
                     <Mail className="h-4 w-4" />
                     <AlertTitle>Email Provider Setup</AlertTitle>
                     <AlertDescription>
-                      Emails are sent through SendGrid. The API key has been configured by the system administrator.
+                      {emailForm.watch('provider') === 'smtp' ? (
+                        <>
+                          Emails are sent through your custom SMTP server. Make sure to provide valid SMTP credentials for your mail server.
+                        </>
+                      ) : (
+                        <>
+                          Emails are sent through SendGrid API. You can either use the system-wide API key configured by the administrator or provide your own SendGrid API key.
+                        </>
+                      )}
                     </AlertDescription>
                   </Alert>
                 </div>
