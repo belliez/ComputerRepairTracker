@@ -714,9 +714,8 @@ export default function ViewRepair() {
               </Card>
             )}
             
-            {safeGet(repair, 'device', null) ? (
-              <DeviceInformation 
-                device={repair.device}
+            <DeviceInformation 
+                device={safeGet(repair, 'device', null)}
                 customerId={repair.customerId}
                 onDeviceUpdated={() => {
                   // Refresh repair details to reflect updated device info
@@ -725,17 +724,39 @@ export default function ViewRepair() {
                     refetchType: 'active'
                   });
                 }}
+                onDeviceCreated={(deviceId) => {
+                  // Update the repair with the new device
+                  console.log("Device created with ID:", deviceId);
+                  
+                  // Update repair with new device ID
+                  apiRequest("PUT", `/api/repairs/${repairId}`, {
+                    deviceId: deviceId
+                  }).then(() => {
+                    toast({
+                      title: "Device added",
+                      description: "The device has been added to this repair"
+                    });
+                    
+                    // Refresh repair details
+                    queryClient.invalidateQueries({ 
+                      queryKey: [`/api/repairs/${repairId}/details`],
+                      refetchType: 'active'
+                    });
+                    
+                    // Manually refetch after a short delay
+                    setTimeout(() => {
+                      refetchRepair();
+                    }, 500);
+                  }).catch(error => {
+                    console.error("Failed to update repair with device ID:", error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to add device to repair",
+                      variant: "destructive"
+                    });
+                  });
+                }}
               />
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Device Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">No device information available</p>
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           <RepairInformation repair={repair} />
