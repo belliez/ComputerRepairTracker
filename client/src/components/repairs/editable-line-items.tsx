@@ -177,7 +177,7 @@ export default function EditableLineItems({
                         className="w-20 ml-auto"
                       />
                     ) : (
-                      formatCurrency(item.unitPrice)
+                      formatCurrency(item.unitPrice, currencyCode)
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -194,7 +194,7 @@ export default function EditableLineItems({
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    {formatCurrency((item.unitPrice || 0) * (item.quantity || 0))}
+                    {formatCurrency((item.unitPrice || 0) * (item.quantity || 0), currencyCode)}
                   </TableCell>
                   {showEditControls && (
                     <TableCell className="text-right">
@@ -282,7 +282,7 @@ export default function EditableLineItems({
                   />
                 </TableCell>
                 <TableCell className="text-right">
-                  {formatCurrency((newItem.unitPrice || 0) * (newItem.quantity || 0))}
+                  {formatCurrency((newItem.unitPrice || 0) * (newItem.quantity || 0), currencyCode)}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button onClick={handleAddItem} variant="outline" size="sm">
