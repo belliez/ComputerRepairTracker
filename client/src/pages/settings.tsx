@@ -1205,7 +1205,14 @@ const SettingsPage = () => {
       <Tabs defaultValue="organization" onValueChange={setActiveTab} value={activeTab}>
         <TabsList className="mb-6">
           <TabsTrigger value="organization">Organization</TabsTrigger>
-          <TabsTrigger value="currencies">Currencies</TabsTrigger>
+          <TabsTrigger value="currencies">
+            Currencies 
+            {currencies && currencies.find(c => c.isDefault) && (
+              <span className="ml-2 text-xs px-2 py-0.5 bg-primary/10 rounded-full">
+                {currencies.find(c => c.isDefault)?.code}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="tax-rates">Tax Rates</TabsTrigger>
           <TabsTrigger value="technicians">Technicians</TabsTrigger>
           <TabsTrigger value="data-management">Data Management</TabsTrigger>
