@@ -10,12 +10,12 @@ export type Currency = {
 export function useCurrency() {
   // Get the default currency
   const { data: defaultCurrency } = useQuery<Currency>({
-    queryKey: ['/api/settings/currencies/default'],
+    queryKey: ['/api/public-settings/currencies/default'],
   });
 
   // Get all available currencies
   const { data: currencies = [] } = useQuery<Currency[]>({
-    queryKey: ['/api/settings/currencies'],
+    queryKey: ['/api/public-settings/currencies'],
   });
 
   // Format a currency value based on the default currency
