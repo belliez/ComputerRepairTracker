@@ -16,9 +16,9 @@ export interface PrintableDocument {
  * Helper function to get a currency symbol based on currency code
  * Used for consistent direct symbol injection in HTML templates
  */
-export function getCurrencySymbol(currencyCode: string, fallbackSymbol: string = '£'): string {
+export function getCurrencySymbol(currencyCode: string): string {
   if (!currencyCode) {
-    return fallbackSymbol;
+    return ''; // No fallback, return empty string if no currency code provided
   }
   
   switch(currencyCode) {
@@ -28,7 +28,7 @@ export function getCurrencySymbol(currencyCode: string, fallbackSymbol: string =
     case 'JPY': return '¥';
     case 'AUD': return 'A$';
     case 'CAD': return 'C$';
-    default: return fallbackSymbol;
+    default: return ''; // No fallback for unknown currencies either
   }
 }
 
@@ -234,7 +234,7 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
        quote.currencyCode === 'AUD' ? 'Australian Dollar' : 
        quote.currencyCode === 'CAD' ? 'Canadian Dollar' : 
        `${quote.currencyCode} Currency`) : 'British Pound', 
-    symbol: getCurrencySymbol(quote.currencyCode, '£'),
+    symbol: getCurrencySymbol(quote.currencyCode),
     isDefault: false // Will be updated when we fetch the currency list
   };
   
@@ -337,10 +337,10 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
   // Define decimal places based on currency
   const decimalPlaces = currency.code === 'JPY' ? 0 : 2;
   
-  // Get direct symbol for HTML template
-  const currencySymbol = getCurrencySymbol(currency.code, currency.symbol);
+  // Get direct symbol for HTML template, without fallback
+  const currencySymbol = getCurrencySymbol(currency.code);
   
-  console.log("PRINT DOCUMENT: Using direct symbol for HTML template:", currencySymbol, "with", decimalPlaces, "decimal places");
+  console.log("PRINT DOCUMENT: Using direct symbol for HTML template:", currencySymbol || 'none', "with", decimalPlaces, "decimal places");
   
   // Use itemsData from quote if available, otherwise fall back to passed items
   let itemsToDisplay = itemsFromRepair;
@@ -491,7 +491,7 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
        invoice.currencyCode === 'AUD' ? 'Australian Dollar' : 
        invoice.currencyCode === 'CAD' ? 'Canadian Dollar' : 
        `${invoice.currencyCode} Currency`) : 'British Pound', 
-    symbol: getCurrencySymbol(invoice.currencyCode, '£'),
+    symbol: getCurrencySymbol(invoice.currencyCode),
     isDefault: false // Will be updated when we fetch the currency list
   };
   
@@ -602,7 +602,7 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
   const decimalPlaces = currency.code === 'JPY' ? 0 : 2;
   
   // Get direct symbol for HTML template
-  const currencySymbol = getCurrencySymbol(currency.code, currency.symbol);
+  const currencySymbol = getCurrencySymbol(currency.code);
   
   console.log("PRINT DOCUMENT: Using direct symbol for invoice HTML template:", currencySymbol, "with", decimalPlaces, "decimal places");
   
