@@ -2,6 +2,52 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+
+// Helper function to format currency for preview display
+function formatCurrencyPreview(amount: number | string | null | undefined, currencyCode?: string): string {
+  // Handle undefined, null, or non-numeric values
+  if (amount === undefined || amount === null) {
+    return '-';
+  }
+  
+  // Convert to number if it's a string
+  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  
+  // Handle NaN values
+  if (isNaN(numericAmount)) {
+    return '-';
+  }
+  
+  // Use provided currency code or fallback to GBP
+  const code = currencyCode || 'GBP';
+  
+  // Choose locale based on the currency code
+  let locale: string;
+  switch(code) {
+    case 'GBP':
+      locale = 'en-GB';
+      break;
+    case 'JPY':
+      locale = 'ja-JP';
+      break;
+    case 'EUR':
+      locale = 'de-DE';
+      break;
+    default:
+      locale = 'en-US';
+  }
+  
+  // Set decimal digit options based on currency
+  const minimumFractionDigits = code === 'JPY' ? 0 : 2;
+  const maximumFractionDigits = code === 'JPY' ? 0 : 2;
+  
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency: code,
+    minimumFractionDigits,
+    maximumFractionDigits
+  }).format(numericAmount);
+};
 import { Loader, Loader2, PlusCircle, Trash2, X, RefreshCw, RotateCw, UserRound, Pencil, Edit } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -1418,6 +1464,13 @@ const SettingsPage = () => {
                 <CardDescription>
                   Manage currencies for quotes and invoices
                 </CardDescription>
+                {currencies && currencies.find(c => c.isDefault) && (
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      Default: {currencies.find(c => c.isDefault)?.code}
+                    </Badge>
+                  </div>
+                )}
               </div>
               <Dialog open={showCurrencyDialog} onOpenChange={setShowCurrencyDialog}>
                 <DialogTrigger asChild>
@@ -1545,6 +1598,31 @@ const SettingsPage = () => {
               </Dialog>
             </CardHeader>
             <CardContent>
+              {/* Currency Preview Section */}
+              {currencies && currencies.find(c => c.isDefault) && (
+                <div className="mb-6 p-4 border rounded-md bg-slate-50">
+                  <h3 className="text-sm font-semibold mb-2">Currency Preview</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Small Amount:</p>
+                      <p className="text-base font-medium">{formatCurrencyPreview(9.99, currencies.find(c => c.isDefault)?.code || 'USD')}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Large Amount:</p>
+                      <p className="text-base font-medium">{formatCurrencyPreview(1250.50, currencies.find(c => c.isDefault)?.code || 'USD')}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Whole Number:</p>
+                      <p className="text-base font-medium">{formatCurrencyPreview(42, currencies.find(c => c.isDefault)?.code || 'USD')}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Large Number:</p>
+                      <p className="text-base font-medium">{formatCurrencyPreview(9999999.99, currencies.find(c => c.isDefault)?.code || 'USD')}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {isLoadingCurrencies ? (
                 <div className="flex justify-center py-8">
                   <Loader className="h-8 w-8 animate-spin text-primary" />
