@@ -240,11 +240,11 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
         total: existingQuote.total,
         status: existingQuote.status,
         notes: existingQuote.notes || "",
-        currencyCode: existingQuote.currencyCode || (defaultCurrency?.code || "USD"),
+        currencyCode: existingQuote.currencyCode || (defaultCurrencyData?.code || "USD"),
         taxRateId: existingQuote.taxRateId || (defaultTaxRate?.id || 1),
       });
     }
-  }, [existingQuote, form, defaultCurrency, defaultTaxRate]);
+  }, [existingQuote, form, defaultCurrencyData, defaultTaxRate]);
 
   // Automatically update totals when items change
   useEffect(() => {
