@@ -10,12 +10,12 @@ export type Currency = {
 export function useCurrency() {
   // Get the default currency
   const { data: defaultCurrency } = useQuery<Currency>({
-    queryKey: ['/api/public-settings/currencies/default'],
+    queryKey: ['/api/settings/currencies/default'],
   });
 
   // Get all available currencies
   const { data: currencies = [] } = useQuery<Currency[]>({
-    queryKey: ['/api/public-settings/currencies'],
+    queryKey: ['/api/settings/currencies'],
   });
 
   // Format a currency value based on the default currency
@@ -33,10 +33,11 @@ export function useCurrency() {
       return '-';
     }
     
-    // Hard-code GBP for testing
-    const currencyCode = 'GBP';
+    // Use the default currency from the API, or fallback to GBP
+    const currencyCode = defaultCurrency?.code || 'GBP';
+    const locale = currencyCode === 'GBP' ? 'en-GB' : 'en-US';
     
-    return new Intl.NumberFormat('en-GB', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: currencyCode,
       minimumFractionDigits: 2,

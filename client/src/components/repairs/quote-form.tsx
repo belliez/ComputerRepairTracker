@@ -106,19 +106,19 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   
   // Get currencies and tax rates
   const { data: currencies, isLoading: isLoadingCurrencies } = useQuery<Currency[]>({
-    queryKey: ['/api/public-settings/currencies'],
+    queryKey: ['/api/settings/currencies'],
   });
   
   const { data: defaultCurrencyData, isLoading: isLoadingDefaultCurrency } = useQuery<Currency>({
-    queryKey: ['/api/public-settings/currencies/default'],
+    queryKey: ['/api/settings/currencies/default'],
   });
   
   const { data: taxRates, isLoading: isLoadingTaxRates } = useQuery<TaxRate[]>({
-    queryKey: ['/api/public-settings/tax-rates'],
+    queryKey: ['/api/settings/tax-rates'],
   });
   
   const { data: defaultTaxRate, isLoading: isLoadingDefaultTaxRate } = useQuery<TaxRate>({
-    queryKey: ['/api/public-settings/tax-rates/default'],
+    queryKey: ['/api/settings/tax-rates/default'],
   });
   
   // Get organization data to check if tax is enabled
@@ -131,6 +131,16 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   const [selectedCurrencyCode, setSelectedCurrencyCode] = useState<string>("");
   const [selectedTaxRateId, setSelectedTaxRateId] = useState<number | null>(null);
   
+  // Debug currency data
+  useEffect(() => {
+    console.log("QUOTE FORM DEBUG: Default currency data:", defaultCurrencyData);
+    console.log("QUOTE FORM DEBUG: Selected currency code:", selectedCurrencyCode);
+    console.log("QUOTE FORM DEBUG: All currencies:", currencies);
+    console.log("QUOTE FORM DEBUG: Selected currency object:", 
+      currencies?.find(c => c.code === selectedCurrencyCode)
+    );
+  }, [defaultCurrencyData, currencies, selectedCurrencyCode]);
+
   // Set defaults when data loads
   useEffect(() => {
     if (defaultCurrencyData && !selectedCurrencyCode) {

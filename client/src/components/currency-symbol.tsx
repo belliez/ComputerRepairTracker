@@ -16,17 +16,22 @@ interface CurrencySymbolProps {
 export function CurrencySymbol({ currencyCode, className = "mr-1" }: CurrencySymbolProps) {
   // Get all currencies and default currency
   const { data: currencies } = useQuery<Currency[]>({
-    queryKey: ['/api/public-settings/currencies'],
+    queryKey: ['/api/settings/currencies'],
   });
   
   const { data: defaultCurrency } = useQuery<Currency>({
-    queryKey: ['/api/public-settings/currencies/default'],
+    queryKey: ['/api/settings/currencies/default'],
   });
 
   // State to track the selected currency symbol
-  const [symbol, setSymbol] = useState<string>('$');
+  const [symbol, setSymbol] = useState<string>('£');
 
   useEffect(() => {
+    // Hard-coded to £ temporarily for testing
+    setSymbol('£');
+    
+    // Commented out for testing
+    /*
     // If a specific currency code is provided, use that
     if (currencyCode && currencies) {
       const selectedCurrency = currencies.find(c => c.code === currencyCode);
@@ -40,6 +45,7 @@ export function CurrencySymbol({ currencyCode, className = "mr-1" }: CurrencySym
     if (defaultCurrency?.symbol) {
       setSymbol(defaultCurrency.symbol);
     }
+    */
   }, [currencies, defaultCurrency, currencyCode]);
 
   return <span className={className}>{symbol}</span>;
