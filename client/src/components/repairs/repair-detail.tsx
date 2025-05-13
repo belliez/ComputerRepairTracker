@@ -1782,7 +1782,7 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
                   // Here we can handle saving the estimate if needed
                   toast({
                     title: "Estimate complete",
-                    description: `Total estimated cost: ${formatCurrency(estimateData.total)}`,
+                    description: `Total estimated cost: ${formatCurrency(estimateData.total, defaultCurrency?.code)}`,
                   });
                   setShowCostEstimator(false);
                 }}
