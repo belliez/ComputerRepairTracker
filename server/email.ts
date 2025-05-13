@@ -117,6 +117,12 @@ export async function getOrganizationEmailSettings(organizationId: number): Prom
     
     // Extract email settings from the organization settings
     const settings = organization.settings as any || {};
+    
+    // If there are no email settings at all, log this situation
+    if (!settings.email) {
+      console.warn(`Organization ${organizationId} has no email settings, will use defaults`);
+    }
+    
     const emailSettings = settings.email || {};
     
     // Return with defaults for missing values

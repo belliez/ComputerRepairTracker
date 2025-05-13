@@ -48,7 +48,7 @@ function formatCurrencyPreview(amount: number | string | null | undefined, curre
     maximumFractionDigits
   }).format(numericAmount);
 };
-import { Loader, Loader2, PlusCircle, Trash2, X, RefreshCw, RotateCw, UserRound, Pencil, Edit, Mail } from 'lucide-react';
+import { Loader, Loader2, PlusCircle, Trash2, X, RefreshCw, RotateCw, UserRound, Pencil, Edit, Mail, AlertTriangle } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
@@ -2053,6 +2053,21 @@ const SettingsPage = () => {
                 </div>
               ) : organization ? (
                 <div className="space-y-6">
+                  {(!emailForm.watch('provider') || 
+                    (emailForm.watch('provider') === 'sendgrid' && !emailForm.watch('sendgridApiKey')) || 
+                    (emailForm.watch('provider') === 'mailgun' && (!emailForm.watch('mailgunApiKey') || !emailForm.watch('mailgunDomain'))) || 
+                    (emailForm.watch('provider') === 'smtp' && (!emailForm.watch('smtpHost') || !emailForm.watch('smtpPort')))) && (
+                    <Alert className="bg-yellow-50 border-yellow-200">
+                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                      <AlertTitle className="text-yellow-800">Default Email Configuration Active</AlertTitle>
+                      <AlertDescription className="text-yellow-700">
+                        <p className="mb-2">You haven't configured a valid email provider yet. The system will use a default Mailgun account for sending emails to ensure functionality.</p>
+                        <p className="mb-2">This is fine for testing, but for production we recommend setting up your own email provider for better deliverability and control.</p>
+                        <p>All emails sent using the default configuration will include a notice to recipients.</p>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <Form {...emailForm}>
                     <form onSubmit={emailForm.handleSubmit(onEmailFormSubmit)} className="space-y-4">
                       <FormField
