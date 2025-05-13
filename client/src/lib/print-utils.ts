@@ -225,7 +225,7 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
   
   // Initialize with the quote's currency code if available
   let currency = { 
-    code: quote.currencyCode || 'EUR', // Default to EUR as it's the organization default
+    code: quote.currencyCode || 'GBP', // Default to GBP (will be overridden if we find the actual default)
     name: quote.currencyCode ? 
       (quote.currencyCode === 'USD' ? 'US Dollar' : 
        quote.currencyCode === 'EUR' ? 'Euro' : 
@@ -233,9 +233,9 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
        quote.currencyCode === 'JPY' ? 'Japanese Yen' : 
        quote.currencyCode === 'AUD' ? 'Australian Dollar' : 
        quote.currencyCode === 'CAD' ? 'Canadian Dollar' : 
-       `${quote.currencyCode} Currency`) : 'Euro', 
-    symbol: getCurrencySymbol(quote.currencyCode, '€'),
-    isDefault: quote.currencyCode ? false : true
+       `${quote.currencyCode} Currency`) : 'British Pound', 
+    symbol: getCurrencySymbol(quote.currencyCode, '£'),
+    isDefault: false // Will be updated when we fetch the currency list
   };
   
   // Log the currency data we're initializing with
@@ -459,7 +459,7 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
   
   // Initialize with the invoice's currency code if available
   let currency = { 
-    code: invoice.currencyCode || 'EUR', // Default to EUR as it's the organization default
+    code: invoice.currencyCode || 'GBP', // Default to GBP (will be overridden if we find the actual default)
     name: invoice.currencyCode ? 
       (invoice.currencyCode === 'USD' ? 'US Dollar' : 
        invoice.currencyCode === 'EUR' ? 'Euro' : 
@@ -467,9 +467,9 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
        invoice.currencyCode === 'JPY' ? 'Japanese Yen' : 
        invoice.currencyCode === 'AUD' ? 'Australian Dollar' : 
        invoice.currencyCode === 'CAD' ? 'Canadian Dollar' : 
-       `${invoice.currencyCode} Currency`) : 'Euro', 
-    symbol: getCurrencySymbol(invoice.currencyCode, '€'),
-    isDefault: false 
+       `${invoice.currencyCode} Currency`) : 'British Pound', 
+    symbol: getCurrencySymbol(invoice.currencyCode, '£'),
+    isDefault: false // Will be updated when we fetch the currency list
   };
   
   try {
