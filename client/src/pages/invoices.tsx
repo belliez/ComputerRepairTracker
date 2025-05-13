@@ -32,12 +32,22 @@ export default function Invoices() {
   const { toast } = useToast();
   const { formatCurrency } = useCurrency();
 
-  const { data: invoices, isLoading } = useQuery<Invoice[]>({
+  const { data: invoices, isLoading, isError, error } = useQuery<Invoice[]>({
     queryKey: ["/api/invoices"],
+    retry: 1,
+    onError: (err) => {
+      console.error("Error fetching invoices:", err);
+    },
+    onSuccess: (data) => {
+      console.log("Successfully fetched invoices:", data);
+    }
   });
 
   const { data: repairs } = useQuery<Repair[]>({
     queryKey: ["/api/repairs"],
+    onSuccess: (data) => {
+      console.log("Successfully fetched repairs for invoices page:", data?.length);
+    }
   });
 
   const handleCreateInvoice = () => {
