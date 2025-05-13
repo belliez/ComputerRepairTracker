@@ -818,9 +818,28 @@ const SettingsPage = () => {
       // Default to enabled if not explicitly set to false
       const enableTax = organization.settings?.enableTax !== false;
       
+      // Get email value from settings, handling different formats
+      let emailValue = '';
+      const emailSetting = organization.settings?.email;
+      
+      if (emailSetting) {
+        if (typeof emailSetting === 'string') {
+          emailValue = emailSetting;
+        } else if (typeof emailSetting === 'object') {
+          // Check if it's an array-like object with numeric keys
+          if (Object.keys(emailSetting).every(key => !isNaN(Number(key)))) {
+            emailValue = Object.values(emailSetting).join('');
+          } 
+          // Check if it's an email settings object with fromEmail property
+          else if ('fromEmail' in emailSetting) {
+            emailValue = emailSetting.fromEmail;
+          }
+        }
+      }
+      
       organizationForm.reset({
         name: organization.name || '',
-        email: (organization.settings?.email as string) || '',
+        email: emailValue,
         phone: (organization.settings?.phone as string) || '',
         address: (organization.settings?.address as string) || '',
         enableTax: enableTax,
@@ -1729,7 +1748,24 @@ const SettingsPage = () => {
                     <div className="space-y-2">
                       <h3 className="text-sm font-medium text-gray-500">Email</h3>
                       <p className="text-base">
-                        {(organization.settings?.email && organization.settings.email !== "null") ? organization.settings.email : "No email set"}
+                        {(() => {
+                          const email = organization.settings?.email;
+                          if (!email || email === "null") return "No email set";
+                          
+                          // Handle array-like object with numeric keys
+                          if (typeof email === 'object' && !Array.isArray(email) && 
+                              Object.keys(email).every(key => !isNaN(Number(key)))) {
+                            return Object.values(email).join('');
+                          }
+                          
+                          // Handle standard objects with fromEmail property
+                          if (typeof email === 'object' && 'fromEmail' in email) {
+                            return email.fromEmail;
+                          }
+                          
+                          // Handle case where it's a simple string
+                          return typeof email === 'string' ? email : "No email set";
+                        })()}
                       </p>
                     </div>
                     <div className="space-y-2">
