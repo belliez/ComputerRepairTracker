@@ -33,8 +33,8 @@ export function useCurrency() {
       return '-';
     }
     
-    // Use custom currency code if provided, otherwise use default currency from API, or fallback to GBP
-    const currencyCode = customCurrencyCode || defaultCurrency?.code || 'GBP';
+    // Use custom currency code if provided, otherwise use default currency from API, or fallback to JPY
+    const currencyCode = customCurrencyCode || defaultCurrency?.code || 'JPY';
     
     // Choose locale based on the currency code
     let locale: string;
