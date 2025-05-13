@@ -2501,22 +2501,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const currentSettings = orgEmailResult[0]?.settings || {};
             
             // Create updated settings object with email settings
-            const emailSettings = data.settings || {};
+            const newEmailSettings = data.settings || {};
             
-            // Log the complete settings object before saving
-            console.log('Email settings to be saved:', JSON.stringify(emailSettings, null, 2));
+            // Log the incoming settings object 
+            console.log('Email settings received:', JSON.stringify(newEmailSettings, null, 2));
             
             // Make sure the provider field is correctly stored and not overridden
-            const provider = emailSettings.provider || 'sendgrid';
-            console.log('Email provider from form:', provider);
+            const newProvider = newEmailSettings.provider || 'sendgrid';
+            console.log('Email provider from form:', newProvider);
             
-            let updatedSettings;
+            // Get the current email settings if they exist
+            const currentEmailSettings = currentSettings.email || {};
             
-            // Always use the complete email settings object rather than merging
-            // This ensures all fields are updated and not just the ones that changed
-            updatedSettings = {
+            // Create a merged email settings object that preserves provider-specific settings
+            // even when switching between providers
+            let mergedEmailSettings = {
+              // Start with all existing email settings
+              ...currentEmailSettings,
+              
+              // Update with the new common settings
+              enabled: newEmailSettings.enabled,
+              fromEmail: newEmailSettings.fromEmail,
+              fromName: newEmailSettings.fromName,
+              replyTo: newEmailSettings.replyTo,
+              footerText: newEmailSettings.footerText,
+              
+              // Set the active provider
+              provider: newProvider
+            };
+            
+            // Now, update only the provider-specific settings based on the new provider
+            if (newProvider === 'sendgrid') {
+              // Update SendGrid-specific settings
+              mergedEmailSettings.sendgridApiKey = newEmailSettings.sendgridApiKey;
+            } else if (newProvider === 'smtp') {
+              // Update SMTP-specific settings
+              mergedEmailSettings.smtpHost = newEmailSettings.smtpHost;
+              mergedEmailSettings.smtpPort = newEmailSettings.smtpPort;
+              mergedEmailSettings.smtpUser = newEmailSettings.smtpUser;
+              mergedEmailSettings.smtpPassword = newEmailSettings.smtpPassword;
+              mergedEmailSettings.smtpSecure = newEmailSettings.smtpSecure;
+            } else if (newProvider === 'mailgun') {
+              // Update Mailgun-specific settings
+              mergedEmailSettings.mailgunApiKey = newEmailSettings.mailgunApiKey;
+              mergedEmailSettings.mailgunDomain = newEmailSettings.mailgunDomain;
+              mergedEmailSettings.mailgunRegion = newEmailSettings.mailgunRegion;
+            }
+            
+            // Log the merged email settings
+            console.log('Merged email settings to be saved:', JSON.stringify(mergedEmailSettings, null, 2));
+            
+            let updatedSettings = {
               ...currentSettings,
-              email: emailSettings
+              email: mergedEmailSettings
             };
             
             console.log('Final organization settings to be saved:', JSON.stringify(updatedSettings, null, 2));
