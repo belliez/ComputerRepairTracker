@@ -1,5 +1,6 @@
 /**
  * Utility functions for handling printing and document generation
+ * Fixed version to correctly handle currency symbols in print documents
  */
 import { Currency } from "@/hooks/use-currency";
 
@@ -7,84 +8,6 @@ export interface PrintableDocument {
   title: string;
   content: string;
   // Add more properties as needed (e.g., CSS styles)
-}
-
-/**
- * Format a currency value based on the provided currency
- * This is a special version for print documents that ensures proper currency symbol display
- * 
- * IMPORTANT: This version has been updated to manually handle currency symbols
- * to ensure correct display in print previews
- */
-export function formatCurrency(
-  amount: number | string | null | undefined,
-  currency?: Currency | null
-): string {
-  // Handle undefined, null, or non-numeric values
-  if (amount === undefined || amount === null) {
-    return '-';
-  }
-  
-  // Convert to number if it's a string
-  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  
-  // Handle NaN values
-  if (isNaN(numericAmount)) {
-    return '-';
-  }
-  
-  // Use the provided currency, or fallback to GBP (previously USD)
-  const currencyCode = currency?.code || 'GBP';
-  
-  // Manually determine the currency symbol based on the currency code
-  let symbol: string;
-  switch(currencyCode) {
-    case 'USD':
-      symbol = '$';
-      break;
-    case 'GBP':
-      symbol = '£';
-      break;
-    case 'EUR':
-      symbol = '€';
-      break;
-    case 'JPY':
-      symbol = '¥';
-      break;
-    case 'AUD':
-      symbol = 'A$';
-      break;
-    case 'CAD':
-      symbol = 'C$';
-      break;
-    default:
-      // Use the symbol from the currency object if available
-      symbol = currency?.symbol || '$';
-  }
-  
-  // Determine decimal places based on currency
-  const decimalPlaces = currencyCode === 'JPY' ? 0 : 2;
-  
-  // Format the number with the correct decimal places
-  const formattedNumber = numericAmount.toFixed(decimalPlaces);
-  
-  // Output enhanced debug info for currency formatting in print documents
-  console.log("PRINT FORMAT CURRENCY:", 
-    "Amount:", numericAmount,
-    "| Using", currencyCode, 
-    "| Symbol:", symbol,
-    "| Currency object:", currency);
-  
-  // Add thousand separators for better readability
-  const parts = formattedNumber.split('.');
-  const wholePart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  const decimalPart = parts.length > 1 ? '.' + parts[1] : '';
-  
-  // Combine the parts with the currency symbol
-  const formatted = symbol + wholePart + decimalPart;
-  console.log("PRINT FORMAT CURRENCY: Manually formatted result:", formatted);
-  
-  return formatted;
 }
 
 /**
@@ -317,6 +240,20 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
   
   console.log("PRINT DOCUMENT: Final currency being used for formatting:", currency);
   
+  // Get currency symbol directly for template
+  const currencySymbol = currency.code === 'USD' ? '$' :
+                     currency.code === 'GBP' ? '£' :
+                     currency.code === 'EUR' ? '€' :
+                     currency.code === 'JPY' ? '¥' :
+                     currency.code === 'AUD' ? 'A$' :
+                     currency.code === 'CAD' ? 'C$' :
+                     currency.symbol || '$';
+                     
+  // Define decimal places based on currency
+  const decimalPlaces = currency.code === 'JPY' ? 0 : 2;
+  
+  console.log("PRINT DOCUMENT: Using direct symbol for quote:", currencySymbol, "with", decimalPlaces, "decimal places");
+  
   // Use itemsData from quote if available, otherwise fall back to passed items
   let itemsToDisplay = itemsFromRepair;
   
@@ -343,7 +280,7 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
     }
   }
   
-  // Generate items table
+  // Generate items table with direct symbol injection
   const itemsTable = `
     <table>
       <thead>
@@ -356,15 +293,20 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
         </tr>
       </thead>
       <tbody>
-        ${itemsToDisplay.length > 0 ? itemsToDisplay.map(item => `
+        ${itemsToDisplay.length > 0 ? itemsToDisplay.map(item => {
+          const unitPrice = item.unitPrice || 0;
+          const quantity = item.quantity || 1;
+          const lineTotal = unitPrice * quantity;
+          return `
           <tr>
             <td>${item.description || 'N/A'}</td>
             <td>${item.itemType === 'part' ? 'Part' : 'Service'}</td>
-            <td class="text-right">${formatCurrency(item.unitPrice, currency)}</td>
-            <td class="text-right">${item.quantity || 1}</td>
-            <td class="text-right">${formatCurrency((item.unitPrice || 0) * (item.quantity || 1), currency)}</td>
+            <td class="text-right">${currencySymbol}${unitPrice.toFixed(decimalPlaces)}</td>
+            <td class="text-right">${quantity}</td>
+            <td class="text-right">${currencySymbol}${lineTotal.toFixed(decimalPlaces)}</td>
           </tr>
-        `).join('') : '<tr><td colspan="5" class="text-center">No items</td></tr>'}
+        `;
+        }).join('') : '<tr><td colspan="5" class="text-center">No items</td></tr>'}
       </tbody>
     </table>
   `;
@@ -403,15 +345,15 @@ export async function createQuoteDocument(quote: any, customer: any, repair: any
       <table>
         <tr>
           <th>Subtotal</th>
-          <td class="text-right">${currency.symbol}${quote.subtotal.toFixed(currency.code === 'JPY' ? 0 : 2)}</td>
+          <td class="text-right">${currencySymbol}${quote.subtotal.toFixed(decimalPlaces)}</td>
         </tr>
         <tr>
           <th>Tax</th>
-          <td class="text-right">${currency.symbol}${(quote.tax || quote.taxAmount || (quote.total - quote.subtotal) || 0).toFixed(currency.code === 'JPY' ? 0 : 2)}</td>
+          <td class="text-right">${currencySymbol}${(quote.tax || quote.taxAmount || (quote.total - quote.subtotal) || 0).toFixed(decimalPlaces)}</td>
         </tr>
         <tr>
           <th>Total</th>
-          <td class="text-right"><strong>${currency.symbol}${quote.total.toFixed(currency.code === 'JPY' ? 0 : 2)}</strong></td>
+          <td class="text-right"><strong>${currencySymbol}${quote.total.toFixed(decimalPlaces)}</strong></td>
         </tr>
       </table>
     </div>
@@ -515,6 +457,20 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
   
   console.log("PRINT DOCUMENT: Final currency being used for formatting:", currency);
   
+  // Get currency symbol directly for template
+  const currencySymbol = currency.code === 'USD' ? '$' :
+                     currency.code === 'GBP' ? '£' :
+                     currency.code === 'EUR' ? '€' :
+                     currency.code === 'JPY' ? '¥' :
+                     currency.code === 'AUD' ? 'A$' :
+                     currency.code === 'CAD' ? 'C$' :
+                     currency.symbol || '$';
+                     
+  // Define decimal places based on currency
+  const decimalPlaces = currency.code === 'JPY' ? 0 : 2;
+  
+  console.log("PRINT DOCUMENT: Using direct symbol for invoice:", currencySymbol, "with", decimalPlaces, "decimal places");
+  
   // Use itemsData from invoice if available, otherwise fall back to passed items
   let itemsToDisplay = itemsFromRepair;
   
@@ -541,7 +497,7 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
     }
   }
   
-  // Generate items table
+  // Generate items table with direct symbol injection
   const itemsTable = `
     <table>
       <thead>
@@ -554,37 +510,30 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
         </tr>
       </thead>
       <tbody>
-        ${itemsToDisplay.length > 0 ? itemsToDisplay.map(item => `
+        ${itemsToDisplay.length > 0 ? itemsToDisplay.map(item => {
+          const unitPrice = item.unitPrice || 0;
+          const quantity = item.quantity || 1;
+          const lineTotal = unitPrice * quantity;
+          return `
           <tr>
             <td>${item.description || 'N/A'}</td>
             <td>${item.itemType === 'part' ? 'Part' : 'Service'}</td>
-            <td class="text-right">${formatCurrency(item.unitPrice, currency)}</td>
-            <td class="text-right">${item.quantity || 1}</td>
-            <td class="text-right">${formatCurrency((item.unitPrice || 0) * (item.quantity || 1), currency)}</td>
+            <td class="text-right">${currencySymbol}${unitPrice.toFixed(decimalPlaces)}</td>
+            <td class="text-right">${quantity}</td>
+            <td class="text-right">${currencySymbol}${lineTotal.toFixed(decimalPlaces)}</td>
           </tr>
-        `).join('') : '<tr><td colspan="5" class="text-center">No items</td></tr>'}
+        `;
+        }).join('') : '<tr><td colspan="5" class="text-center">No items</td></tr>'}
       </tbody>
     </table>
   `;
-
-  // Get the payment status label
-  let statusLabel = 'Unpaid';
-  let statusColor = 'text-red-500';
-  
-  if (invoice.status === 'paid') {
-    statusLabel = 'Paid';
-    statusColor = 'text-green-500';
-  } else if (invoice.status === 'partial') {
-    statusLabel = 'Partially Paid';
-    statusColor = 'text-yellow-500';
-  }
 
   // Create the document content
   const content = `
     <div class="print-header">
       <h1>Invoice #${invoice.invoiceNumber}</h1>
       <div>
-        <strong>Status:</strong> <span class="${statusColor}">${statusLabel}</span>
+        <strong>Status:</strong> ${invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
       </div>
     </div>
     
@@ -600,7 +549,6 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
           <h3>Invoice Details</h3>
           <p><strong>Date Issued:</strong> ${dateIssued}</p>
           <p><strong>Date Paid:</strong> ${datePaid}</p>
-          <p><strong>Payment Method:</strong> ${invoice.paymentMethod === 'none' ? 'Not Paid Yet' : invoice.paymentMethod}</p>
           <p><strong>Repair Ticket:</strong> ${repair.ticketNumber}</p>
           ${invoice.currencyCode ? `<p><strong>Currency:</strong> ${invoice.currencyCode}</p>` : ''}
         </div>
@@ -614,15 +562,15 @@ export async function createInvoiceDocument(invoice: any, customer: any, repair:
       <table>
         <tr>
           <th>Subtotal</th>
-          <td class="text-right">${formatCurrency(invoice.subtotal, currency)}</td>
+          <td class="text-right">${currencySymbol}${invoice.subtotal.toFixed(decimalPlaces)}</td>
         </tr>
         <tr>
           <th>Tax</th>
-          <td class="text-right">${formatCurrency(invoice.tax || invoice.taxAmount || (invoice.total - invoice.subtotal) || 0, currency)}</td>
+          <td class="text-right">${currencySymbol}${(invoice.tax || invoice.taxAmount || (invoice.total - invoice.subtotal) || 0).toFixed(decimalPlaces)}</td>
         </tr>
         <tr>
           <th>Total</th>
-          <td class="text-right"><strong>${formatCurrency(invoice.total, currency)}</strong></td>
+          <td class="text-right"><strong>${currencySymbol}${invoice.total.toFixed(decimalPlaces)}</strong></td>
         </tr>
       </table>
     </div>
