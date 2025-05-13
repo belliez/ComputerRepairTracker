@@ -401,6 +401,12 @@ export function generateQuoteEmail(quote: any, customer: any, repair: any, items
   const expirationDate = quote.expirationDate 
     ? new Date(quote.expirationDate).toLocaleDateString()
     : 'N/A';
+    
+  // Determine the currency symbol based on the quote's currencyCode
+  const currencySymbol = getCurrencySymbol(quote.currencyCode);
+  
+  // Define decimal places based on currency
+  const decimalPlaces = quote.currencyCode === 'JPY' ? 0 : 2;
   
   // Use itemsData from quote if available, otherwise fall back to passed items
   let itemsToDisplay = itemsFromRepair;
