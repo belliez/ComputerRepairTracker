@@ -235,7 +235,7 @@ async function sendWithMailgun(mailContent: any, settings: EmailSettings): Promi
     });
     
     // Prepare Mailgun message format
-    const mgMessage: Record<string, any> = {
+    const mgMessage = {
       from: mailContent.from,
       to: mailContent.to,
       subject: mailContent.subject,
@@ -243,18 +243,21 @@ async function sendWithMailgun(mailContent: any, settings: EmailSettings): Promi
       text: mailContent.text
     };
     
+    // Create a properly typed message object
+    const messageData: any = { ...mgMessage };
+    
     // Add reply-to if specified
     if (mailContent.replyTo) {
-      mgMessage['h:Reply-To'] = mailContent.replyTo;
+      messageData['h:Reply-To'] = mailContent.replyTo;
     }
     
     // Add CC and BCC if they exist
-    if (mailContent.cc) mgMessage.cc = mailContent.cc;
-    if (mailContent.bcc) mgMessage.bcc = mailContent.bcc;
+    if (mailContent.cc) messageData.cc = mailContent.cc;
+    if (mailContent.bcc) messageData.bcc = mailContent.bcc;
     
     // Send the message
     console.log(`Sending email via Mailgun to ${mailContent.to} using domain ${domain}`);
-    await mg.messages.create(domain, mgMessage);
+    await mg.messages.create(domain, messageData);
     console.log('Email sent successfully using Mailgun');
     return true;
   } catch (error) {

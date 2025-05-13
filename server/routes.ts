@@ -1789,6 +1789,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Special handling for Mailgun errors
+      if (overrideSettings.provider === 'mailgun') {
+        const errorString = String(error).toLowerCase();
+        
+        if (errorString.includes('unauthorized') || errorString.includes('401') || 
+            errorString.includes('api key')) {
+          errorDetails = "Mailgun authentication failed. Please verify your API key is correct and active.";
+        } else if (errorString.includes('domain') || errorString.includes('not found')) {
+          errorDetails = "Mailgun domain error. Make sure your domain is properly configured and verified in your Mailgun account.";
+        } else if (errorString.includes('region')) {
+          errorDetails = "Mailgun region error. Make sure you've selected the correct region (US or EU) where your Mailgun account is hosted.";
+        }
+      }
+      
       return res.status(500).json({ 
         error: "Failed to send test email", 
         details: errorDetails,
