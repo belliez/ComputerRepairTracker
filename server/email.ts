@@ -598,9 +598,9 @@ export function generateInvoiceEmail(invoice: any, customer: any, repair: any, i
           <tr>
             <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: left;">${item.description || 'N/A'}</td>
             <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: left;">${item.itemType === 'part' ? 'Part' : 'Service'}</td>
-            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">$${unitPrice.toFixed(2)}</td>
+            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">${currencySymbol}${unitPrice.toFixed(decimalPlaces)}</td>
             <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">${quantity}</td>
-            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">$${total.toFixed(2)}</td>
+            <td style="border: 1px solid #ddd; padding: 8px 12px; text-align: right;">${currencySymbol}${total.toFixed(decimalPlaces)}</td>
           </tr>
         `;
         }).join('') : '<tr><td colspan="5" style="border: 1px solid #ddd; padding: 8px 12px; text-align: center;">No items</td></tr>'}
@@ -661,7 +661,7 @@ export function generateInvoiceEmail(invoice: any, customer: any, repair: any, i
         <table style="margin-left: auto; width: 100%; border-collapse: collapse;">
           <tr>
             <th style="border: 1px solid #ddd; padding: 5px 12px; text-align: left; background-color: #f2f7ff;">Subtotal</th>
-            <td style="border: 1px solid #ddd; padding: 5px 12px; text-align: right;">$${invoice.subtotal.toFixed(2)}</td>
+            <td style="border: 1px solid #ddd; padding: 5px 12px; text-align: right;">${currencySymbol}${invoice.subtotal.toFixed(decimalPlaces)}</td>
           </tr>
           <tr>
             <th style="border: 1px solid #ddd; padding: 5px 12px; text-align: left; background-color: #f2f7ff;">Tax</th>
