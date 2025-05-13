@@ -1690,8 +1690,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Email Invoice to Customer
-  // Test email endpoint
-  apiRouter.post("/test-email", async (req: Request, res: Response) => {
+  // Test email endpoint (does not require authentication)
+  app.post("/api/test-email", async (req: Request, res: Response) => {
     try {
       const { to, emailSettings } = req.body;
       
@@ -1736,11 +1736,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (success) {
         return res.status(200).json({ message: "Test email sent successfully" });
       } else {
-        return res.status(500).json({ error: "Failed to send test email" });
+        return res.status(500).json({ 
+          error: "Failed to send test email",
+          details: "Email service returned failure. Check your API key and email settings."
+        });
       }
     } catch (error) {
       console.error("Error sending test email:", error);
-      return res.status(500).json({ error: "Failed to send test email" });
+      return res.status(500).json({ 
+        error: "Failed to send test email", 
+        details: error instanceof Error ? error.message : "Unknown error occurred",
+        stack: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
+      });
     }
   });
 

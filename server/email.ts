@@ -1,4 +1,5 @@
 import { MailService } from '@sendgrid/mail';
+import nodemailer from 'nodemailer';
 import { db } from './db';
 import { eq } from 'drizzle-orm';
 import { organizations } from '@shared/schema';
@@ -20,7 +21,17 @@ export interface EmailSettings {
   fromName: string;
   replyTo?: string;
   footerText?: string;
-  provider: 'sendgrid'; // For future expansion to other providers
+  provider: 'sendgrid' | 'smtp'; // Support both SendGrid and SMTP
+  
+  // SendGrid specific settings
+  sendgridApiKey?: string;
+  
+  // SMTP specific settings
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPassword?: string;
+  smtpSecure?: boolean;
 }
 
 /**
