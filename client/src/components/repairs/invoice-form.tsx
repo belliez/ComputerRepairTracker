@@ -122,8 +122,31 @@ export default function InvoiceForm({
   useEffect(() => {
     if (isOpen) {
       console.log("INVOICE FORM: Dialog opened, refreshing currency data");
-      refetchCurrencies();
-      refetchDefaultCurrency();
+      
+      // First invalidate all currency queries to clear any cached data
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies/default'] });
+      
+      // Then actively refetch all required data with fresh API calls
+      Promise.all([
+        refetchCurrencies(),
+        refetchDefaultCurrency()
+      ]).then(() => {
+        console.log("INVOICE FORM: Currency data refreshed successfully");
+        
+        // After refetching, make sure to set the selected currency from the latest data
+        if (defaultCurrency?.code) {
+          console.log("INVOICE FORM: Setting currency to latest default:", defaultCurrency.code);
+          setSelectedCurrencyCode(defaultCurrency.code);
+        } else if (currencies && currencies.length > 0) {
+          // As a backup, find the default currency from the currencies array
+          const defaultFromArray = currencies.find(c => c.isDefault);
+          if (defaultFromArray?.code) {
+            console.log("INVOICE FORM: Setting currency to default from array:", defaultFromArray.code);
+            setSelectedCurrencyCode(defaultFromArray.code);
+          }
+        }
+      });
     }
   }, [isOpen, refetchCurrencies, refetchDefaultCurrency]);
   

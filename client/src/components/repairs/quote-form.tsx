@@ -117,8 +117,31 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   useEffect(() => {
     if (isOpen) {
       console.log("QUOTE FORM: Dialog opened, refreshing currency data");
-      refetchCurrencies();
-      refetchDefaultCurrency();
+      
+      // First invalidate all currency queries to clear any cached data
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies/default'] });
+      
+      // Then actively refetch all required data with fresh API calls
+      Promise.all([
+        refetchCurrencies(),
+        refetchDefaultCurrency()
+      ]).then(() => {
+        console.log("QUOTE FORM: Currency data refreshed successfully");
+        
+        // After refetching, make sure to set the selected currency from the latest data
+        if (defaultCurrencyData?.code) {
+          console.log("QUOTE FORM: Setting currency to latest default:", defaultCurrencyData.code);
+          setSelectedCurrencyCode(defaultCurrencyData.code);
+        } else if (currencies && currencies.length > 0) {
+          // As a backup, find the default currency from the currencies array
+          const defaultCurrency = currencies.find(c => c.isDefault);
+          if (defaultCurrency?.code) {
+            console.log("QUOTE FORM: Setting currency to default from array:", defaultCurrency.code);
+            setSelectedCurrencyCode(defaultCurrency.code);
+          }
+        }
+      });
     }
   }, [isOpen, refetchCurrencies, refetchDefaultCurrency]);
   
