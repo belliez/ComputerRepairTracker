@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { getAuthToken } from "../lib/auth";
 
 export type Currency = {
   code: string;
@@ -8,27 +10,101 @@ export type Currency = {
 };
 
 export function useCurrency() {
-  // Get the default currency - staleTime: 0 ensures it always refetches
-  const { data: defaultCurrency, refetch: refetchDefaultCurrency } = useQuery<Currency>({
-    queryKey: ['/api/settings/currencies/default'],
-    staleTime: 0, // Don't use cache, always fetch fresh data
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-  });
+  // Use useState to store currencies and defaultCurrency
+  const [defaultCurrency, setDefaultCurrency] = useState<Currency | null>(null);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number>(Date.now());
 
-  // Get all available currencies
-  const { data: currencies = [], refetch: refetchCurrencies } = useQuery<Currency[]>({
-    queryKey: ['/api/settings/currencies'],
-    staleTime: 0, // Don't use cache, always fetch fresh data
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-  });
+  // Function to directly fetch currency data from the API without using React Query
+  const fetchCurrencyData = async () => {
+    console.log("CURRENCY: Directly fetching currency data from API");
+    
+    // Set up headers
+    const headers: Record<string, string> = {
+      'X-Debug-Client': 'RepairTrackerClient',
+      'X-Organization-ID': '2', // Use the organization ID
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    };
+    
+    // Add auth token if available
+    const authToken = getAuthToken();
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+    
+    try {
+      // Fetch all currencies
+      const currenciesResponse = await fetch('/api/settings/currencies', {
+        method: 'GET',
+        headers,
+        cache: 'no-store'
+      });
+      
+      if (currenciesResponse.ok) {
+        const allCurrencies = await currenciesResponse.json();
+        console.log("CURRENCY: Successfully fetched", allCurrencies.length, "currencies");
+        setCurrencies(allCurrencies);
+        
+        // Find the default currency in the list
+        const defaultFromList = allCurrencies.find((c: Currency) => c.isDefault);
+        if (defaultFromList) {
+          console.log("CURRENCY: Found default currency in list:", defaultFromList.code);
+          setDefaultCurrency(defaultFromList);
+        } else {
+          // If no default in the list, try to fetch it directly
+          const defaultResponse = await fetch('/api/settings/currencies/default', {
+            method: 'GET',
+            headers,
+            cache: 'no-store'
+          });
+          
+          if (defaultResponse.ok) {
+            const defaultData = await defaultResponse.json();
+            console.log("CURRENCY: Fetched default currency directly:", defaultData?.code);
+            setDefaultCurrency(defaultData);
+          }
+        }
+      } else {
+        console.error("CURRENCY: Failed to fetch currencies", currenciesResponse.status);
+      }
+    } catch (error) {
+      console.error("CURRENCY: Error fetching currency data:", error);
+    }
+    
+    // Update last refresh time
+    setLastRefreshTime(Date.now());
+  };
+  
+  // Fetch currency data on component mount and when explicitly refreshed
+  useEffect(() => {
+    fetchCurrencyData();
+    
+    // Set up interval to refresh every 15 seconds
+    const intervalId = setInterval(() => {
+      fetchCurrencyData();
+    }, 15000);
+    
+    // Also refresh on window focus
+    const handleFocus = () => {
+      console.log("CURRENCY: Window focused, refreshing currency data");
+      fetchCurrencyData();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    // Clean up
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
   
   // Function to explicitly refresh all currency data
   const refreshCurrencyData = async () => {
     console.log("CURRENCY: Explicitly refreshing all currency data");
-    await Promise.all([
-      refetchDefaultCurrency(),
-      refetchCurrencies()
-    ]);
+    await fetchCurrencyData();
     return true;
   };
 
@@ -47,10 +123,15 @@ export function useCurrency() {
       return '-';
     }
     
+    // Always try to get the default currency from most recently fetched data
+    const currentDefaultCurrency = currencies.find(c => c.isDefault);
+    
     // Use custom currency code if provided, otherwise use default from all currencies (most reliable),
     // then try the direct default currency endpoint, and finally fall back to EUR
-    const currentDefaultCurrency = currencies.find(c => c.isDefault);
-    const currencyCode = customCurrencyCode || currentDefaultCurrency?.code || defaultCurrency?.code || 'EUR';
+    const currencyCode = customCurrencyCode || 
+                          currentDefaultCurrency?.code || 
+                          defaultCurrency?.code || 
+                          'EUR';
     
     // Choose locale based on the currency code
     let locale: string;
@@ -68,10 +149,12 @@ export function useCurrency() {
         locale = 'en-US';
     }
     
-    console.log("FORMAT CURRENCY DEBUG: Using currency code:", currencyCode, 
-      "with locale:", locale, 
-      "default from currencies array:", currentDefaultCurrency?.code,
-      "default from API endpoint:", defaultCurrency?.code);
+    // Log detailed information about which currency is being used
+    console.log("CURRENCY FORMAT: Using", currencyCode, 
+      "with locale", locale, 
+      "| Default from list:", currentDefaultCurrency?.code,
+      "| API default:", defaultCurrency?.code,
+      "| Last refresh:", new Date(lastRefreshTime).toLocaleTimeString());
     
     // Set decimal digit options based on currency
     const minimumFractionDigits = currencyCode === 'JPY' ? 0 : 2;
@@ -86,9 +169,10 @@ export function useCurrency() {
   };
 
   return {
-    defaultCurrency,
+    defaultCurrency: defaultCurrency || undefined,
     currencies,
     formatCurrency,
-    refreshCurrencyData
+    refreshCurrencyData,
+    lastRefreshTime
   };
 }
