@@ -301,7 +301,7 @@ export default function PartsForm({ itemId, isOpen, onClose }: PartsFormProps) {
                       <FormLabel>Cost</FormLabel>
                       <FormControl>
                         <div className="flex items-center">
-                          <span className="mr-1">{defaultCurrency?.symbol || '$'}</span>
+                          <CurrencySymbol />
                           <Input
                             type="number"
                             step="0.01"
@@ -399,7 +399,7 @@ export default function PartsForm({ itemId, isOpen, onClose }: PartsFormProps) {
                     </div>
                     <FormControl>
                       <Switch
-                        checked={field.value}
+                        checked={Boolean(field.value)}
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
