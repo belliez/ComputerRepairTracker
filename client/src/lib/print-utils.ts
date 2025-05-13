@@ -16,7 +16,7 @@ export interface PrintableDocument {
  * Helper function to get a currency symbol based on currency code
  * Used for consistent direct symbol injection in HTML templates
  */
-export function getCurrencySymbol(currencyCode: string, fallbackSymbol: string = '€'): string {
+export function getCurrencySymbol(currencyCode: string, fallbackSymbol: string = '£'): string {
   if (!currencyCode) {
     return fallbackSymbol;
   }
