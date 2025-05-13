@@ -450,23 +450,31 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
     setShowDeleteDialog(true);
   };
   
-  // Print quote handler
-  const handlePrintQuote = (quote: any) => {
+  // Print quote handler - updated to handle async createQuoteDocument
+  const handlePrintQuote = async (quote: any) => {
     if (!repair || !repair.customer) return;
     
     try {
-      const quoteDocument = createQuoteDocument(
+      // Set a loading state while we fetch fresh currency data
+      toast({
+        title: "Preparing document",
+        description: "Fetching latest currency data...",
+      });
+      
+      // Using await with the async createQuoteDocument function
+      const quoteDocument = await createQuoteDocument(
         quote, 
         repair.customer, 
         repair, 
         repairItems || []
       );
       
+      // Now we can safely print the document with the latest currency data
       printDocument(quoteDocument);
       
       toast({
         title: "Print initiated",
-        description: "Quote print preview has been opened"
+        description: "Quote print preview has been opened with latest currency settings"
       });
     } catch (error) {
       console.error("Error printing quote:", error);
@@ -511,23 +519,31 @@ export default function RepairDetail({ repairId, isOpen, onClose }: RepairDetail
     emailQuoteMutation.mutate(quoteId);
   };
   
-  // Print invoice handler
-  const handlePrintInvoice = (invoice: any) => {
+  // Print invoice handler - updated to handle async createInvoiceDocument
+  const handlePrintInvoice = async (invoice: any) => {
     if (!repair || !repair.customer) return;
     
     try {
-      const invoiceDocument = createInvoiceDocument(
+      // Set a loading state while we fetch fresh currency data
+      toast({
+        title: "Preparing document",
+        description: "Fetching latest currency data...",
+      });
+      
+      // Using await with the async createInvoiceDocument function
+      const invoiceDocument = await createInvoiceDocument(
         invoice, 
         repair.customer, 
         repair, 
         repairItems || []
       );
       
+      // Now we can safely print the document with the latest currency data
       printDocument(invoiceDocument);
       
       toast({
         title: "Print initiated",
-        description: "Invoice print preview has been opened"
+        description: "Invoice print preview has been opened with latest currency settings"
       });
     } catch (error) {
       console.error("Error printing invoice:", error);
