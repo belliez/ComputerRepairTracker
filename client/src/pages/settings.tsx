@@ -1172,22 +1172,16 @@ const SettingsPage = () => {
         // Force refetch to get fresh data after the changes have been applied
         fetchCurrencies();
         
-        // Invalidate all currency-related queries to ensure all components use the new default
-        queryClient.invalidateQueries();
+        // Only invalidate currency-related queries for a more selective cache clear
+        queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies/default'] });
         
-        // Show a toast notification about the cache reset
+        // Show a toast notification with improved message (no longer mentions cache reset)
         toast({
           title: "Default currency updated",
-          description: `The default currency has been set to ${currencyCode}. Application cache has been reset.`
+          description: `The default currency has been set to ${currencyCode}.`
         });
-        
-        // For a guaranteed refresh, reload the entire app after a few seconds
-        // This is the most reliable way to ensure everything is using the updated currency
-        setTimeout(() => {
-          console.log("Forcing application reload to refresh all currency data");
-          window.location.reload();
-        }, 2000);
-      }, 500);
+      }, 300);
     } catch (error) {
       console.error('Error setting default currency:', error);
       toast({
@@ -1492,17 +1486,21 @@ const SettingsPage = () => {
                       size="sm" 
                       className="h-8 px-2 text-xs"
                       onClick={() => {
-                        // Force refresh all currency data
+                        // Force refresh all currency data with a cleaner approach
                         fetchCurrencies();
+                        
+                        // Selectively invalidate only currency-related queries
                         queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
                         queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies/default'] });
+                        
+                        // More accurate description in the toast
                         toast({
-                          title: "Currency cache cleared",
-                          description: "All currency data has been refreshed"
+                          title: "Currency data updated",
+                          description: "Latest currency information loaded"
                         });
                       }}
                     >
-                      <RefreshCw className="h-3 w-3 mr-1" /> Refresh Cache
+                      <RefreshCw className="h-3 w-3 mr-1" /> Refresh Data
                     </Button>
                   </div>
                 )}
