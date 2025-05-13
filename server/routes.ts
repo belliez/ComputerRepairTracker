@@ -1641,7 +1641,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get repair items (these will be used as a fallback if itemsData is not available)
       const items = await storage.getRepairItems(repair.id);
       
-      console.log(`Sending quote email for quote #${quote.quoteNumber}, repair #${repair.ticketNumber}`);
+      // Get organization settings to determine currency if not set in quote
+      const organizationId = quote.organizationId || req.organizationId || 1;
+      
+      // If quote doesn't have a currency code set, try to get the default currency for the organization
+      if (!quote.currencyCode) {
+        try {
+          // Get the organization's default currency
+          const [defaultCurrency] = await db
+            .select()
+            .from(currencies)
+            .where(
+              and(
+                eq(currencies.organizationId, organizationId),
+                eq(currencies.isDefault, true)
+              )
+            );
+            
+          if (defaultCurrency) {
+            console.log(`Quote email: Using organization's default currency: ${defaultCurrency.code}`);
+            // Modify the quote object to include the currency code
+            quote.currencyCode = defaultCurrency.code;
+          } else {
+            console.log(`Quote email: No default currency found for organization ${organizationId}, using GBP as fallback`);
+            quote.currencyCode = 'GBP'; // Fallback to GBP 
+          }
+        } catch (error) {
+          console.error("Error fetching default currency:", error);
+          quote.currencyCode = 'GBP'; // Fallback to GBP
+        }
+      }
+
+      console.log(`Sending quote email for quote #${quote.quoteNumber}, repair #${repair.ticketNumber} with currency code: ${quote.currencyCode}`);
       
       // Check for itemsData
       if (quote.itemsData) {
@@ -1838,7 +1869,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get repair items (these will be used as a fallback if itemsData is not available)
       const items = await storage.getRepairItems(repair.id);
       
-      console.log(`Sending invoice email for invoice #${invoice.invoiceNumber}, repair #${repair.ticketNumber}`);
+      // Get organization settings to determine currency if not set in invoice
+      const organizationId = invoice.organizationId || req.organizationId || 1;
+      
+      // If invoice doesn't have a currency code set, try to get the default currency for the organization
+      if (!invoice.currencyCode) {
+        try {
+          // Get the organization's default currency
+          const [defaultCurrency] = await db
+            .select()
+            .from(currencies)
+            .where(
+              and(
+                eq(currencies.organizationId, organizationId),
+                eq(currencies.isDefault, true)
+              )
+            );
+            
+          if (defaultCurrency) {
+            console.log(`Invoice email: Using organization's default currency: ${defaultCurrency.code}`);
+            // Modify the invoice object to include the currency code
+            invoice.currencyCode = defaultCurrency.code;
+          } else {
+            console.log(`Invoice email: No default currency found for organization ${organizationId}, using GBP as fallback`);
+            invoice.currencyCode = 'GBP'; // Fallback to GBP 
+          }
+        } catch (error) {
+          console.error("Error fetching default currency:", error);
+          invoice.currencyCode = 'GBP'; // Fallback to GBP
+        }
+      }
+
+      console.log(`Sending invoice email for invoice #${invoice.invoiceNumber}, repair #${repair.ticketNumber} with currency code: ${invoice.currencyCode}`);
       
       // Check for itemsData
       if (invoice.itemsData) {
