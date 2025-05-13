@@ -2451,6 +2451,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Handle different types of settings
       switch (type) {
+        case 'email':
+          try {
+            console.log('Processing email settings update:', data);
+            
+            // Get current organization settings
+            const orgEmailResult = await db.select({ settings: organizations.settings })
+              .from(organizations)
+              .where(eq(organizations.id, organizationId));
+            
+            const currentSettings = orgEmailResult[0]?.settings || {};
+            
+            // Create updated settings object with email settings
+            const updatedSettings = {
+              ...currentSettings,
+              email: data.settings || {}
+            };
+            
+            console.log('Updated email settings to be saved:', JSON.stringify(updatedSettings));
+            
+            // Update the organization with new settings
+            await db.update(organizations)
+              .set({
+                settings: updatedSettings,
+                updatedAt: new Date()
+              })
+              .where(eq(organizations.id, organizationId));
+              
+            console.log('Email settings updated successfully');
+          } catch (emailError) {
+            console.error('Error updating email settings:', emailError);
+            throw emailError;
+          }
+          break;
+            
         case 'company':
           // Update the organization name
           await db.update(organizations)
