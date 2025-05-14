@@ -88,6 +88,48 @@ export const insertInventoryItemSchema = createInsertSchema(inventoryItems).omit
   id: true,
 });
 
+// Services (e.g., labor)
+export const services = pgTable("services", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").notNull(), // For multi-tenancy
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // e.g., "labor", "diagnostics", "software"
+  hourlyRate: doublePrecision("hourly_rate").notNull(),
+  cost: doublePrecision("cost"), // Internal cost of providing the service
+  isActive: boolean("is_active").default(true),
+  deleted: boolean("deleted").default(false).notNull(),
+  deletedAt: timestamp("deleted_at"),
+});
+
+export const insertServiceSchema = createInsertSchema(services).omit({
+  id: true,
+  deleted: true,
+  deletedAt: true,
+});
+
+// Technician service rates (optional customization of service rates per technician)
+export const technicianRates = pgTable("technician_rates", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").notNull(), // For multi-tenancy
+  technicianId: integer("technician_id").notNull().references(() => technicians.id),
+  serviceId: integer("service_id").notNull().references(() => services.id),
+  hourlyRate: doublePrecision("hourly_rate").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    // Each technician can only have one rate for a specific service
+    techServiceUniqueIdx: primaryKey(table.technicianId, table.serviceId),
+  };
+});
+
+export const insertTechnicianRateSchema = createInsertSchema(technicianRates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Repair Tickets
 export const repairStatuses = [
   "intake",
@@ -438,17 +480,41 @@ export const devicesRelations = relations(devices, ({ one }) => ({
   }),
 }));
 
-export const techniciansRelations = relations(technicians, ({ one }) => ({
+export const techniciansRelations = relations(technicians, ({ one, many }) => ({
   organization: one(organizations, {
     fields: [technicians.organizationId],
     references: [organizations.id],
   }),
+  serviceRates: many(technicianRates),
 }));
 
 export const inventoryItemsRelations = relations(inventoryItems, ({ one }) => ({
   organization: one(organizations, {
     fields: [inventoryItems.organizationId],
     references: [organizations.id],
+  }),
+}));
+
+export const servicesRelations = relations(services, ({ one, many }) => ({
+  organization: one(organizations, {
+    fields: [services.organizationId],
+    references: [organizations.id],
+  }),
+  technicianRates: many(technicianRates),
+}));
+
+export const technicianRatesRelations = relations(technicianRates, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [technicianRates.organizationId],
+    references: [organizations.id],
+  }),
+  technician: one(technicians, {
+    fields: [technicianRates.technicianId],
+    references: [technicians.id],
+  }),
+  service: one(services, {
+    fields: [technicianRates.serviceId],
+    references: [services.id],
   }),
 }));
 
