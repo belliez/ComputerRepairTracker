@@ -37,8 +37,25 @@ export function CurrencySymbol({ currencyCode, className = "mr-1" }: CurrencySym
     
     // If a specific currency code is provided, use that
     if (currencyCode && currencies) {
-      const selectedCurrency = currencies.find(c => c.code === currencyCode);
+      // First, look for exact match
+      let selectedCurrency = currencies.find(c => c.code === currencyCode);
+      
+      // If no exact match and currencyCode doesn't have _CORE suffix, check for core version
+      if (!selectedCurrency && !currencyCode.includes('_CORE')) {
+        // Try to find a core currency that starts with the provided code
+        selectedCurrency = currencies.find(c => 
+          c.isCore && c.code.startsWith(currencyCode)
+        );
+      }
+      
+      // If the currency has _CORE suffix, also try with just the base code
+      if (!selectedCurrency && currencyCode.includes('_CORE')) {
+        const baseCode = currencyCode.split('_')[0];
+        selectedCurrency = currencies.find(c => c.code === baseCode);
+      }
+      
       console.log("CURRENCY SYMBOL DEBUG: Selected currency by code:", selectedCurrency);
+      
       if (selectedCurrency?.symbol) {
         console.log("CURRENCY SYMBOL DEBUG: Setting symbol to:", selectedCurrency.symbol);
         setSymbol(selectedCurrency.symbol);

@@ -2727,7 +2727,17 @@ const SettingsPage = () => {
                   <TableBody>
                     {currencies.map((currency: any) => (
                       <TableRow key={currency.code}>
-                        <TableCell className="font-medium">{currency.code}</TableCell>
+                        <TableCell className="font-medium">
+                          {currency.isCore && currency.code.includes('_CORE') 
+                            ? currency.code.split('_')[0]  /* Display just the standard code (USD, EUR, etc.) */
+                            : currency.code
+                          }
+                          {currency.isCore && (
+                            <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">
+                              Core
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell>{currency.name}</TableCell>
                         <TableCell>{currency.symbol}</TableCell>
                         <TableCell>
