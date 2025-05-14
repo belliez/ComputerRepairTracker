@@ -123,6 +123,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
         
         console.log(`PUBLIC API: Found ${allCurrencies.length} currencies for organization ${organizationId} (including core currencies)`);
+        
+        // Get organization-specific currency settings from the database
+        const orgSettings = await db.execute(
+          sql`SELECT * FROM organization_currency_settings WHERE organization_id = ${organizationId}`
+        );
+        
+        console.log(`PUBLIC API: Organization ${organizationId} has ${orgSettings.rows.length} currency settings`);
+        
+        // Find the default currency from the database settings
+        let defaultCurrencyCode = null;
+        for (const row of orgSettings.rows) {
+          if (isPostgresTrue(row.is_default)) {
+            defaultCurrencyCode = row.currency_code;
+            console.log(`PUBLIC API: Found default currency code in DB: ${defaultCurrencyCode}`);
+            break;
+          }
+        }
+        
+        // Set the default currency flag for each currency
+        if (defaultCurrencyCode) {
+          allCurrencies = allCurrencies.map(currency => ({
+            ...currency,
+            isDefault: currency.code === defaultCurrencyCode
+          }));
+          console.log(`PUBLIC API: Marked ${defaultCurrencyCode} as default currency`);
+        }
       } else {
         // No organization ID, only return core currencies
         allCurrencies = await db.select()
