@@ -115,7 +115,7 @@ export default function InvoiceForm({
   });
   
   const { data: defaultCurrency, isLoading: isLoadingDefaultCurrency, refetch: refetchDefaultCurrency } = useQuery<Currency>({
-    queryKey: ['/api/settings/currencies/default'],
+    queryKey: ['/api/settings/currencies/default-fixed'],
   });
   
   // Force refresh currencies and default currency when dialog opens
@@ -125,7 +125,7 @@ export default function InvoiceForm({
       
       // First invalidate all currency queries to clear any cached data
       queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies/default'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies/default-fixed'] });
       
       // Then actively refetch all required data with fresh API calls
       Promise.all([

@@ -3114,6 +3114,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Organization settings endpoint for onboarding
+  // New fixed endpoint to get default currency that correctly handles snake_case DB columns
+  apiRouter.get("/settings/currencies/default-fixed", async (req: Request, res: Response) => {
+    try {
+      const headerOrgId = req.headers['x-organization-id'];
+      const globalOrgId = (global as any).currentOrganizationId;
+      console.log(`DEBUG DEFAULT CURRENCY: Header org ID: ${headerOrgId}, Global org ID: ${globalOrgId}`);
+      
+      // Force organization ID from the header if present
+      const orgId = headerOrgId ? parseInt(headerOrgId as string) : globalOrgId;
+      console.log("Getting default currency for organization ID:", orgId);
+      
+      // Get raw data from database
+      const orgSettings = await db.execute(
+        sql`SELECT * FROM organization_currency_settings WHERE organization_id = ${orgId}`
+      );
+      
+      console.log(`DEBUG: Organization settings for ${orgId}:`, orgSettings.rows);
+      
+      // Find default setting
+      let defaultCurrencyCode = null;
+      for (const row of orgSettings.rows) {
+        if (row.is_default) {
+          defaultCurrencyCode = row.currency_code;
+          console.log(`DEBUG: Found default currency code: ${defaultCurrencyCode}`);
+          break;
+        }
+      }
+      
+      // If found a default, get the currency details
+      if (defaultCurrencyCode) {
+        const [currency] = await db.select()
+          .from(currencies)
+          .where(eq(currencies.code, defaultCurrencyCode));
+          
+        if (currency) {
+          console.log(`DEBUG: Found currency ${currency.code}, returning with isDefault=true`);
+          return res.json({
+            ...currency,
+            isDefault: true
+          });
+        }
+      }
+      
+      // Fallback to core default
+      const [coreDefault] = await db.select()
+        .from(currencies)
+        .where(and(
+          eq(currencies.isCore, true),
+          eq(currencies.isDefault, true)
+        ));
+        
+      if (coreDefault) {
+        console.log(`DEBUG: Using core default ${coreDefault.code}`);
+        return res.json(coreDefault);
+      }
+      
+      // Last resort fallback
+      const [anyCurrency] = await db.select().from(currencies).limit(1);
+      return res.json({
+        ...anyCurrency,
+        isDefault: true
+      });
+    } catch (error: any) {
+      console.error("Error in default-fixed:", error);
+      return res.status(500).json({ error: error.message });
+    }
+  });
+
   apiRouter.post("/settings/organization", authenticateJWT, async (req: Request, res: Response) => {
     try {
       const { type, ...data } = req.body;

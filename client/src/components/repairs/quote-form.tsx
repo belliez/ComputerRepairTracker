@@ -110,7 +110,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
   });
   
   const { data: defaultCurrencyData, isLoading: isLoadingDefaultCurrency, refetch: refetchDefaultCurrency } = useQuery<Currency>({
-    queryKey: ['/api/settings/currencies/default'],
+    queryKey: ['/api/settings/currencies/default-fixed'],
   });
   
   // Force refresh currencies and default currency when dialog opens
@@ -120,7 +120,7 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
       
       // First invalidate all currency queries to clear any cached data
       queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies/default'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies/default-fixed'] });
       
       // Then actively refetch all required data with fresh API calls
       Promise.all([

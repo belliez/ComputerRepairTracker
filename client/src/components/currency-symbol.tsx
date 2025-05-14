@@ -23,8 +23,9 @@ export function CurrencySymbol({ currencyCode, className = "mr-1" }: CurrencySym
     refetchOnWindowFocus: true, // Refetch when window regains focus
   });
   
+  // Use our new fixed endpoint
   const { data: defaultCurrency } = useQuery<Currency>({
-    queryKey: ['/api/settings/currencies/default'],
+    queryKey: ['/api/settings/currencies/default-fixed'],
     staleTime: 0, // Don't use cache, always fetch fresh data
     refetchOnWindowFocus: true, // Refetch when window regains focus
   });
