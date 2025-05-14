@@ -614,9 +614,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Inventory Items
   apiRouter.get("/inventory", async (req: Request, res: Response) => {
     try {
+      console.log(`INVENTORY DEBUG: Request for inventory items - org ID: ${(global as any).currentOrganizationId || 'not set'}`);
       const items = await storage.getInventoryItems();
+      console.log(`INVENTORY DEBUG: Found ${items.length} items`);
+      if (items.length > 0) {
+        console.log(`INVENTORY DEBUG: First item: ${JSON.stringify(items[0])}`);
+      }
       res.json(items);
     } catch (error) {
+      console.error("INVENTORY ERROR:", error);
       res.status(500).json({ error: "Failed to fetch inventory items" });
     }
   });
@@ -641,10 +647,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   apiRouter.post("/inventory", async (req: Request, res: Response) => {
     try {
+      console.log(`INVENTORY DEBUG: Creating inventory item in organization: ${(global as any).currentOrganizationId || 'not set'}`);
       const validatedData = insertInventoryItemSchema.parse(req.body);
+      console.log(`INVENTORY DEBUG: Validated data: ${JSON.stringify(validatedData)}`);
       const item = await storage.createInventoryItem(validatedData);
+      console.log(`INVENTORY DEBUG: Created item: ${JSON.stringify(item)}`);
+      
+      // After creating, let's verify the item is retrievable
+      const allItems = await storage.getInventoryItems();
+      console.log(`INVENTORY DEBUG: After creation, found ${allItems.length} total items`);
+      const justCreated = allItems.find(i => i.id === item.id);
+      console.log(`INVENTORY DEBUG: Item retrieval verification: ${justCreated ? 'FOUND' : 'NOT FOUND'}`);
+      
       res.status(201).json(item);
     } catch (error) {
+      console.error("INVENTORY ERROR:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid inventory item data", details: error.errors });
       }
