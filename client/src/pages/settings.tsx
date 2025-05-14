@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -785,6 +785,11 @@ const SettingsPage = () => {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [isLoadingOrganization, setIsLoadingOrganization] = useState(true);
   const [organizationError, setOrganizationError] = useState<Error | null>(null);
+  
+  // Helper function to get current organization ID
+  const getCurrentOrgId = useCallback(() => {
+    return organization?.id || Number(localStorage.getItem('currentOrganizationId')) || 3;
+  }, [organization]);
 
   // Function to fetch organization with proper headers
   const fetchOrganization = async () => {
@@ -793,9 +798,11 @@ const SettingsPage = () => {
       // Get the auth token 
       const authToken = getAuthToken();
       
+      const orgId = getCurrentOrgId();
+      
       const headers: Record<string, string> = {
         'X-Debug-Client': 'RepairTrackerClient',
-        'X-Organization-ID': '2', // Hardcoded ID for now
+        'X-Organization-ID': orgId.toString(), // Use dynamic organization ID
         'Pragma': 'no-cache',
         'Cache-Control': 'no-cache'
       };
