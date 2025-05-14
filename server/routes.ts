@@ -94,14 +94,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const organizationId = parseInt(req.headers['x-organization-id'] as string) || null;
       console.log("PUBLIC API: Currencies request for organization:", organizationId);
       
-      // Query with organization filter if we have an organization ID
-      let query = db.select().from(currencies);
-      if (organizationId) {
-        query = query.where(eq(currencies.organizationId, organizationId));
-      }
+      let allCurrencies;
       
-      const allCurrencies = await query;
-      console.log("PUBLIC API: All currencies count:", allCurrencies.length, "for organization:", organizationId);
+      // If we have an organization ID, get both organization-specific and core currencies
+      if (organizationId) {
+        allCurrencies = await db.select()
+          .from(currencies)
+          .where(
+            or(
+              // Get organization-specific currencies
+              eq(currencies.organizationId, organizationId),
+              // Get core currencies that are available to all organizations
+              eq(currencies.isCore, true)
+            )
+          );
+        
+        console.log(`PUBLIC API: Found ${allCurrencies.length} currencies for organization ${organizationId} (including core currencies)`);
+      } else {
+        // No organization ID, only return core currencies
+        allCurrencies = await db.select()
+          .from(currencies)
+          .where(eq(currencies.isCore, true));
+        
+        console.log(`PUBLIC API: Found ${allCurrencies.length} core currencies`);
+      }
       
       res.json(allCurrencies);
     } catch (error) {
@@ -118,33 +134,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const organizationId = parseInt(req.headers['x-organization-id'] as string) || null;
       console.log("PUBLIC API: Default currency request for organization:", organizationId);
       
-      // Query with organization filter
-      let query = db.select().from(currencies);
-      
+      // First try to find an organization-specific default currency
       if (organizationId) {
-        query = query.where(and(
-          eq(currencies.isDefault, true),
-          eq(currencies.organizationId, organizationId)
-        ));
-      } else {
-        query = query.where(eq(currencies.isDefault, true));
-      }
-      
-      const defaultCurrency = await query.limit(1);
-      console.log("PUBLIC API: Default currency query result:", JSON.stringify(defaultCurrency[0] || null));
-      
-      if (defaultCurrency.length > 0) {
-        res.json(defaultCurrency[0]);
-      } else {
-        // If no default currency is set, return the first one for the organization or null
-        let fallbackQuery = db.select().from(currencies);
-        if (organizationId) {
-          fallbackQuery = fallbackQuery.where(eq(currencies.organizationId, organizationId));
+        const [orgDefaultCurrency] = await db.select()
+          .from(currencies)
+          .where(and(
+            eq(currencies.isDefault, true),
+            eq(currencies.organizationId, organizationId)
+          ));
+        
+        if (orgDefaultCurrency) {
+          console.log(`PUBLIC API: Found organization-specific default currency: ${orgDefaultCurrency.code}`);
+          return res.json(orgDefaultCurrency);
         }
-        const anyCurrency = await fallbackQuery.limit(1);
-        console.log("PUBLIC API: Fallback currency result:", JSON.stringify(anyCurrency[0] || null));
-        res.json(anyCurrency[0] || null);
       }
+      
+      // If no org-specific default is found, look for a core default currency
+      const [coreDefaultCurrency] = await db.select()
+        .from(currencies)
+        .where(and(
+          eq(currencies.isDefault, true),
+          eq(currencies.isCore, true)
+        ));
+        
+      if (coreDefaultCurrency) {
+        console.log(`PUBLIC API: Found core default currency: ${coreDefaultCurrency.code}`);
+        return res.json(coreDefaultCurrency);
+      }
+      
+      // If no default currency found, try to get any organization-specific currency
+      if (organizationId) {
+        const [anyOrgCurrency] = await db.select()
+          .from(currencies)
+          .where(eq(currencies.organizationId, organizationId))
+          .limit(1);
+          
+        if (anyOrgCurrency) {
+          console.log(`PUBLIC API: No default currency found, using first organization currency: ${anyOrgCurrency.code}`);
+          return res.json(anyOrgCurrency);
+        }
+      }
+      
+      // Last resort: Get any core currency
+      const [anyCoreCurrency] = await db.select()
+        .from(currencies)
+        .where(eq(currencies.isCore, true))
+        .limit(1);
+        
+      if (anyCoreCurrency) {
+        console.log(`PUBLIC API: Using first available core currency: ${anyCoreCurrency.code}`);
+        return res.json(anyCoreCurrency);
+      }
+      
+      // If we get here, there are no currencies at all
+      console.log("PUBLIC API: No currencies found in the system");
+      return res.json(null);
     } catch (error) {
       console.error("PUBLIC API: Error fetching default currency:", error);
       res.status(500).json({ message: "Error fetching default currency" });
