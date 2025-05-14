@@ -67,6 +67,14 @@ export async function createOrgCurrencySettings() {
             WHERE organization_id = ${orgId} AND currency_code = ${coreCurrencyCode}
           `);
 
+          // First, reset any default currencies for this organization
+          console.log(`Ensuring only one default currency for organization ${orgId}`);
+          await db.execute(sql`
+            UPDATE organization_currency_settings
+            SET is_default = false
+            WHERE organization_id = ${orgId}
+          `);
+          
           if (existingSetting.rows.length > 0) {
             console.log(`Default currency setting already exists for organization ${orgId}, updating it`);
             await db.execute(sql`
