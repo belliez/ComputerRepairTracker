@@ -2448,6 +2448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Force organization ID from the header if present
       const organizationId = headerOrgId ? parseInt(headerOrgId as string) : globalOrgId;
+      console.log(`✅ Using organization ID: ${organizationId} for currencies endpoint`);
       console.log("Getting currencies for organization ID:", organizationId);
       
       // Get all core currencies
@@ -2463,11 +2464,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       console.log(`DEBUG: Organization ${organizationId} has ${orgSettings.rows.length} currency settings`);
+      console.log('DEBUG: Raw currency settings:', JSON.stringify(orgSettings.rows, null, 2));
       
       // Find the default currency from the database
       let defaultCurrencyCode = null;
       for (const row of orgSettings.rows) {
-        if (row.is_default) {
+        console.log(`DEBUG: Checking row: ${JSON.stringify(row)}, is_default: ${row.is_default}, type: ${typeof row.is_default}`);
+        if (row.is_default === true || row.is_default === 't') {
           defaultCurrencyCode = row.currency_code;
           console.log(`DEBUG: Found default currency code in DB: ${defaultCurrencyCode}`);
           break;
@@ -4017,9 +4020,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Settings - Currencies
   settingsRouter.get("/currencies", async (req: Request, res: Response) => {
     try {
-      // Get organization ID from global context or default to 1
-      const orgId = (global as any).currentOrganizationId || 1;
-      console.log(`Getting currencies for organization: ${orgId} (public router)`);
+      // Force organization ID from the header if present, fall back to global context or default to 1
+      const headerOrgId = req.headers['x-organization-id'];
+      const globalOrgId = (global as any).currentOrganizationId;
+      const orgId = headerOrgId ? parseInt(headerOrgId as string) : (globalOrgId || 1);
+      console.log(`Getting currencies for organization: ${orgId} (public router) Header: ${headerOrgId}, Global: ${globalOrgId}`);
       
       // Get all core currencies
       const allCurrencies = await db.select().from(currencies)
@@ -4034,11 +4039,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       console.log(`DEBUG: Organization ${orgId} has ${orgSettings.rows.length} currency settings`);
+      console.log('DEBUG: Raw currency settings:', JSON.stringify(orgSettings.rows, null, 2));
       
       // Find the default currency from the database
       let defaultCurrencyCode = null;
       for (const row of orgSettings.rows) {
-        if (row.is_default) {
+        console.log(`DEBUG: Checking row: ${JSON.stringify(row)}, is_default: ${row.is_default}, type: ${typeof row.is_default}`);
+        if (row.is_default === true || row.is_default === 't') {
           defaultCurrencyCode = row.currency_code;
           console.log(`DEBUG: Found default currency code in DB: ${defaultCurrencyCode}`);
           break;
