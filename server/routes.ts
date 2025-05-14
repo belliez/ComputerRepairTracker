@@ -3309,9 +3309,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orgId = (global as any).currentOrganizationId || 1;
       console.log(`Getting currencies for organization: ${orgId} (public router)`);
       
+      // Get both organization-specific currencies and core currencies
       const allCurrencies = await db.select()
         .from(currencies)
-        .where(eq((currencies as any).organizationId, orgId));
+        .where(
+          or(
+            // Get organization-specific currencies
+            eq(currencies.organizationId, orgId),
+            // Get core currencies that are available to all organizations
+            eq(currencies.isCore, true)
+          )
+        );
       
       console.log(`Found ${allCurrencies.length} currencies for organization: ${orgId}`);
       res.json(allCurrencies);
@@ -3327,14 +3335,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orgId = (global as any).currentOrganizationId || 1;
       console.log(`Getting default currency for organization: ${orgId} (public router)`);
       
-      const [defaultCurrency] = await db.select()
+      // First try to find an organization-specific default currency
+      const [orgDefaultCurrency] = await db.select()
         .from(currencies)
         .where(and(
           eq(currencies.isDefault, true),
-          eq((currencies as any).organizationId, orgId)
+          eq(currencies.organizationId, orgId)
         ));
       
-      res.json(defaultCurrency || null);
+      if (orgDefaultCurrency) {
+        console.log(`Found organization-specific default currency: ${orgDefaultCurrency.code}`);
+        return res.json(orgDefaultCurrency);
+      }
+      
+      // If no org-specific default is found, look for a core default currency
+      const [coreDefaultCurrency] = await db.select()
+        .from(currencies)
+        .where(and(
+          eq(currencies.isDefault, true),
+          eq(currencies.isCore, true)
+        ));
+        
+      if (coreDefaultCurrency) {
+        console.log(`Found core default currency: ${coreDefaultCurrency.code}`);
+        return res.json(coreDefaultCurrency);
+      }
+      
+      // If no default currency found at all, return null
+      console.log('No default currency found');
+      res.json(null);
     } catch (error) {
       console.error("Error fetching default currency:", error);
       res.status(500).json({ message: "Error fetching default currency" });
