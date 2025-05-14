@@ -3200,6 +3200,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For new organizations during onboarding, get the organization ID from user organizations
       let organizationId = isDevelopmentMode ? 1 : req.organizationId;
       
+      // Get organization ID from headers if available
+      const orgIdHeader = req.headers['x-organization-id'];
+      if (orgIdHeader && !organizationId) {
+        const parsedOrgId = parseInt(orgIdHeader as string, 10);
+        if (!isNaN(parsedOrgId)) {
+          console.log(`Using organization ID ${parsedOrgId} from X-Organization-ID header`);
+          organizationId = parsedOrgId;
+        }
+      }
+      
       // If organization ID is not set and we're not in development mode, try to find user's organization
       if (!organizationId && !isDevelopmentMode && req.user) {
         try {

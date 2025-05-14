@@ -581,10 +581,20 @@ const SettingsPage = () => {
         options.body = JSON.stringify(data);
       }
       
+      console.log('Sending request to:', url, 'with options:', JSON.stringify({
+        method: options.method,
+        headers: options.headers,
+        bodyLength: options.body ? JSON.stringify(options.body).length : 0
+      }));
+      
       const response = await fetch(url, options);
       
       if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
+        // Try to get more detailed error information
+        const errorText = await response.text();
+        console.error('API error response:', response.status, response.statusText, errorText);
+        
+        throw new Error(`API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
       
       return await response.json();
