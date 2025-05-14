@@ -77,9 +77,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       description: 'Using development authentication',
     });
     
-    // Redirect to home page
+    // Force immediate redirect to home page if on auth page
     if (window.location.pathname.includes('/auth')) {
-      window.location.href = '/';
+      console.log("Detected auth page, forcing redirect to home");
+      // Use setTimeout to ensure toast is shown first
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 500);
     }
   };
 

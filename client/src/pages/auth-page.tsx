@@ -40,14 +40,24 @@ const AuthPage: React.FC = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      console.log("Starting sign-in with email:", email);
       await signIn(email, password);
+      console.log("Sign-in completed successfully");
       toast({
         title: 'Sign in successful',
         description: 'Welcome back!',
       });
-      setLocation('/');
+      
+      // Force redirect to dashboard
+      window.location.href = '/';
     } catch (error: any) {
-      // Error handling is done in the auth provider
+      console.error("Sign-in error in auth-page:", error);
+      // Show fallback error message
+      toast({
+        title: "Sign-in Failed",
+        description: error.message || "Could not sign in with these credentials. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -61,7 +71,9 @@ const AuthPage: React.FC = () => {
         title: 'Sign up successful',
         description: 'Welcome to RepairTrack!',
       });
-      setLocation('/');
+      
+      // Force redirect to dashboard
+      window.location.href = '/';
     } catch (error: any) {
       console.error("Registration error in auth-page:", error);
       // Show fallback error message
@@ -78,7 +90,9 @@ const AuthPage: React.FC = () => {
       console.log("Starting Google sign-in from Auth page");
       await signInWithGoogle();
       console.log("Google sign-in completed successfully");
-      setLocation('/');
+      
+      // Force redirect to dashboard
+      window.location.href = '/';
     } catch (error: any) {
       console.error("Google sign-in error in auth-page:", error);
       // Show fallback error message
@@ -129,8 +143,8 @@ const AuthPage: React.FC = () => {
           description: 'Using development authentication',
         });
         
-        // Redirect to home page
-        setLocation('/');
+        // Force redirect to dashboard
+        window.location.href = '/';
       }).catch(error => {
         throw error;
       });
