@@ -2449,84 +2449,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Force organization ID from the header if present
       const organizationId = headerOrgId ? parseInt(headerOrgId as string) : globalOrgId;
       console.log("Getting currencies for organization ID:", organizationId);
-      console.log("Request headers:", req.headers);
       
-      // Get both organization-specific currencies and core currencies
+      // Get all core currencies
       const allCurrencies = await db.select().from(currencies)
-        .where(
-          or(
-            // Get organization-specific currencies
-            eq(currencies.organizationId, organizationId),
-            // Get core currencies that are available to all organizations
-            eq(currencies.isCore, true)
-          )
-        );
+        .where(eq(currencies.isCore, true));
       
-      console.log(`Found ${allCurrencies.length} total currencies for org ${organizationId}`);
+      console.log(`Found ${allCurrencies.length} core currencies`);
       
-      // Get organization-specific settings for core currencies
-      const orgSettings = await db.select().from(organizationCurrencySettings)
-        .where(eq(organizationCurrencySettings.organizationId, organizationId));
+      // Get organization-specific currency settings directly from the database
+      // Using raw SQL query to avoid property name conflicts
+      const orgSettings = await db.execute(
+        sql`SELECT * FROM organization_currency_settings WHERE organization_id = ${organizationId}`
+      );
       
-      console.log(`DEBUG: Organization ${organizationId} has ${orgSettings.length} currency settings:`);
-      console.log(JSON.stringify(orgSettings, null, 2));
+      console.log(`DEBUG: Organization ${organizationId} has ${orgSettings.rows.length} currency settings`);
       
-      // Debug the raw settings
-      for (const setting of orgSettings) {
-        console.log(`RAW SETTING: ${JSON.stringify(setting)}`);
-      }
-      
-      // Create a map of currency code -> settings for quick lookup
-      const settingsMap = new Map();
-      for (const setting of orgSettings) {
-        // Normalize property names from DB snake_case to camelCase
-        // These properties come directly from the DB so they'll be snake_case
-        const code = setting.currency_code;
-        const isDefault = setting.is_default;
-        
-        if (code) {
-          settingsMap.set(code, {
-            ...setting,
-            currencyCode: code,
-            isDefault: isDefault
-          });
-          console.log(`DEBUG: Setting currency ${code} has isDefault=${isDefault}`);
-        } else {
-          console.log(`WARNING: Currency setting missing currency_code:`, setting);
+      // Find the default currency from the database
+      let defaultCurrencyCode = null;
+      for (const row of orgSettings.rows) {
+        if (row.is_default) {
+          defaultCurrencyCode = row.currency_code;
+          console.log(`DEBUG: Found default currency code in DB: ${defaultCurrencyCode}`);
+          break;
         }
       }
       
-      // Enhance the currency objects with organization-specific settings
-      console.log('Organization currency settings for org', organizationId, ':', orgSettings);
-      
-      // First, set all currencies' isDefault to false
-      // We'll then apply the organization-specific settings
-      const currenciesWithDefaults = allCurrencies.map(currency => {
-        // Always default to false initially
-        return {
-          ...currency,
-          isDefault: false
-        };
-      });
-      
-      console.log(`DEBUG: After setting defaults to false, currencies:`, 
-        currenciesWithDefaults.map(c => ({ code: c.code, isDefault: c.isDefault })));
-      
-      // Now apply organization-specific settings
-      const enhancedCurrencies = currenciesWithDefaults.map(currency => {
-        // For core currencies, check if we have organization-specific settings
-        if (currency.isCore && settingsMap.has(currency.code)) {
-          const settings = settingsMap.get(currency.code);
-          console.log(`DEBUG: Enhancing ${currency.code} with org settings: isDefault=${settings.isDefault}`);
+      // Override isDefault property on all currencies
+      const enhancedCurrencies = allCurrencies.map(currency => {
+        // Check if this currency is the default one
+        const isDefault = currency.code === defaultCurrencyCode;
+        
+        if (isDefault) {
+          console.log(`DEBUG: Marking ${currency.code} as default currency`);
           return {
             ...currency,
-            isDefault: settings.isDefault  // Override the isDefault with org-specific setting
+            isDefault: true  // Override the isDefault for the designated default currency
           };
         } else {
-          console.log(`DEBUG: Currency ${currency.code} has no organization settings`);
+          // Make sure non-default currencies are explicitly marked as non-default
+          return {
+            ...currency,
+            isDefault: false
+          };
         }
-        
-        return currency;
       });
       
       // Log all currencies with their default status
@@ -2534,10 +2499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`FINAL CURRENCY: ${c.code}, isDefault=${c.isDefault}`);
       });
       
-      console.log(`DEBUG: Final currencies with settings applied:`, 
-        enhancedCurrencies.map(c => ({ code: c.code, isDefault: c.isDefault })));
-      
-      console.log(`Found ${allCurrencies.length} currencies for organization ${organizationId}`);
+      console.log(`Returning ${enhancedCurrencies.length} currencies for organization ${organizationId}`);
       return res.json(enhancedCurrencies);
     } catch (error: any) {
       console.error("Error fetching currencies:", error);
