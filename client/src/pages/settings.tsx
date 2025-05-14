@@ -780,7 +780,7 @@ const SettingsPage = () => {
   const [organizationError, setOrganizationError] = useState<Error | null>(null);
   
   // Use the organization utilities from the shared lib
-  const { getStandardHeaders, getCurrentOrgId } = require('@/lib/organization-utils');
+  import { getStandardHeaders, getCurrentOrgId } from '@/lib/organization-utils';
 
   // Function to fetch organization with proper headers
   const fetchOrganization = async () => {
