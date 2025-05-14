@@ -5,6 +5,14 @@ import { z } from "zod";
 import { initializeDemo } from "./init-db";
 import { db } from "./db";
 import { and, eq, desc, isNull, ne, not, or, sql } from "drizzle-orm";
+
+/**
+ * Helper function to consistently convert PostgreSQL boolean values
+ * PostgreSQL can return 't'/'f' strings or JavaScript true/false
+ */
+function isPostgresTrue(value: any): boolean {
+  return value === true || value === 't' || value === 'true';
+}
 import { sendEmail, sendEmailWithOverride, generateQuoteEmail, generateInvoiceEmail, EmailData, EmailSettings } from "./email";
 import Stripe from "stripe";
 import {
