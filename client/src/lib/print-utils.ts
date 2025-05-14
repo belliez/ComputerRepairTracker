@@ -5,6 +5,7 @@
  * to avoid any issues with formatCurrency and browser formatting.
  */
 import { Currency } from "@/hooks/use-currency";
+import { getStandardHeaders, getCurrentOrgId } from "@/lib/organization-utils";
 
 export interface PrintableDocument {
   title: string;
