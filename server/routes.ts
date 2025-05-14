@@ -2097,15 +2097,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Enhance the currency objects with organization-specific settings
+      console.log('Organization currency settings:', orgSettings);
+      
       const enhancedCurrencies = allCurrencies.map(currency => {
         // For core currencies, check if we have organization-specific settings
         if (currency.isCore && settingsMap.has(currency.code)) {
           const settings = settingsMap.get(currency.code);
+          console.log(`Enhancing ${currency.code} with org settings: isDefault=${settings.isDefault}`);
           return {
             ...currency,
             isDefault: settings.isDefault  // Override the isDefault from core with org-specific setting
           };
         }
+        
+        // For core currencies without specific settings, default to false
+        if (currency.isCore) {
+          console.log(`Core currency ${currency.code} has no org settings, using default value from currency`);
+        }
+        
         return currency;
       });
       
