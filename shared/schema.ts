@@ -94,10 +94,12 @@ export const services = pgTable("services", {
   organizationId: integer("organization_id").notNull(), // For multi-tenancy
   name: text("name").notNull(),
   description: text("description"),
-  category: text("category").notNull(), // e.g., "labor", "diagnostics", "software"
-  hourlyRate: doublePrecision("hourly_rate").notNull(),
+  category: text("category"), // e.g., "labor", "diagnostics", "software"
+  hourlyRate: doublePrecision("hourly_rate"),
   cost: doublePrecision("cost"), // Internal cost of providing the service
   isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at"),
   deleted: boolean("deleted").default(false).notNull(),
   deletedAt: timestamp("deleted_at"),
 });
@@ -292,6 +294,12 @@ export type InsertRepair = z.infer<typeof insertRepairSchema>;
 
 export type RepairItem = typeof repairItems.$inferSelect;
 export type InsertRepairItem = z.infer<typeof insertRepairItemSchema>;
+
+export type Service = typeof services.$inferSelect;
+export type InsertService = z.infer<typeof insertServiceSchema>;
+
+export type TechnicianRate = typeof technicianRates.$inferSelect;
+export type InsertTechnicianRate = z.infer<typeof insertTechnicianRateSchema>;
 
 export type Quote = typeof quotes.$inferSelect;
 export type InsertQuote = z.infer<typeof insertQuoteSchema>;

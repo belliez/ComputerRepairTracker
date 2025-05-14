@@ -16,6 +16,7 @@ import Inventory from "@/pages/inventory";
 import Invoices from "@/pages/invoices";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
+import Services from "@/pages/services";
 import AuthPage from "@/pages/auth-page";
 import BasicAuthPage from "@/pages/basic-auth";
 import AuthDebugPage from "@/pages/auth-debug";
@@ -64,6 +65,7 @@ function Router() {
       <ProtectedRoute path="/repairs/:id" component={ViewRepair} />
       <ProtectedRoute path="/customers" component={Customers} />
       <ProtectedRoute path="/inventory" component={Inventory} />
+      <ProtectedRoute path="/services" component={Services} />
       <ProtectedRoute path="/invoices" component={Invoices} />
       <ProtectedRoute path="/reports" component={Reports} />
       <ProtectedRoute path="/settings" component={Settings} />

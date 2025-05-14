@@ -8,6 +8,7 @@ const navItems: NavItem[] = [
   { label: "Repairs", path: "/repairs", icon: "tools" },
   { label: "Customers", path: "/customers", icon: "users" },
   { label: "Inventory", path: "/inventory", icon: "boxes" },
+  { label: "Services", path: "/services", icon: "wrench" },
   { label: "Invoices", path: "/invoices", icon: "file-invoice-dollar" },
   { label: "Reports", path: "/reports", icon: "chart-bar" },
   { label: "Settings", path: "/settings", icon: "cog" },
