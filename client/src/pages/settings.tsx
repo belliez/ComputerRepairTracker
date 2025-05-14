@@ -936,12 +936,8 @@ const SettingsPage = () => {
   const fetchTechnicians = async () => {
     setIsLoadingTechnicians(true);
     try {
-      const headers = {
-        'X-Debug-Client': 'RepairTrackerClient',
-        'X-Organization-ID': '2', // Hardcoded ID for now
-        'Pragma': 'no-cache',
-        'Cache-Control': 'no-cache'
-      };
+      // Get standardized headers with organization ID
+      const headers = getStandardHeaders();
       
       console.log('SETTINGS DEBUG: Fetching technicians with headers:', headers);
       const response = await fetch('/api/technicians', { headers });
@@ -1174,19 +1170,10 @@ const SettingsPage = () => {
       // Get the auth token
       const authToken = getAuthToken();
       
-      const headers: Record<string, string> = {
-        'X-Debug-Client': 'RepairTrackerClient',
-        'X-Organization-ID': '2', // Hardcoded ID for now
-        'Content-Type': 'application/json'
-      };
+      // Get standardized headers with organization ID and auth token
+      const headers = getStandardHeaders(authToken);
       
-      // Add authorization header if token exists
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-        console.log('Adding auth token to organization update request');
-      } else {
-        console.warn('No authentication token found, organization update may fail');
-      }
+      console.log('Adding auth token to organization update request with headers:', headers);
       
       const response = await fetch('/api/settings/organization', {
         method: 'POST',
