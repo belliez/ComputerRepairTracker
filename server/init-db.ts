@@ -42,8 +42,9 @@ export async function initializeDemo() {
     // Fix any missing currencies or tax rates for organizations
     await fixCurrenciesAndTaxRates();
     
-    // Create core currencies and clean up redundant ones
-    await createCoreCurrencies();
+    // DISABLED: Skipping this to preserve custom currencies
+    // await createCoreCurrencies();
+    console.log('Database initialization skipped to preserve custom currencies');
     
     // Create organization currency settings table for core currency preferences
     await createOrgCurrencySettings();
