@@ -164,10 +164,43 @@ export default function Invoices() {
     }
   });
   
+  // Make separate requests for repairs and customers with higher priority
+  const { data: repairsData, isLoading: repairsLoading } = useQuery<Repair[]>({
+    queryKey: ["/api/repairs"],
+    staleTime: 5000, // Reduce refetching
+    refetchOnWindowFocus: false,
+    onSuccess: (data) => {
+      console.log("REPAIRS DIRECT FETCH: Successfully fetched repairs:", data?.length);
+    }
+  });
+
+  const { data: customersData, isLoading: customersLoading } = useQuery({
+    queryKey: ["/api/customers"],
+    staleTime: 5000, // Reduce refetching 
+    refetchOnWindowFocus: false,
+    onSuccess: (data) => {
+      console.log("CUSTOMERS DIRECT FETCH: Successfully fetched customers:", data?.length);
+    }
+  });
+  
+  // Debug information
+  console.log("INVOICES DEBUG: Repairs data:", repairsData || repairs);
+  console.log("INVOICES DEBUG: Customers data:", customersData || customers);
+  console.log("INVOICES DEBUG: Combined invoices:", combinedInvoices);
+  
+  // Use the most reliable data source
+  const availableRepairs = repairsData || repairs || [];
+  const availableCustomers = customersData || customers || [];
+  
   // Find repair and customer info for each invoice
   const invoicesWithRepairInfo = combinedInvoices.map(invoice => {
-    const repair = repairs?.find(r => r.id === invoice.repairId);
-    const customer = repair ? customers?.find(c => c.id === repair.customerId) : null;
+    console.log(`INVOICES DEBUG: Processing invoice ${invoice.invoiceNumber} with repairId ${invoice.repairId}`);
+    const repair = availableRepairs.find(r => r.id === invoice.repairId);
+    console.log(`INVOICES DEBUG: Found repair:`, repair);
+    
+    const customer = repair ? availableCustomers.find(c => c.id === repair.customerId) : null;
+    console.log(`INVOICES DEBUG: Found customer:`, customer);
+    
     const customerName = customer ? `${customer.firstName} ${customer.lastName}` : "Unknown";
     return { ...invoice, repair, customer, customerName };
   });
