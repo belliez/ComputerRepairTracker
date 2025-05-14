@@ -136,7 +136,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("PUBLIC API: Getting default currency (public router)");
       
       // Get the organization ID from the request headers
-      const organizationId = parseInt(req.headers['x-organization-id'] as string) || null;
+      const headerOrgId = req.headers['x-organization-id'];
+      console.log(`DEBUG PUBLIC DEFAULT CURRENCY: Header org ID: ${headerOrgId}, Global org ID: ${(global as any).currentOrganizationId}`);
+      
+      const organizationId = headerOrgId ? parseInt(headerOrgId as string) : null;
       console.log("PUBLIC API: Default currency request for organization:", organizationId);
       
       // First try to find an organization-specific default currency
@@ -2439,7 +2442,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Settings API - Currencies - Fixed GET method with auth bypass for debugging
   apiRouter.get("/settings/currencies", async (req: Request, res: Response) => {
     try {
-      const organizationId = (global as any).currentOrganizationId;
+      const headerOrgId = req.headers['x-organization-id'];
+      const globalOrgId = (global as any).currentOrganizationId;
+      console.log(`DEBUG CURRENCIES: Header org ID: ${headerOrgId}, Global org ID: ${globalOrgId}`);
+      
+      // Force organization ID from the header if present
+      const organizationId = headerOrgId ? parseInt(headerOrgId as string) : globalOrgId;
       console.log("Getting currencies for organization ID:", organizationId);
       console.log("Request headers:", req.headers);
       
@@ -2514,7 +2522,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   apiRouter.get("/settings/currencies/default", async (req: Request, res: Response) => {
     try {
-      const orgId = (global as any).currentOrganizationId;
+      const headerOrgId = req.headers['x-organization-id'];
+      const globalOrgId = (global as any).currentOrganizationId;
+      console.log(`DEBUG DEFAULT CURRENCY: Header org ID: ${headerOrgId}, Global org ID: ${globalOrgId}`);
+      
+      // Force organization ID from the header if present
+      const orgId = headerOrgId ? parseInt(headerOrgId as string) : globalOrgId;
       console.log("Getting default currency for organization ID:", orgId);
       console.log("Request headers:", req.headers);
       
