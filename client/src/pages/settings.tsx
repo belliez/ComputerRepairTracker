@@ -1213,11 +1213,8 @@ const SettingsPage = () => {
     mutationFn: async (data: z.infer<typeof currencySchema>) => {
       console.log('Creating currency:', data);
       
-      const headers = {
-        'X-Debug-Client': 'RepairTrackerClient',
-        'X-Organization-ID': '2', // Hardcoded ID for now
-        'Content-Type': 'application/json'
-      };
+      // Get standardized headers with organization ID
+      const headers = getStandardHeaders();
       
       const response = await fetch('/api/settings/currencies', {
         method: 'POST',
@@ -1304,19 +1301,10 @@ const SettingsPage = () => {
       // Get the auth token
       const authToken = getAuthToken();
       
-      const headers: Record<string, string> = {
-        'X-Debug-Client': 'RepairTrackerClient',
-        'X-Organization-ID': '2', // Hardcoded ID for now
-        'Content-Type': 'application/json'
-      };
+      // Get standardized headers with organization ID and auth token
+      const headers = getStandardHeaders(authToken);
       
-      // Add authorization header if token exists
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-        console.log('Adding auth token to create tax rate request');
-      } else {
-        console.warn('No authentication token found for creating tax rate');
-      }
+      console.log('Creating tax rate with headers:', headers);
       
       const response = await fetch('/api/settings/tax-rates', {
         method: 'POST',
@@ -1706,22 +1694,10 @@ const SettingsPage = () => {
       // Get the auth token
       const authToken = getAuthToken();
       
-      // Get current organization ID from the state or localStorage
-      const orgId = organization?.id || Number(localStorage.getItem('currentOrganizationId')) || 3;
+      // Get standardized headers with organization ID and auth token
+      const headers = getStandardHeaders(authToken);
       
-      const headers: Record<string, string> = {
-        'X-Debug-Client': 'RepairTrackerClient',
-        'X-Organization-ID': orgId.toString(), // Use the current organization ID
-        'Content-Type': 'application/json'
-      };
-      
-      // Add authorization header if token exists
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-        console.log('Adding auth token to currency default update request');
-      } else {
-        console.warn('No authentication token found for currency update');
-      }
+      console.log('Setting currency default with headers:', headers);
       
       console.log(`Setting currency ${currencyCode} as default`);
       
