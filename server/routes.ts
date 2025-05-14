@@ -2333,8 +2333,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { code } = req.params;
       const organizationId = (global as any).currentOrganizationId;
       
-      console.log(`Deleting currency for organization ID: ${organizationId}`);
+      console.log(`Deleting currency for organization ID: ${organizationId}, code: ${code}`);
       
+      // Check if this is a core currency
+      const isCoreCurrency = code.includes('_CORE');
+      
+      if (isCoreCurrency) {
+        console.log(`Attempting to delete a core currency setting: ${code}`);
+        
+        // For core currencies, we're actually removing the organization setting for that currency
+        // First check if the setting exists
+        const [orgSetting] = await db.select()
+          .from(organizationCurrencySettings)
+          .where(
+            and(
+              eq(organizationCurrencySettings.currencyCode, code),
+              eq(organizationCurrencySettings.organizationId, organizationId)
+            )
+          );
+          
+        if (!orgSetting) {
+          return res.status(404).json({
+            error: "No organization-specific setting found for this core currency"
+          });
+        }
+        
+        // Check if it's the default currency setting
+        if (orgSetting.isDefault) {
+          return res.status(400).json({
+            error: "Cannot remove the default currency setting. Set another currency as default first."
+          });
+        }
+        
+        // Delete the organization setting for this core currency
+        await db.delete(organizationCurrencySettings)
+          .where(
+            and(
+              eq(organizationCurrencySettings.currencyCode, code),
+              eq(organizationCurrencySettings.organizationId, organizationId)
+            )
+          );
+          
+        return res.status(204).send();
+      }
+      
+      // For non-core currencies, proceed with the existing logic
       // Check if currency is in use within this organization
       const quotesUsingCurrency = await db.select({ count: sql`count(*)` })
         .from(quotes)
