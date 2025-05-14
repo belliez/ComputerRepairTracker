@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest, getQueryFn } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { getStandardHeaders, getCurrentOrgId } from '@/lib/organization-utils';
 
 // Helper function to format currency for preview display
 function formatCurrencyPreview(amount: number | string | null | undefined, currencyCode?: string): string {
@@ -779,8 +780,7 @@ const SettingsPage = () => {
   const [isLoadingOrganization, setIsLoadingOrganization] = useState(true);
   const [organizationError, setOrganizationError] = useState<Error | null>(null);
   
-  // Use the organization utilities from the shared lib
-  import { getStandardHeaders, getCurrentOrgId } from '@/lib/organization-utils';
+  // Use the organization utilities imported at the top of the file
 
   // Function to fetch organization with proper headers
   const fetchOrganization = async () => {
