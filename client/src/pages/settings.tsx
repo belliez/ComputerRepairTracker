@@ -1130,6 +1130,9 @@ const SettingsPage = () => {
       
       console.log('Setting email form with data:', emailSettings);
       
+      // Log the provider to debug
+      console.log('Provider from settings:', (emailSettings as any).provider);
+      
       // Set default email form values using the email settings object
       emailForm.reset({
         // Basic email settings
@@ -1150,7 +1153,12 @@ const SettingsPage = () => {
         smtpPort: (emailSettings as any).smtpPort || 587,
         smtpUser: (emailSettings as any).smtpUser || '',
         smtpPassword: (emailSettings as any).smtpPassword || '',
-        smtpSecure: (emailSettings as any).smtpSecure === true
+        smtpSecure: (emailSettings as any).smtpSecure === true,
+        
+        // Mailgun settings - this was missing!
+        mailgunApiKey: (emailSettings as any).mailgunApiKey || '',
+        mailgunDomain: (emailSettings as any).mailgunDomain || '',
+        mailgunRegion: (emailSettings as any).mailgunRegion || 'us'
       });
     }
   }, [organization, emailForm]);
