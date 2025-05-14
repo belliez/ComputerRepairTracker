@@ -296,11 +296,34 @@ export type RepairWithRelations = Repair & {
 };
 
 // Define new types
+// Organization-specific currency settings for core currencies
+export const organizationCurrencySettings = pgTable("organization_currency_settings", {
+  id: serial("id").primaryKey(),
+  organizationId: integer("organization_id").notNull().references(() => organizations.id),
+  currencyCode: text("currency_code").notNull().references(() => currencies.code),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => {
+  return {
+    orgCurrencyIdx: primaryKey(table.organizationId, table.currencyCode),
+  };
+});
+
+export const insertOrgCurrencySettingSchema = createInsertSchema(organizationCurrencySettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type Currency = typeof currencies.$inferSelect;
 export type InsertCurrency = z.infer<typeof insertCurrencySchema>;
 
 export type TaxRate = typeof taxRates.$inferSelect;
 export type InsertTaxRate = z.infer<typeof insertTaxRateSchema>;
+
+export type OrganizationCurrencySetting = typeof organizationCurrencySettings.$inferSelect;
+export type InsertOrganizationCurrencySetting = z.infer<typeof insertOrgCurrencySettingSchema>;
 
 // Multi-tenancy tables
 // Users table to store authentication information

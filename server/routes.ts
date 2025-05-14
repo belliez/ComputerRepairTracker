@@ -25,6 +25,7 @@ import {
   technicians,
   users,
   organizationUsers,
+  organizationCurrencySettings,
 } from "@shared/schema";
 import { 
   authenticateJWT, 

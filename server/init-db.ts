@@ -21,6 +21,7 @@ import { fixOrganizationRelations } from './migrations/003-fix-organization-rela
 import { fixCurrenciesAndTaxRates } from './migrations/004-fix-currencies-tax-rates';
 import { setupCoreCurrencies } from './migrations/005-add-core-currencies';
 import { createCoreCurrencies } from './migrations/006-create-core-currencies';
+import { createOrgCurrencySettings } from './migrations/007-create-org-currency-settings';
 
 // Initialize database structure and migrations
 export async function initializeDemo() {
