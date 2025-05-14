@@ -168,13 +168,14 @@ export const getQueryFn: <T>(options: {
       // Standard query handling
       console.log(`QUERY DEBUG: Making request to ${url} with headers:`, JSON.stringify(headers));
       
-      // For customers specifically, add extra logging
-      if (url === '/api/customers') {
-        console.log('CUSTOMERS FETCH DEBUG: Starting customer data fetch with the following headers:');
+      // For customers and inventory specifically, add extra logging
+      if (url === '/api/customers' || url === '/api/inventory') {
+        const endpoint = url === '/api/customers' ? 'CUSTOMERS' : 'INVENTORY';
+        console.log(`${endpoint} FETCH DEBUG: Starting ${endpoint.toLowerCase()} data fetch with the following headers:`);
         Object.entries(headers).forEach(([key, value]) => {
           // Mask token value for security
           const displayValue = key === 'Authorization' ? 'Bearer [TOKEN]' : value;
-          console.log(`CUSTOMERS FETCH DEBUG: Header ${key}: ${displayValue}`);
+          console.log(`${endpoint} FETCH DEBUG: Header ${key}: ${displayValue}`);
         });
       }
       
@@ -220,14 +221,20 @@ export const getQueryFn: <T>(options: {
             data = JSON.parse(responseText);
             console.log(`QUERY DEBUG: Query to ${url} response data:`, data);
             
-            // Specific debug for customer data
-            if (url === '/api/customers') {
-              console.log('CUSTOMERS FETCH DEBUG: Parsed customers data:');
-              console.log('CUSTOMERS FETCH DEBUG: Type:', typeof data);
-              console.log('CUSTOMERS FETCH DEBUG: Is array?', Array.isArray(data));
-              console.log('CUSTOMERS FETCH DEBUG: Length:', Array.isArray(data) ? data.length : 'N/A');
+            // Specific debug for customer and inventory data
+            if (url === '/api/customers' || url === '/api/inventory') {
+              const endpoint = url === '/api/customers' ? 'CUSTOMERS' : 'INVENTORY';
+              const itemType = url === '/api/customers' ? 'customer' : 'inventory item';
+              
+              console.log(`${endpoint} FETCH DEBUG: Parsed ${itemType} data:`);
+              console.log(`${endpoint} FETCH DEBUG: Type:`, typeof data);
+              console.log(`${endpoint} FETCH DEBUG: Is array?`, Array.isArray(data));
+              console.log(`${endpoint} FETCH DEBUG: Length:`, Array.isArray(data) ? data.length : 'N/A');
+              
               if (Array.isArray(data) && data.length > 0) {
-                console.log('CUSTOMERS FETCH DEBUG: First customer:', data[0]);
+                console.log(`${endpoint} FETCH DEBUG: First ${itemType}:`, data[0]);
+              } else {
+                console.log(`${endpoint} FETCH DEBUG: No ${itemType}s found`);
               }
             }
           } catch (parseError) {

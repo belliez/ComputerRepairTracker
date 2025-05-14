@@ -39,11 +39,22 @@ export default function Inventory() {
   const { toast } = useToast();
   const { formatCurrency } = useCurrency();
 
-  const { data: inventoryItems, isLoading, refetch } = useQuery<InventoryItem[]>({
+  const { data: inventoryItems, isLoading, refetch, error } = useQuery<InventoryItem[]>({
     queryKey: ["/api/inventory"],
     refetchOnWindowFocus: true,
     staleTime: 0, // Consider the data always stale to ensure fresh data
+    onSuccess: (data) => {
+      console.log("INVENTORY CLIENT DEBUG: Successfully fetched inventory items:", data);
+    },
+    onError: (error) => {
+      console.error("INVENTORY CLIENT ERROR:", error);
+    }
   });
+  
+  // Add debugging logs
+  console.log("INVENTORY CLIENT DEBUG: inventoryItems:", inventoryItems);
+  console.log("INVENTORY CLIENT DEBUG: isLoading:", isLoading);
+  console.log("INVENTORY CLIENT DEBUG: error:", error);
 
   const handleAddPart = () => {
     setSelectedItemId(null);
