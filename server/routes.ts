@@ -2094,35 +2094,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   apiRouter.get("/settings/currencies/default", async (req: Request, res: Response) => {
     try {
-      console.log("Getting default currency for organization ID:", (global as any).currentOrganizationId);
+      const orgId = (global as any).currentOrganizationId;
+      console.log("Getting default currency for organization ID:", orgId);
       
-      // Get organization-specific currencies or global ones
-      const orgCurrencies = await db.select().from(currencies)
-        .where(
-          sql`(${currencies.organizationId} = ${(global as any).currentOrganizationId} OR ${currencies.organizationId} IS NULL)`
-        );
+      // First try to find an organization-specific default currency
+      const [orgDefaultCurrency] = await db.select()
+        .from(currencies)
+        .where(and(
+          eq(currencies.isDefault, true),
+          eq(currencies.organizationId, orgId)
+        ));
+      
+      if (orgDefaultCurrency) {
+        console.log(`Found organization-specific default currency: ${orgDefaultCurrency.code}`);
+        return res.json(orgDefaultCurrency);
+      }
+      
+      // If no org-specific default is found, look for a core default currency
+      const [coreDefaultCurrency] = await db.select()
+        .from(currencies)
+        .where(and(
+          eq(currencies.isDefault, true),
+          eq(currencies.isCore, true)
+        ));
         
-      // First try to find a default currency specific to this organization
-      let defaultCurrency = orgCurrencies.find(currency => 
-        currency.isDefault === true && 
-        currency.organizationId === (global as any).currentOrganizationId
-      );
-      
-      // If no org-specific default, try to find a global default
-      if (!defaultCurrency) {
-        defaultCurrency = orgCurrencies.find(currency => 
-          currency.isDefault === true && 
-          (currency.organizationId === null || currency.organizationId === undefined)
-        );
+      if (coreDefaultCurrency) {
+        console.log(`Found core default currency: ${coreDefaultCurrency.code}`);
+        return res.json(coreDefaultCurrency);
       }
       
-      // If no default at all, try to find USD in the org currencies
-      if (!defaultCurrency) {
-        const usdCurrency = orgCurrencies.find(currency => currency.code === "USD");
-        return res.json(usdCurrency || { code: "USD", symbol: "$", name: "US Dollar" });
+      // If no default currency found, try to get any organization-specific currency
+      const [anyOrgCurrency] = await db.select()
+        .from(currencies)
+        .where(eq(currencies.organizationId, orgId))
+        .limit(1);
+        
+      if (anyOrgCurrency) {
+        console.log(`No default currency found, using first organization currency: ${anyOrgCurrency.code}`);
+        return res.json(anyOrgCurrency);
       }
       
-      return res.json(defaultCurrency);
+      // Last resort: Get any core currency
+      const [anyCoreCurrency] = await db.select()
+        .from(currencies)
+        .where(eq(currencies.isCore, true))
+        .limit(1);
+        
+      if (anyCoreCurrency) {
+        console.log(`Using first available core currency: ${anyCoreCurrency.code}`);
+        return res.json(anyCoreCurrency);
+      }
+      
+      // If we really don't have any currency, return a fallback USD as before
+      console.log("No currencies found in the system, returning fallback USD");
+      return res.json({ code: "USD", symbol: "$", name: "US Dollar" });
     } catch (error: any) {
       console.error("Error fetching default currency:", error);
       return res.status(500).json({ error: error.message });
