@@ -263,6 +263,8 @@ const SettingsPage = () => {
       console.log('Provider from settings:', settings.provider);
       
       // Update the provider settings cache with any values from the API
+      // Important to capture all values to make sure provider-specific settings are available
+      // when switching between providers later
       setProviderSettings({
         sendgrid: {
           sendgridApiKey: settings.sendgridApiKey ?? ''
@@ -313,22 +315,31 @@ const SettingsPage = () => {
         // Also set the previous provider value to match 
         setPreviousProvider(settings.provider);
         
-        // Apply provider-specific settings 
-        const currentProvider = settings.provider;
-        if (currentProvider === 'sendgrid') {
-          console.log('Restored sendgrid settings:', {
+        // Apply provider-specific settings immediately to guarantee they're set
+        // This is important for fields that may not be visible right away
+        if (settings.provider === 'sendgrid') {
+          emailForm.setValue('sendgridApiKey', settings.sendgridApiKey ?? '');
+          console.log('Directly set sendgrid settings:', {
             sendgridApiKey: settings.sendgridApiKey ?? ''
           });
-        } else if (currentProvider === 'smtp') {
-          console.log('Restored smtp settings:', {
+        } else if (settings.provider === 'smtp') {
+          emailForm.setValue('smtpHost', settings.smtpHost ?? '');
+          emailForm.setValue('smtpPort', settings.smtpPort ?? 587);
+          emailForm.setValue('smtpUser', settings.smtpUser ?? '');
+          emailForm.setValue('smtpPassword', settings.smtpPassword ?? '');
+          emailForm.setValue('smtpSecure', settings.smtpSecure ?? false);
+          console.log('Directly set smtp settings:', {
             smtpHost: settings.smtpHost ?? '',
             smtpPort: settings.smtpPort ?? 587,
             smtpUser: settings.smtpUser ?? '',
             smtpPassword: settings.smtpPassword ?? '',
             smtpSecure: settings.smtpSecure ?? false
           });
-        } else if (currentProvider === 'mailgun') {
-          console.log('Restored mailgun settings:', {
+        } else if (settings.provider === 'mailgun') {
+          emailForm.setValue('mailgunApiKey', settings.mailgunApiKey ?? '');
+          emailForm.setValue('mailgunDomain', settings.mailgunDomain ?? '');
+          emailForm.setValue('mailgunRegion', settings.mailgunRegion === 'eu' ? 'eu' : 'us');
+          console.log('Directly set mailgun settings:', {
             mailgunApiKey: settings.mailgunApiKey ?? '',
             mailgunDomain: settings.mailgunDomain ?? '',
             mailgunRegion: settings.mailgunRegion ?? 'us'
@@ -393,22 +404,34 @@ const SettingsPage = () => {
         emailForm.setValue('smtpSecure', smtpSecure);
         console.log('Restored smtp settings:', { smtpHost, smtpPort, smtpUser, smtpSecure });
       } else if (provider === 'mailgun') {
-        const { mailgunApiKey, mailgunDomain, mailgunRegion } = providerSettings.mailgun;
-        
-        // Check if we need to load settings from API data - this is critical
+        // Check API data first - this is the preferred source
         const settings = emailSettingsData as any || {};
-        if (settings.provider === 'mailgun' && settings.mailgunApiKey) {
-          // If the API data has Mailgun settings, use those
-          emailForm.setValue('mailgunApiKey', settings.mailgunApiKey || '');
+        
+        // If we have API data and it shows mailgun as the provider, always use that
+        if (settings?.mailgunApiKey) {
+          // Use the API settings regardless of current provider
+          emailForm.setValue('mailgunApiKey', settings.mailgunApiKey);
           emailForm.setValue('mailgunDomain', settings.mailgunDomain || '');
           emailForm.setValue('mailgunRegion', settings.mailgunRegion === 'eu' ? 'eu' : 'us');
+          
+          // Also update the cached settings
+          setProviderSettings(prev => ({
+            ...prev,
+            mailgun: {
+              mailgunApiKey: settings.mailgunApiKey,
+              mailgunDomain: settings.mailgunDomain || '',
+              mailgunRegion: settings.mailgunRegion === 'eu' ? 'eu' : 'us'
+            }
+          }));
+          
           console.log('Restored mailgun settings from API data:', { 
             mailgunApiKey: settings.mailgunApiKey,
             mailgunDomain: settings.mailgunDomain,
             mailgunRegion: settings.mailgunRegion
           });
         } else {
-          // Otherwise use the cached provider settings
+          // Fall back to the cached settings if needed
+          const { mailgunApiKey, mailgunDomain, mailgunRegion } = providerSettings.mailgun;
           emailForm.setValue('mailgunApiKey', mailgunApiKey);
           emailForm.setValue('mailgunDomain', mailgunDomain);
           emailForm.setValue('mailgunRegion', mailgunRegion);
