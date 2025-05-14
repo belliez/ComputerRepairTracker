@@ -819,6 +819,270 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to adjust inventory quantity" });
     }
   });
+  
+  // Services endpoints
+  apiRouter.get("/services", async (req: Request, res: Response) => {
+    const organizationId = (global as any).currentOrganizationId;
+    console.log(`Fetching services for organization: ${organizationId}`);
+    
+    try {
+      const allServices = await db.select().from(services)
+        .where(and(
+          eq(services.organizationId, organizationId),
+          eq(services.deleted, false)
+        ));
+      
+      res.json(allServices);
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      res.status(500).json({ error: "Failed to fetch services" });
+    }
+  });
+  
+  apiRouter.get("/services/:id", async (req: Request, res: Response) => {
+    const organizationId = (global as any).currentOrganizationId;
+    const { id } = req.params;
+    
+    try {
+      const [service] = await db.select().from(services)
+        .where(and(
+          eq(services.id, parseInt(id)),
+          eq(services.organizationId, organizationId),
+          eq(services.deleted, false)
+        ));
+      
+      if (!service) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      
+      res.json(service);
+    } catch (error) {
+      console.error("Error fetching service:", error);
+      res.status(500).json({ error: "Failed to fetch service" });
+    }
+  });
+  
+  apiRouter.post("/services", async (req: Request, res: Response) => {
+    const organizationId = (global as any).currentOrganizationId;
+    
+    try {
+      const parsedService = insertServiceSchema.parse({
+        ...req.body,
+        organizationId,
+        deleted: false,
+        deletedAt: null
+      });
+      
+      const [newService] = await db.insert(services)
+        .values(parsedService)
+        .returning();
+      
+      res.status(201).json(newService);
+    } catch (error) {
+      console.error("Error creating service:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid service data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create service" });
+    }
+  });
+  
+  apiRouter.put("/services/:id", async (req: Request, res: Response) => {
+    const organizationId = (global as any).currentOrganizationId;
+    const { id } = req.params;
+    
+    try {
+      const [existingService] = await db.select().from(services)
+        .where(and(
+          eq(services.id, parseInt(id)),
+          eq(services.organizationId, organizationId),
+          eq(services.deleted, false)
+        ));
+        
+      if (!existingService) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      
+      const [updatedService] = await db.update(services)
+        .set({
+          name: req.body.name,
+          description: req.body.description,
+          category: req.body.category,
+          hourlyRate: req.body.hourlyRate,
+          cost: req.body.cost,
+          isActive: req.body.isActive
+        })
+        .where(and(
+          eq(services.id, parseInt(id)),
+          eq(services.organizationId, organizationId)
+        ))
+        .returning();
+      
+      res.json(updatedService);
+    } catch (error) {
+      console.error("Error updating service:", error);
+      res.status(500).json({ error: "Failed to update service" });
+    }
+  });
+  
+  apiRouter.delete("/services/:id", async (req: Request, res: Response) => {
+    const organizationId = (global as any).currentOrganizationId;
+    const { id } = req.params;
+    
+    try {
+      const [existingService] = await db.select().from(services)
+        .where(and(
+          eq(services.id, parseInt(id)),
+          eq(services.organizationId, organizationId),
+          eq(services.deleted, false)
+        ));
+        
+      if (!existingService) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      
+      const [deletedService] = await db.update(services)
+        .set({
+          deleted: true,
+          deletedAt: new Date()
+        })
+        .where(and(
+          eq(services.id, parseInt(id)),
+          eq(services.organizationId, organizationId)
+        ))
+        .returning();
+      
+      res.json({ success: true, id: deletedService.id });
+    } catch (error) {
+      console.error("Error deleting service:", error);
+      res.status(500).json({ error: "Failed to delete service" });
+    }
+  });
+  
+  // Technician rates endpoints
+  apiRouter.get("/technician-rates", async (req: Request, res: Response) => {
+    const organizationId = (global as any).currentOrganizationId;
+    const { technicianId, serviceId } = req.query;
+    
+    try {
+      let query = db.select({
+        id: technicianRates.id,
+        technicianId: technicianRates.technicianId,
+        serviceId: technicianRates.serviceId,
+        hourlyRate: technicianRates.hourlyRate,
+        technicianFirstName: technicians.firstName,
+        technicianLastName: technicians.lastName,
+        serviceName: services.name,
+        serviceCategory: services.category,
+        serviceStandardRate: services.hourlyRate
+      })
+      .from(technicianRates)
+      .leftJoin(technicians, eq(technicianRates.technicianId, technicians.id))
+      .leftJoin(services, eq(technicianRates.serviceId, services.id))
+      .where(eq(technicianRates.organizationId, organizationId));
+      
+      if (technicianId) {
+        query = query.where(eq(technicianRates.technicianId, parseInt(technicianId as string)));
+      }
+      
+      if (serviceId) {
+        query = query.where(eq(technicianRates.serviceId, parseInt(serviceId as string)));
+      }
+      
+      const rates = await query;
+      res.json(rates);
+    } catch (error) {
+      console.error("Error fetching technician rates:", error);
+      res.status(500).json({ error: "Failed to fetch technician rates" });
+    }
+  });
+  
+  apiRouter.post("/technician-rates", async (req: Request, res: Response) => {
+    const organizationId = (global as any).currentOrganizationId;
+    
+    try {
+      const parsedRate = insertTechnicianRateSchema.parse({
+        ...req.body,
+        organizationId
+      });
+      
+      // Check if technician and service exist and belong to this organization
+      const [technician] = await db.select().from(technicians)
+        .where(and(
+          eq(technicians.id, parsedRate.technicianId),
+          eq(technicians.organizationId, organizationId),
+          eq(technicians.deleted, false)
+        ));
+        
+      if (!technician) {
+        return res.status(404).json({ error: "Technician not found" });
+      }
+      
+      const [service] = await db.select().from(services)
+        .where(and(
+          eq(services.id, parsedRate.serviceId),
+          eq(services.organizationId, organizationId),
+          eq(services.deleted, false)
+        ));
+        
+      if (!service) {
+        return res.status(404).json({ error: "Service not found" });
+      }
+      
+      // Check if a rate already exists for this technician-service combination
+      const [existingRate] = await db.select().from(technicianRates)
+        .where(and(
+          eq(technicianRates.technicianId, parsedRate.technicianId),
+          eq(technicianRates.serviceId, parsedRate.serviceId),
+          eq(technicianRates.organizationId, organizationId)
+        ));
+        
+      if (existingRate) {
+        // Update the existing rate
+        const [updatedRate] = await db.update(technicianRates)
+          .set({ hourlyRate: parsedRate.hourlyRate, updatedAt: new Date() })
+          .where(and(
+            eq(technicianRates.technicianId, parsedRate.technicianId),
+            eq(technicianRates.serviceId, parsedRate.serviceId),
+            eq(technicianRates.organizationId, organizationId)
+          ))
+          .returning();
+          
+        return res.json(updatedRate);
+      }
+      
+      // Create a new rate
+      const [newRate] = await db.insert(technicianRates)
+        .values(parsedRate)
+        .returning();
+      
+      res.status(201).json(newRate);
+    } catch (error) {
+      console.error("Error creating technician rate:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid technician rate data", details: error.errors });
+      }
+      res.status(500).json({ error: "Failed to create technician rate" });
+    }
+  });
+  
+  apiRouter.delete("/technician-rates/:id", async (req: Request, res: Response) => {
+    const organizationId = (global as any).currentOrganizationId;
+    const { id } = req.params;
+    
+    try {
+      const deleteResult = await db.delete(technicianRates)
+        .where(and(
+          eq(technicianRates.id, parseInt(id)),
+          eq(technicianRates.organizationId, organizationId)
+        ));
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting technician rate:", error);
+      res.status(500).json({ error: "Failed to delete technician rate" });
+    }
+  });
 
   // Repairs
   // Create a dedicated middleware-bypassing route for repair status counts
