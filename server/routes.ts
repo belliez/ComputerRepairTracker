@@ -2680,8 +2680,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Updating currency for organization ID: ${organizationId}, currency code: ${code}`);
       
-      // Check if this is a core currency by examining the code
-      const isCoreCurrency = code.includes('_CORE');
+      // Check if this is a core currency by looking up isCore flag in database
+      const [currencyRecord] = await db.select().from(currencies)
+        .where(eq(currencies.code, code));
+      const isCoreCurrency = currencyRecord?.isCore === true;
       
       // If setting as default, unset any existing defaults for this organization,
       // regardless of whether we're updating a core or organization-specific currency
@@ -2807,8 +2809,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Deleting currency for organization ID: ${organizationId}, code: ${code}`);
       
-      // Check if this is a core currency
-      const isCoreCurrency = code.includes('_CORE');
+      // Check if this is a core currency by looking up isCore flag in database
+      const [currencyRecord] = await db.select().from(currencies)
+        .where(eq(currencies.code, code));
+      const isCoreCurrency = currencyRecord?.isCore === true;
       
       if (isCoreCurrency) {
         console.log(`Attempting to delete a core currency setting: ${code}`);

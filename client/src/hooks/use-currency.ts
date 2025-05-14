@@ -136,13 +136,8 @@ export function useCurrency() {
                         defaultCurrency?.code || 
                         'EUR';
     
-    // Handle special currency codes with organization IDs (like USD_3) or _CORE suffix
-    // Extract the base currency code (USD, EUR, etc.) from our special format
-    if (currencyCode && currencyCode.includes('_')) {
-      // Split by underscore and take the first part as the standard currency code
-      currencyCode = currencyCode.split('_')[0];
-      console.log(`CURRENCY FORMAT: Converted code from ${currencyCode}_* to ${currencyCode}`);
-    }
+    // Currency codes are now simple 3-letter codes (USD, EUR, etc.) without suffixes
+    // No need to manipulate them
     
     // Ensure it's a valid 3-letter currency code for Intl.NumberFormat
     if (!currencyCode || currencyCode.length !== 3) {
