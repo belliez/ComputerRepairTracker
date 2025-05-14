@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { initializeDemo } from "./init-db";
 import { db } from "./db";
-import { and, eq, desc, isNull, ne, or, sql } from "drizzle-orm";
+import { and, eq, desc, isNull, ne, not, or, sql } from "drizzle-orm";
 import { sendEmail, sendEmailWithOverride, generateQuoteEmail, generateInvoiceEmail, EmailData, EmailSettings } from "./email";
 import Stripe from "stripe";
 import {
@@ -16,6 +16,8 @@ import {
   insertRepairItemSchema,
   insertRepairSchema,
   insertTechnicianSchema,
+  insertServiceSchema,
+  insertTechnicianRateSchema,
   repairStatuses,
   currencies,
   taxRates,
@@ -26,6 +28,8 @@ import {
   users,
   organizationUsers,
   organizationCurrencySettings,
+  services,
+  technicianRates,
 } from "@shared/schema";
 import { 
   authenticateJWT, 
@@ -260,6 +264,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("PUBLIC API: Error fetching technicians:", error);
       res.status(500).json({ message: "Error fetching technicians" });
+    }
+  });
+  
+  // Public API endpoint for services
+  app.get('/api/public-settings/services', async (req: Request, res: Response) => {
+    try {
+      console.log("PUBLIC API: Getting services (public router)");
+      
+      // Set organization context from header if present
+      const orgIdHeader = req.headers['x-organization-id'];
+      let orgId: number;
+      
+      if (orgIdHeader) {
+        orgId = parseInt(orgIdHeader as string);
+        (global as any).currentOrganizationId = orgId;
+        console.log(`PUBLIC API: Using organization ID from header: ${orgId}`);
+      } else {
+        // Default fallback
+        orgId = 2;
+        (global as any).currentOrganizationId = orgId;
+        console.log(`PUBLIC API: Using default organization ID: ${orgId}`);
+      }
+      
+      const allServices = await db.select().from(services)
+        .where(and(
+          eq(services.organizationId, orgId),
+          eq(services.deleted, false),
+          eq(services.isActive, true)
+        ));
+      
+      console.log(`PUBLIC API: Found ${allServices.length} services for organization ${orgId}`);
+      res.json(allServices);
+    } catch (error) {
+      console.error("PUBLIC API: Error fetching services:", error);
+      res.status(500).json({ message: "Error fetching services" });
+    }
+  });
+  
+  // API endpoint to get unique service categories
+  app.get('/api/public-settings/service-categories', async (req: Request, res: Response) => {
+    try {
+      console.log("PUBLIC API: Getting service categories (public router)");
+      
+      // Set organization context from header if present
+      const orgIdHeader = req.headers['x-organization-id'];
+      let orgId: number;
+      
+      if (orgIdHeader) {
+        orgId = parseInt(orgIdHeader as string);
+        (global as any).currentOrganizationId = orgId;
+        console.log(`PUBLIC API: Using organization ID from header: ${orgId}`);
+      } else {
+        // Default fallback
+        orgId = 2;
+        (global as any).currentOrganizationId = orgId;
+        console.log(`PUBLIC API: Using default organization ID: ${orgId}`);
+      }
+      
+      // Query for distinct categories
+      const categoriesQuery = db.selectDistinct({ category: services.category }).from(services)
+        .where(and(
+          eq(services.organizationId, orgId),
+          eq(services.deleted, false),
+          eq(services.isActive, true),
+          not(isNull(services.category))
+        ));
+      
+      const categories = await categoriesQuery;
+      const categoryList = categories.map(c => c.category).filter(Boolean);
+      
+      console.log(`PUBLIC API: Found ${categoryList.length} unique service categories`);
+      res.json(categoryList);
+    } catch (error) {
+      console.error("PUBLIC API: Error fetching service categories:", error);
+      res.status(500).json({ message: "Error fetching service categories" });
     }
   });
 
