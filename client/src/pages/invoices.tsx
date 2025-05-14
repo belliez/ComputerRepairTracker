@@ -156,10 +156,20 @@ export default function Invoices() {
   // Combine our data sources, prioritizing manual fetch results for debugging
   const combinedInvoices = manualInvoices.length > 0 ? manualInvoices : (invoices || []);
   
-  // Find repair info for each invoice
+  // Get customers data
+  const { data: customers } = useQuery({
+    queryKey: ["/api/customers"],
+    onSuccess: (data) => {
+      console.log("Successfully fetched customers for invoices page:", data?.length);
+    }
+  });
+  
+  // Find repair and customer info for each invoice
   const invoicesWithRepairInfo = combinedInvoices.map(invoice => {
     const repair = repairs?.find(r => r.id === invoice.repairId);
-    return { ...invoice, repair };
+    const customer = repair ? customers?.find(c => c.id === repair.customerId) : null;
+    const customerName = customer ? `${customer.firstName} ${customer.lastName}` : "Unknown";
+    return { ...invoice, repair, customer, customerName };
   });
 
   // Apply search filter
@@ -168,6 +178,7 @@ export default function Invoices() {
     return (
       invoice.invoiceNumber.toLowerCase().includes(searchLower) ||
       String(invoice.total).includes(searchLower) ||
+      (invoice.customerName && invoice.customerName.toLowerCase().includes(searchLower)) ||
       invoice.repair?.ticketNumber?.toLowerCase().includes(searchLower) || false
     );
   });
@@ -280,6 +291,7 @@ export default function Invoices() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Invoice #</TableHead>
+                    <TableHead>Customer</TableHead>
                     <TableHead>Repair Ticket</TableHead>
                     <TableHead>Date Issued</TableHead>
                     <TableHead>Amount</TableHead>
