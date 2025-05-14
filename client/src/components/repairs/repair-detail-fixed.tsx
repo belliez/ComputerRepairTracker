@@ -20,6 +20,13 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
+} from "@/components/ui/dialog";
 
 // Define RepairItem interface if not already defined elsewhere
 interface RepairItem {
@@ -37,9 +44,12 @@ interface RepairItem {
 
 interface RepairDetailProps {
   repairId: number;
+  isOpen: boolean;
+  onClose: () => void;
   onRepairDeleted?: () => void;
   showButtons?: boolean;
   onStatusChange?: () => void;
+  isStandalonePage?: boolean;
 }
 
 // Status options for dropdown
@@ -57,9 +67,12 @@ const statusOptions = [
 
 export default function RepairDetail({ 
   repairId, 
+  isOpen,
+  onClose,
   onRepairDeleted,
   showButtons = true,
-  onStatusChange
+  onStatusChange,
+  isStandalonePage = false
 }: RepairDetailProps) {
   const [editStatus, setEditStatus] = useState(false);
   const [newStatus, setNewStatus] = useState("");
@@ -385,7 +398,8 @@ export default function RepairDetail({
   // Calculate final total
   const total = subtotal + taxAmount;
 
-  return (
+  // Content for the repair details
+  const repairContent = (
     <div className="space-y-4">
       <div className="flex justify-between items-start">
         <div>
