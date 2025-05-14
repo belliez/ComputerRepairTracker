@@ -56,8 +56,8 @@ export function useCurrency() {
           console.log("CURRENCY: Found default currency in list:", defaultFromList.code);
           setDefaultCurrency(defaultFromList);
         } else {
-          // If no default in the list, try to fetch it directly
-          const defaultResponse = await fetch('/api/settings/currencies/default', {
+          // If no default in the list, try to fetch it directly using our fixed endpoint
+          const defaultResponse = await fetch('/api/settings/currencies/default-fixed', {
             method: 'GET',
             headers,
             cache: 'no-store'

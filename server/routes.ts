@@ -4021,20 +4021,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orgId = (global as any).currentOrganizationId || 1;
       console.log(`Getting currencies for organization: ${orgId} (public router)`);
       
-      // Get both organization-specific currencies and core currencies
-      const allCurrencies = await db.select()
-        .from(currencies)
-        .where(
-          or(
-            // Get organization-specific currencies
-            eq(currencies.organizationId, orgId),
-            // Get core currencies that are available to all organizations
-            eq(currencies.isCore, true)
-          )
-        );
+      // Get all core currencies
+      const allCurrencies = await db.select().from(currencies)
+        .where(eq(currencies.isCore, true));
       
-      console.log(`Found ${allCurrencies.length} currencies for organization: ${orgId}`);
-      res.json(allCurrencies);
+      console.log(`Found ${allCurrencies.length} core currencies for organization: ${orgId}`);
+      
+      // Get organization-specific currency settings directly from the database
+      // Using raw SQL query to avoid property name conflicts
+      const orgSettings = await db.execute(
+        sql`SELECT * FROM organization_currency_settings WHERE organization_id = ${orgId}`
+      );
+      
+      console.log(`DEBUG: Organization ${orgId} has ${orgSettings.rows.length} currency settings`);
+      
+      // Find the default currency from the database
+      let defaultCurrencyCode = null;
+      for (const row of orgSettings.rows) {
+        if (row.is_default) {
+          defaultCurrencyCode = row.currency_code;
+          console.log(`DEBUG: Found default currency code in DB: ${defaultCurrencyCode}`);
+          break;
+        }
+      }
+      
+      // Override isDefault property on all currencies
+      const enhancedCurrencies = allCurrencies.map(currency => {
+        // Check if this currency is the default one
+        const isDefault = currency.code === defaultCurrencyCode;
+        
+        if (isDefault) {
+          console.log(`DEBUG: Marking ${currency.code} as default currency`);
+          return {
+            ...currency,
+            isDefault: true  // Override the isDefault for the designated default currency
+          };
+        } else {
+          // Make sure non-default currencies are explicitly marked as non-default
+          return {
+            ...currency,
+            isDefault: false
+          };
+        }
+      });
+      
+      console.log(`Found ${enhancedCurrencies.length} currencies for organization: ${orgId}`);
+      res.json(enhancedCurrencies);
     } catch (error) {
       console.error("Error fetching currencies:", error);
       res.status(500).json({ message: "Error fetching currencies" });
