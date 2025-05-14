@@ -562,8 +562,11 @@ const SettingsPage = () => {
     try {
       // Get token from firebase_token (main app storage)
       let token = localStorage.getItem('firebase_token') || '';
-      if (!token.startsWith('Bearer ')) {
-        token = `Bearer ${token}`;
+      
+      // Clean up the token by removing any Bearer prefix
+      // The getStandardHeaders function will handle adding it properly
+      if (token.startsWith('Bearer ')) {
+        token = token.substring(7);
       }
       
       // Get standardized headers with organization ID and auth token

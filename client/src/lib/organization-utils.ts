@@ -39,7 +39,12 @@ export function getStandardHeaders(
   
   // Add authorization header if token exists
   if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
+    // Check if the token already includes the Bearer prefix
+    if (authToken.startsWith('Bearer ')) {
+      headers['Authorization'] = authToken;
+    } else {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
   }
   
   return headers;
