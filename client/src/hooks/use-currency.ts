@@ -19,10 +19,13 @@ export function useCurrency() {
   const fetchCurrencyData = async () => {
     console.log("CURRENCY: Directly fetching currency data from API");
     
+    // Get current organization ID from localStorage
+    const currentOrgId = localStorage.getItem('currentOrganizationId') || '3';
+    
     // Set up headers
     const headers: Record<string, string> = {
       'X-Debug-Client': 'RepairTrackerClient',
-      'X-Organization-ID': '2', // Use the organization ID
+      'X-Organization-ID': currentOrgId, // Use the current organization ID from localStorage
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Pragma': 'no-cache',
       'Expires': '0'

@@ -1707,9 +1707,12 @@ const SettingsPage = () => {
       // Get the auth token
       const authToken = getAuthToken();
       
+      // Get current organization ID from the state or localStorage
+      const orgId = organization?.id || Number(localStorage.getItem('currentOrganizationId')) || 3;
+      
       const headers: Record<string, string> = {
         'X-Debug-Client': 'RepairTrackerClient',
-        'X-Organization-ID': '2', // Hardcoded ID for now
+        'X-Organization-ID': orgId.toString(), // Use the current organization ID
         'Content-Type': 'application/json'
       };
       
