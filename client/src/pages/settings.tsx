@@ -19,7 +19,20 @@ function formatCurrencyPreview(amount: number | string | null | undefined, curre
   }
   
   // Use provided currency code or fallback to GBP
-  const code = currencyCode || 'GBP';
+  let code = currencyCode || 'GBP';
+  
+  // Handle special currency codes with organization IDs (like USD_3)
+  // Extract the base currency code (USD, EUR, etc.) from our special format
+  if (code && code.includes('_')) {
+    // Split by underscore and take the first part as the standard currency code
+    code = code.split('_')[0];
+  }
+  
+  // Ensure it's a valid 3-letter currency code for Intl.NumberFormat
+  if (!code || code.length !== 3) {
+    // Fallback to a safe default
+    code = 'USD';
+  }
   
   // Choose locale based on the currency code
   let locale: string;
@@ -41,12 +54,18 @@ function formatCurrencyPreview(amount: number | string | null | undefined, curre
   const minimumFractionDigits = code === 'JPY' ? 0 : 2;
   const maximumFractionDigits = code === 'JPY' ? 0 : 2;
   
-  return new Intl.NumberFormat(locale, {
-    style: 'currency',
-    currency: code,
-    minimumFractionDigits,
-    maximumFractionDigits
-  }).format(numericAmount);
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits,
+      maximumFractionDigits
+    }).format(numericAmount);
+  } catch (error) {
+    console.error(`Currency formatting error with code "${code}":`, error);
+    // Fallback to simple formatting with the currency symbol as a prefix
+    return `$${numericAmount.toFixed(2)}`;
+  }
 };
 import { Loader, Loader2, PlusCircle, Trash2, X, RefreshCw, RotateCw, UserRound, Pencil, Edit, Mail, AlertTriangle } from 'lucide-react';
 import { zodResolver } from '@hookform/resolvers/zod';

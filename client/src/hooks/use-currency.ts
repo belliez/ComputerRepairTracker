@@ -128,10 +128,23 @@ export function useCurrency() {
     
     // Use custom currency code if provided, otherwise use default from all currencies (most reliable),
     // then try the direct default currency endpoint, and finally fall back to EUR
-    const currencyCode = customCurrencyCode || 
-                          currentDefaultCurrency?.code || 
-                          defaultCurrency?.code || 
-                          'EUR';
+    let currencyCode = customCurrencyCode || 
+                        currentDefaultCurrency?.code || 
+                        defaultCurrency?.code || 
+                        'EUR';
+    
+    // Handle special currency codes with organization IDs (like USD_3)
+    // Extract the base currency code (USD, EUR, etc.) from our special format
+    if (currencyCode && currencyCode.includes('_')) {
+      // Split by underscore and take the first part as the standard currency code
+      currencyCode = currencyCode.split('_')[0];
+    }
+    
+    // Ensure it's a valid 3-letter currency code for Intl.NumberFormat
+    if (!currencyCode || currencyCode.length !== 3) {
+      // Fallback to a safe default
+      currencyCode = 'USD';
+    }
     
     // Choose locale based on the currency code
     let locale: string;
@@ -160,12 +173,22 @@ export function useCurrency() {
     const minimumFractionDigits = currencyCode === 'JPY' ? 0 : 2;
     const maximumFractionDigits = currencyCode === 'JPY' ? 0 : 2;
     
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: currencyCode,
-      minimumFractionDigits,
-      maximumFractionDigits
-    }).format(numericAmount);
+    try {
+      return new Intl.NumberFormat(locale, {
+        style: 'currency',
+        currency: currencyCode,
+        minimumFractionDigits,
+        maximumFractionDigits
+      }).format(numericAmount);
+    } catch (error) {
+      console.error(`Currency formatting error with code "${currencyCode}":`, error);
+      // Fallback to simple formatting with the currency symbol as a prefix
+      const symbol = 
+        currencyCode === 'GBP' ? '£' : 
+        currencyCode === 'EUR' ? '€' : 
+        currencyCode === 'JPY' ? '¥' : '$';
+      return `${symbol}${numericAmount.toFixed(maximumFractionDigits)}`;
+    }
   };
 
   return {
