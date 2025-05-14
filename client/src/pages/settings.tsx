@@ -790,6 +790,26 @@ const SettingsPage = () => {
   const getCurrentOrgId = useCallback(() => {
     return organization?.id || Number(localStorage.getItem('currentOrganizationId')) || 3;
   }, [organization]);
+  
+  // Helper function to get standard request headers with current organization ID
+  const getStandardHeaders = useCallback((authToken?: string | null) => {
+    const orgId = getCurrentOrgId();
+    
+    const headers: Record<string, string> = {
+      'X-Debug-Client': 'RepairTrackerClient',
+      'X-Organization-ID': orgId.toString(),
+      'Content-Type': 'application/json',
+      'Pragma': 'no-cache',
+      'Cache-Control': 'no-cache'
+    };
+    
+    // Add authorization header if token exists
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+    
+    return headers;
+  }, [getCurrentOrgId]);
 
   // Function to fetch organization with proper headers
   const fetchOrganization = async () => {
@@ -853,12 +873,8 @@ const SettingsPage = () => {
   const fetchCurrencies = async () => {
     setIsLoadingCurrencies(true);
     try {
-      const headers = {
-        'X-Debug-Client': 'RepairTrackerClient',
-        'X-Organization-ID': '2', // Hardcoded ID for now
-        'Pragma': 'no-cache',
-        'Cache-Control': 'no-cache'
-      };
+      // Get standardized headers with organization ID
+      const headers = getStandardHeaders();
       
       console.log('SETTINGS DEBUG: Fetching currencies with headers:', headers);
       const response = await fetch('/api/settings/currencies', { headers });
@@ -892,12 +908,8 @@ const SettingsPage = () => {
   const fetchTaxRates = async () => {
     setIsLoadingTaxRates(true);
     try {
-      const headers = {
-        'X-Debug-Client': 'RepairTrackerClient',
-        'X-Organization-ID': '2', // Hardcoded ID for now
-        'Pragma': 'no-cache',
-        'Cache-Control': 'no-cache'
-      };
+      // Get standardized headers with organization ID
+      const headers = getStandardHeaders();
       
       console.log('SETTINGS DEBUG: Fetching tax rates with headers:', headers);
       const response = await fetch('/api/settings/tax-rates', { headers });
