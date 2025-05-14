@@ -244,7 +244,7 @@ export default function Invoices() {
             </div>
             <Input
               type="text"
-              placeholder="Search invoices by number, amount, or repair ticket..."
+              placeholder="Search by invoice number, customer name, amount, or repair ticket..."
               className="pl-10"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -304,6 +304,9 @@ export default function Invoices() {
                     <TableRow key={invoice.id} className="hover:bg-gray-50">
                       <TableCell>
                         <div className="font-medium">{invoice.invoiceNumber}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm font-medium">{invoice.customerName}</div>
                       </TableCell>
                       <TableCell>
                         {invoice.repair ? (
