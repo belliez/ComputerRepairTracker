@@ -2471,11 +2471,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`DEBUG: Organization ${organizationId} has ${orgSettings.length} currency settings:`);
       console.log(JSON.stringify(orgSettings, null, 2));
       
+      // Debug the raw settings
+      for (const setting of orgSettings) {
+        console.log(`RAW SETTING: ${JSON.stringify(setting)}`);
+      }
+      
       // Create a map of currency code -> settings for quick lookup
       const settingsMap = new Map();
       for (const setting of orgSettings) {
-        settingsMap.set(setting.currencyCode, setting);
-        console.log(`DEBUG: Setting currency ${setting.currencyCode} has isDefault=${setting.isDefault}`);
+        // Normalize property names from DB snake_case to camelCase
+        // These properties come directly from the DB so they'll be snake_case
+        const code = setting.currency_code;
+        const isDefault = setting.is_default;
+        
+        if (code) {
+          settingsMap.set(code, {
+            ...setting,
+            currencyCode: code,
+            isDefault: isDefault
+          });
+          console.log(`DEBUG: Setting currency ${code} has isDefault=${isDefault}`);
+        } else {
+          console.log(`WARNING: Currency setting missing currency_code:`, setting);
+        }
       }
       
       // Enhance the currency objects with organization-specific settings
@@ -2504,9 +2522,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             ...currency,
             isDefault: settings.isDefault  // Override the isDefault with org-specific setting
           };
+        } else {
+          console.log(`DEBUG: Currency ${currency.code} has no organization settings`);
         }
         
         return currency;
+      });
+      
+      // Log all currencies with their default status
+      enhancedCurrencies.forEach(c => {
+        console.log(`FINAL CURRENCY: ${c.code}, isDefault=${c.isDefault}`);
       });
       
       console.log(`DEBUG: Final currencies with settings applied:`, 
