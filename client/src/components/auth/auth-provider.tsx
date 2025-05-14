@@ -618,6 +618,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
+      console.log("Starting Google sign-in process");
       const provider = new GoogleAuthProvider();
       // Add scopes for additional access if needed
       provider.addScope('profile');
@@ -625,29 +626,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       // Set custom parameters for the auth request
       provider.setCustomParameters({
-        // Request a specific login hint if needed
-        // login_hint: 'user@example.com',
         // Force account selection even if user has only one account
         prompt: 'select_account'
       });
       
-      // Attempt to sign in with popup
-      const result = await signInWithPopup(auth, provider);
+      // Use development auth if in development mode
+      if (import.meta.env.MODE === 'development' || process.env.NODE_ENV === 'development') {
+        console.log('Development mode detected during Google sign-in');
+        // Check if we should use development auth
+        if (!import.meta.env.VITE_FIREBASE_API_KEY || 
+            !import.meta.env.VITE_FIREBASE_PROJECT_ID || 
+            !import.meta.env.VITE_FIREBASE_APP_ID) {
+          console.log('Using development auth due to missing Firebase config');
+          useDevelopmentAuth('dev@example.com', 'Development User');
+          setIsSigningIn(false);
+          return;
+        }
+      }
       
-      // If this is a successful sign in, ensure user is synchronized with our database
-      if (result.user) {
-        // Get the token and manually trigger an API call to create the user in the database
-        const idToken = await result.user.getIdToken(true);
-        localStorage.setItem('firebase_token', idToken);
+      // First, try with popup method
+      try {
+        console.log("Attempting sign in with popup");
+        const result = await signInWithPopup(auth, provider);
+        console.log("Popup sign-in successful");
         
-        try {
-          // Make API call to force user creation in the database
-          const response = await apiRequest('GET', '/api/me');
-          if (response.ok) {
-            // User is now created in the database
-            console.log('User successfully created/updated in database');
-            
-            // Check if user has organizations
+        // If this is a successful sign in, ensure user is synchronized with our database
+        if (result.user) {
+          // Get the token and manually trigger an API call to create the user in the database
+          const idToken = await result.user.getIdToken(true);
+          localStorage.setItem('firebase_token', idToken);
+          
+          try {
+            // Make API call to force user creation in the database
+            const response = await apiRequest('GET', '/api/me');
+            if (response.ok) {
+              // User is now created in the database
+              console.log('User successfully created/updated in database');
+              
+              // Check if user has organizations
             const orgsResponse = await apiRequest('GET', '/api/organizations');
             if (orgsResponse.ok) {
               const orgs = await orgsResponse.json();
