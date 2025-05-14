@@ -2485,11 +2485,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`✅ Using organization ID: ${organizationId} for currencies endpoint`);
       console.log("Getting currencies for organization ID:", organizationId);
       
-      // Get all core currencies
+      // Get both core currencies and organization-specific currencies
       const allCurrencies = await db.select().from(currencies)
-        .where(eq(currencies.isCore, true));
+        .where(
+          or(
+            eq(currencies.isCore, true),
+            eq(currencies.organizationId, organizationId)
+          )
+        );
       
-      console.log(`Found ${allCurrencies.length} core currencies`);
+      console.log(`Found ${allCurrencies.length} currencies for organization: ${organizationId}`);
       
       // Get organization-specific currency settings directly from the database
       // Using raw SQL query to avoid property name conflicts
@@ -4064,11 +4069,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const orgId = headerOrgId ? parseInt(headerOrgId as string) : (globalOrgId || 1);
       console.log(`Getting currencies for organization: ${orgId} (public router) Header: ${headerOrgId}, Global: ${globalOrgId}`);
       
-      // Get all core currencies
+      // Get core currencies and organization-specific currencies
       const allCurrencies = await db.select().from(currencies)
-        .where(eq(currencies.isCore, true));
+        .where(
+          or(
+            eq(currencies.isCore, true),
+            eq(currencies.organizationId, orgId)
+          )
+        );
       
-      console.log(`Found ${allCurrencies.length} core currencies for organization: ${orgId}`);
+      console.log(`Found ${allCurrencies.length} currencies for organization: ${orgId}`);
       
       // Get organization-specific currency settings directly from the database
       // Using raw SQL query to avoid property name conflicts
