@@ -33,6 +33,9 @@ export async function apiRequest(
   if (orgId) {
     console.log(`Adding organization ID ${orgId} to request`);
     headers["X-Organization-ID"] = orgId;
+  } else {
+    console.warn(`No organization ID found in localStorage for request to ${url}!`);
+    // Don't set a default organization to avoid data leakage
   }
   
   // Add Authorization header with appropriate token
@@ -87,9 +90,7 @@ export const getQueryFn: <T>(options: {
       headers["X-Organization-ID"] = orgId;
     } else {
       console.warn(`QUERY DEBUG: No organization ID found in localStorage for query to ${queryKey[0]}!`);
-      // Fallback to organization ID 2 for debugging
-      console.log(`QUERY DEBUG: Using fallback organization ID 2 for query to ${queryKey[0]}`);
-      headers["X-Organization-ID"] = "2";
+      // Don't set a default organization to avoid data leakage
     }
     
     // Add Authorization header with appropriate token
