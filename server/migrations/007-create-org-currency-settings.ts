@@ -61,13 +61,28 @@ export async function createOrgCurrencySettings() {
           const coreCurrencyCode = coreDefault.rows[0].code;
           console.log(`Using core default currency ${coreCurrencyCode} for organization ${orgId}`);
 
-          // Create a setting for this organization to use the core default
-          await db.execute(sql`
-            INSERT INTO organization_currency_settings 
-            (organization_id, currency_code, is_default)
-            VALUES (${orgId}, ${coreCurrencyCode}, true)
+          // Check if the setting already exists
+          const existingSetting = await db.execute(sql`
+            SELECT id FROM organization_currency_settings
+            WHERE organization_id = ${orgId} AND currency_code = ${coreCurrencyCode}
           `);
-          console.log(`Created default currency setting for organization ${orgId}`);
+
+          if (existingSetting.rows.length > 0) {
+            console.log(`Default currency setting already exists for organization ${orgId}, updating it`);
+            await db.execute(sql`
+              UPDATE organization_currency_settings
+              SET is_default = true
+              WHERE organization_id = ${orgId} AND currency_code = ${coreCurrencyCode}
+            `);
+          } else {
+            // Create a setting for this organization to use the core default
+            await db.execute(sql`
+              INSERT INTO organization_currency_settings 
+              (organization_id, currency_code, is_default)
+              VALUES (${orgId}, ${coreCurrencyCode}, true)
+            `);
+            console.log(`Created default currency setting for organization ${orgId}`);
+          }
         }
       }
     }
