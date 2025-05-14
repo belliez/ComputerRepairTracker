@@ -148,6 +148,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`PUBLIC API: Found organization-specific default currency: ${orgDefaultCurrency.code}`);
           return res.json(orgDefaultCurrency);
         }
+        
+        // Check for organization-specific setting for a core currency
+        const [orgCurrencySetting] = await db.select()
+          .from(organizationCurrencySettings)
+          .where(and(
+            eq(organizationCurrencySettings.organizationId, organizationId),
+            eq(organizationCurrencySettings.isDefault, true)
+          ));
+        
+        if (orgCurrencySetting) {
+          console.log(`PUBLIC API: Found organization currency setting for: ${orgCurrencySetting.currencyCode} (isDefault=${orgCurrencySetting.isDefault})`);
+          // Get the core currency
+          const [coreCurrency] = await db.select()
+            .from(currencies)
+            .where(eq(currencies.code, orgCurrencySetting.currencyCode));
+            
+          if (coreCurrency) {
+            console.log(`PUBLIC API: Using core currency from organization settings: ${coreCurrency.code}`);
+            return res.json({
+              ...coreCurrency,
+              isDefault: true // Make sure to show this currency as default
+            });
+          }
+        }
       }
       
       // If no org-specific default is found, look for a core default currency
