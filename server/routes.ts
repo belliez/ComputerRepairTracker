@@ -2097,22 +2097,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Enhance the currency objects with organization-specific settings
-      console.log('Organization currency settings:', orgSettings);
+      console.log('Organization currency settings for org', organizationId, ':', orgSettings);
       
-      const enhancedCurrencies = allCurrencies.map(currency => {
+      // First, set all currencies' isDefault to false if they're core currencies
+      // We'll then apply the organization-specific settings
+      const currenciesWithDefaults = allCurrencies.map(currency => {
+        if (currency.isCore) {
+          // For core currencies, default to false initially
+          return {
+            ...currency,
+            isDefault: false
+          };
+        }
+        return currency;
+      });
+      
+      // Now apply organization-specific settings
+      const enhancedCurrencies = currenciesWithDefaults.map(currency => {
         // For core currencies, check if we have organization-specific settings
         if (currency.isCore && settingsMap.has(currency.code)) {
           const settings = settingsMap.get(currency.code);
           console.log(`Enhancing ${currency.code} with org settings: isDefault=${settings.isDefault}`);
           return {
             ...currency,
-            isDefault: settings.isDefault  // Override the isDefault from core with org-specific setting
+            isDefault: settings.isDefault  // Override the isDefault with org-specific setting
           };
-        }
-        
-        // For core currencies without specific settings, default to false
-        if (currency.isCore) {
-          console.log(`Core currency ${currency.code} has no org settings, using default value from currency`);
         }
         
         return currency;
@@ -2145,17 +2154,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check for organization-specific setting for a core currency
-      const [orgCurrencySetting] = await db.select({
-        currencyCode: organizationCurrencySettings.currencyCode
-      })
-      .from(organizationCurrencySettings)
-      .where(and(
-        eq(organizationCurrencySettings.organizationId, orgId),
-        eq(organizationCurrencySettings.isDefault, true)
-      ));
+      const [orgCurrencySetting] = await db.select()
+        .from(organizationCurrencySettings)
+        .where(and(
+          eq(organizationCurrencySettings.organizationId, orgId),
+          eq(organizationCurrencySettings.isDefault, true)
+        ));
       
       if (orgCurrencySetting) {
-        console.log(`Found organization currency setting for: ${orgCurrencySetting.currencyCode}`);
+        console.log(`Found organization currency setting for: ${orgCurrencySetting.currencyCode} (isDefault=${orgCurrencySetting.isDefault})`);
         // Get the core currency
         const [coreCurrency] = await db.select()
           .from(currencies)
@@ -2163,7 +2170,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
         if (coreCurrency) {
           console.log(`Using core currency from organization settings: ${coreCurrency.code}`);
-          return res.json(coreCurrency);
+          return res.json({
+            ...coreCurrency,
+            isDefault: true // Make sure to show this currency as default
+          });
         }
       }
       
