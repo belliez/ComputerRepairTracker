@@ -614,11 +614,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Inventory Items
   apiRouter.get("/inventory", async (req: Request, res: Response) => {
     try {
-      console.log(`INVENTORY DEBUG: Request for inventory items - org ID: ${(global as any).currentOrganizationId || 'not set'}`);
+      console.log(`INVENTORY DEBUG: Request URL: ${req.originalUrl}`);
+      console.log(`INVENTORY DEBUG: Headers:`, req.headers["x-debug-client"]);
+      console.log(`INVENTORY DEBUG: Organization ID from context: ${(global as any).currentOrganizationId || 'not set'}`);
+      
+      // Set organization context from headers or use default
+      const orgIdHeader = req.headers["x-organization-id"];
+      if (orgIdHeader) {
+        (global as any).currentOrganizationId = Number(orgIdHeader);
+        console.log(`INVENTORY DEBUG: Setting organization ID from header: ${orgIdHeader}`);
+      }
+      
+      // Check org ID is set
+      if (!(global as any).currentOrganizationId) {
+        console.error("INVENTORY DEBUG: No organization ID in context");
+        return res.status(400).json({ message: "Organization ID is required" });
+      }
+      
+      // Proceed with the request
+      console.log(`INVENTORY DEBUG: Fetching inventory items for organization ${(global as any).currentOrganizationId}...`);
       const items = await storage.getInventoryItems();
       console.log(`INVENTORY DEBUG: Found ${items.length} items`);
       if (items.length > 0) {
         console.log(`INVENTORY DEBUG: First item: ${JSON.stringify(items[0])}`);
+      } else {
+        console.log(`INVENTORY DEBUG: No items found`);
       }
       res.json(items);
     } catch (error) {
@@ -3375,6 +3395,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching technicians:", error);
       res.status(500).json({ message: "Error fetching technicians" });
+    }
+  });
+  
+  // Public Inventory endpoint
+  app.get("/api/inventory", async (req: Request, res: Response) => {
+    try {
+      console.log("PUBLIC INVENTORY DEBUG: Request URL:", req.originalUrl);
+      console.log("PUBLIC INVENTORY DEBUG: Headers:", req.headers["x-debug-client"]);
+      
+      // Set organization context from headers or use default
+      const orgIdHeader = req.headers["x-organization-id"];
+      if (orgIdHeader) {
+        (global as any).currentOrganizationId = Number(orgIdHeader);
+        console.log(`PUBLIC INVENTORY DEBUG: Setting organization ID from header: ${orgIdHeader}`);
+      } else {
+        console.log("PUBLIC INVENTORY DEBUG: No organization ID in header, using default");
+        (global as any).currentOrganizationId = 2; // Default to org ID 2 if none provided
+      }
+      
+      // Proceed with the request
+      console.log(`PUBLIC INVENTORY DEBUG: Fetching inventory items for organization ${(global as any).currentOrganizationId}...`);
+      const items = await storage.getInventoryItems();
+      console.log(`PUBLIC INVENTORY DEBUG: Found ${items.length} items`);
+      if (items.length > 0) {
+        console.log(`PUBLIC INVENTORY DEBUG: First item: ${JSON.stringify(items[0])}`);
+      } else {
+        console.log(`PUBLIC INVENTORY DEBUG: No items found`);
+      }
+      res.json(items);
+    } catch (error) {
+      console.error("PUBLIC INVENTORY ERROR:", error);
+      res.status(500).json({ error: "Failed to fetch inventory items" });
     }
   });
 
