@@ -85,7 +85,7 @@ export default function RepairList({
         }
     
         const response = await fetch('/api/customers', { headers });
-        console.log('REPAIR LIST DEBUG: Customers response:', response.text().slice(0, 20) + '...');
+        console.log('REPAIR LIST DEBUG: Customers response status:', response.status);
         
         if (response.ok) {
           const data = await response.json();
@@ -119,7 +119,7 @@ export default function RepairList({
         }
     
         const response = await fetch('/api/devices', { headers });
-        console.log('REPAIR LIST DEBUG: Devices response:', response.text().slice(0, 20) + '...');
+        console.log('REPAIR LIST DEBUG: Devices response status:', response.status);
         
         if (response.ok) {
           const data = await response.json();
@@ -169,7 +169,6 @@ export default function RepairList({
       });
       
       console.log('REPAIR LIST DEBUG: Response status:', response.status);
-      console.log('REPAIR LIST DEBUG: Response text preview:', await response.text().slice(0, 20) + '...');
       
       if (response.ok) {
         const data = await response.json();
@@ -285,7 +284,7 @@ export default function RepairList({
       if (filterStatus && repair.status !== filterStatus) return false;
       
       // Apply priority filter if set
-      if (filterPriority && repair.priority !== filterPriority) return false;
+      if (filterPriority && repair.priorityLevel?.toString() !== filterPriority) return false;
       
       // Apply technician filter if set
       if (searchTechnician && repair.technicianId !== searchTechnician) return false;
@@ -305,8 +304,8 @@ export default function RepairList({
       
       return true;
     })
-    // Sort by creation date, newest first
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    // Sort by intake date, newest first
+    .sort((a, b) => new Date(b.intakeDate || 0).getTime() - new Date(a.intakeDate || 0).getTime())
     // Apply limit if set
     .slice(0, limitRows || repairs.length);
     
@@ -377,8 +376,8 @@ export default function RepairList({
                 <TableHead>Customer</TableHead>
                 <TableHead>Device</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                {!simpleView && <TableHead>Updated</TableHead>}
+                <TableHead>Intake Date</TableHead>
+                {!simpleView && <TableHead>Completed</TableHead>}
                 {showButtons && <TableHead className="w-28">Actions</TableHead>}
               </TableRow>
             </TableHeader>
@@ -395,9 +394,9 @@ export default function RepairList({
                   <TableCell>
                     <StatusBadge status={repair.status} />
                   </TableCell>
-                  <TableCell>{formatDate(repair.createdAt as unknown as string)}</TableCell>
+                  <TableCell>{formatDate(repair.intakeDate as unknown as string)}</TableCell>
                   {!simpleView && (
-                    <TableCell>{formatDate(repair.updatedAt as unknown as string)}</TableCell>
+                    <TableCell>{formatDate(repair.actualCompletionDate as unknown as string)}</TableCell>
                   )}
                   {showButtons && (
                     <TableCell className="space-x-2">
