@@ -730,21 +730,42 @@ export class DatabaseStorage implements IStorage {
 
   // Inventory methods
   async getInventoryItems(): Promise<InventoryItem[]> {
-    return db.select().from(inventoryItems).where(eq(inventoryItems.deleted, false));
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching inventory items for organization: ${orgId}`);
+    
+    return db.select()
+      .from(inventoryItems)
+      .where(and(
+        eq(inventoryItems.deleted, false),
+        eq((inventoryItems as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ));
   }
 
   async getInventoryItem(id: number): Promise<InventoryItem | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Fetching inventory item ${id} for organization: ${orgId}`);
+    
     const [item] = await db.select()
       .from(inventoryItems)
       .where(and(
         eq(inventoryItems.id, id),
-        eq(inventoryItems.deleted, false)
+        eq(inventoryItems.deleted, false),
+        eq((inventoryItems as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
       ));
     return item;
   }
 
   async createInventoryItem(item: InsertInventoryItem): Promise<InventoryItem> {
-    const [newItem] = await db.insert(inventoryItems).values(item).returning();
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Creating inventory item in organization: ${orgId}`);
+    
+    // Ensure the item is created with the current organization ID
+    const itemWithOrgId = {
+      ...item,
+      organizationId: orgId
+    };
+    
+    const [newItem] = await db.insert(inventoryItems).values(itemWithOrgId).returning();
     return newItem;
   }
 
