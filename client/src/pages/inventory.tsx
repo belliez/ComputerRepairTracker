@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { InventoryItem } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -31,6 +31,32 @@ import PartsForm from "@/components/inventory/parts-form";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/use-currency";
 
+// Direct fetch function
+const fetchInventory = async (): Promise<InventoryItem[]> => {
+  const orgId = localStorage.getItem("currentOrganizationId") || "2";
+  console.log("INVENTORY FETCH: Using organization ID:", orgId);
+  
+  try {
+    const response = await fetch("/api/inventory", {
+      headers: {
+        "X-Organization-ID": orgId,
+        "X-Debug-Client": "RepairTrackerClient"
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("INVENTORY FETCH: Successfully fetched inventory items:", data);
+    return data;
+  } catch (error) {
+    console.error("INVENTORY FETCH: Error fetching inventory items:", error);
+    throw error;
+  }
+};
+
 export default function Inventory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
@@ -38,17 +64,13 @@ export default function Inventory() {
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const { toast } = useToast();
   const { formatCurrency } = useCurrency();
-
+  
+  // Use custom query function to avoid authentication issues
   const { data: inventoryItems, isLoading, refetch, error } = useQuery<InventoryItem[]>({
     queryKey: ["/api/inventory"],
+    queryFn: fetchInventory,
     refetchOnWindowFocus: true,
-    staleTime: 0, // Consider the data always stale to ensure fresh data
-    onSuccess: (data) => {
-      console.log("INVENTORY CLIENT DEBUG: Successfully fetched inventory items:", data);
-    },
-    onError: (error) => {
-      console.error("INVENTORY CLIENT ERROR:", error);
-    }
+    staleTime: 0
   });
   
   // Add debugging logs
