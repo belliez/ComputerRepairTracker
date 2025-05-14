@@ -2072,21 +2072,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Settings API - Currencies - Fixed GET method with auth bypass for debugging
   apiRouter.get("/settings/currencies", async (req: Request, res: Response) => {
     try {
-      console.log("Getting currencies for organization ID:", (global as any).currentOrganizationId);
+      const organizationId = (global as any).currentOrganizationId;
+      console.log("Getting currencies for organization ID:", organizationId);
       
       // Get both organization-specific currencies and core currencies
       const allCurrencies = await db.select().from(currencies)
         .where(
           or(
             // Get organization-specific currencies
-            eq(currencies.organizationId, (global as any).currentOrganizationId),
+            eq(currencies.organizationId, organizationId),
             // Get core currencies that are available to all organizations
             eq(currencies.isCore, true)
           )
         );
       
-      console.log("Currencies found:", allCurrencies.length, allCurrencies);
-      return res.json(allCurrencies);
+      // Get organization-specific settings for core currencies
+      const orgSettings = await db.select().from(organizationCurrencySettings)
+        .where(eq(organizationCurrencySettings.organizationId, organizationId));
+      
+      // Create a map of currency code -> settings for quick lookup
+      const settingsMap = new Map();
+      for (const setting of orgSettings) {
+        settingsMap.set(setting.currencyCode, setting);
+      }
+      
+      // Enhance the currency objects with organization-specific settings
+      const enhancedCurrencies = allCurrencies.map(currency => {
+        // For core currencies, check if we have organization-specific settings
+        if (currency.isCore && settingsMap.has(currency.code)) {
+          const settings = settingsMap.get(currency.code);
+          return {
+            ...currency,
+            isDefault: settings.isDefault  // Override the isDefault from core with org-specific setting
+          };
+        }
+        return currency;
+      });
+      
+      console.log(`Found ${allCurrencies.length} currencies for organization ${organizationId}`);
+      return res.json(enhancedCurrencies);
     } catch (error: any) {
       console.error("Error fetching currencies:", error);
       return res.status(500).json({ error: error.message });
@@ -2228,6 +2252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If setting as default, unset any existing defaults for this organization,
       // regardless of whether we're updating a core or organization-specific currency
       if (isDefault) {
+        // First, update any organization-specific currencies to not be default
         await db.update(currencies)
           .set({ isDefault: false })
           .where(
@@ -2236,6 +2261,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
               eq(currencies.organizationId, organizationId)
             )
           );
+          
+        // For core currencies, we need to update the organization settings table
+        // to remove default flag from any existing settings
+        await db.update(organizationCurrencySettings)
+          .set({ isDefault: false })
+          .where(
+            and(
+              eq(organizationCurrencySettings.isDefault, true),
+              eq(organizationCurrencySettings.organizationId, organizationId)
+            )
+          );
+          
+        console.log(`Removed default flag from existing organization settings for org ${organizationId}`);
       }
       
       let updatedCurrency;
