@@ -45,6 +45,9 @@ export async function initializeDemo() {
     // Create core currencies and clean up redundant ones
     await createCoreCurrencies();
     
+    // Create organization currency settings table for core currency preferences
+    await createOrgCurrencySettings();
+    
     // Skip the creation of development user and sample data
     console.log('Skipping development user and demo data creation as requested.');
     

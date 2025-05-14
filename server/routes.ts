@@ -2111,6 +2111,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json(orgDefaultCurrency);
       }
       
+      // Check for organization-specific setting for a core currency
+      const [orgCurrencySetting] = await db.select({
+        currencyCode: organizationCurrencySettings.currencyCode
+      })
+      .from(organizationCurrencySettings)
+      .where(and(
+        eq(organizationCurrencySettings.organizationId, orgId),
+        eq(organizationCurrencySettings.isDefault, true)
+      ));
+      
+      if (orgCurrencySetting) {
+        console.log(`Found organization currency setting for: ${orgCurrencySetting.currencyCode}`);
+        // Get the core currency
+        const [coreCurrency] = await db.select()
+          .from(currencies)
+          .where(eq(currencies.code, orgCurrencySetting.currencyCode));
+          
+        if (coreCurrency) {
+          console.log(`Using core currency from organization settings: ${coreCurrency.code}`);
+          return res.json(coreCurrency);
+        }
+      }
+      
       // If no org-specific default is found, look for a core default currency
       const [coreDefaultCurrency] = await db.select()
         .from(currencies)
