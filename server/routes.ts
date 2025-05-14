@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { initializeDemo } from "./init-db";
 import { db } from "./db";
-import { and, eq, desc } from "drizzle-orm";
+import { and, eq, desc, isNull, ne, or, sql } from "drizzle-orm";
 import { sendEmail, sendEmailWithOverride, generateQuoteEmail, generateInvoiceEmail, EmailData, EmailSettings } from "./email";
 import Stripe from "stripe";
 import {
@@ -35,8 +35,6 @@ import {
   acceptOrganizationInvite,
   addOrganizationContext
 } from "./auth";
-import { db } from "./db";
-import { eq, sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize Stripe
