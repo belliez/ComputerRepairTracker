@@ -664,14 +664,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               console.log('User successfully created/updated in database');
               
               // Check if user has organizations
-            const orgsResponse = await apiRequest('GET', '/api/organizations');
-            if (orgsResponse.ok) {
-              const orgs = await orgsResponse.json();
-              
-              // If user doesn't have any organizations, create a default one
-              if (!orgs || orgs.length === 0) {
-                await apiRequest('POST', '/api/organizations', {
-                  name: `${result.user.displayName || 'My'}'s Organization`
+              const orgsResponse = await apiRequest('GET', '/api/organizations');
+              if (orgsResponse.ok) {
+                const orgs = await orgsResponse.json();
+                
+                // If user doesn't have any organizations, create a default one
+                if (!orgs || orgs.length === 0) {
+                  await apiRequest('POST', '/api/organizations', {
+                    name: `${result.user.displayName || 'My'}'s Organization`
+                  });
+                }
+              }
+            }
+          } catch (apiError) {
+            console.error('Error syncing user with database:', apiError);
+          }
+        }
+      } catch (popupError) {
+        console.error("Popup sign-in failed:", popupError);
+        // If popup fails, try redirect
+        toast({
+          title: "Google Sign-In",
+          description: "Switching to redirect method...",
+          duration: 3000,
+        });
+        
+        // Handle specific errors
+        if (popupError instanceof FirebaseError) {
+          if (popupError.code === 'auth/popup-blocked' || 
+              popupError.code === 'auth/popup-closed-by-user' ||
+              popupError.code === 'auth/cancelled-popup-request' ||
+              popupError.code === 'auth/unauthorized-domain') {
+            
+            if (import.meta.env.MODE === 'development') {
+              console.log('Development mode detected, using dev auth');
+              useDevelopmentAuth('dev@example.com', 'Development User');
+              setIsSigningIn(false);
+              return;
+            }
+          }
+        }
+      }
+      
+      setIsSigningIn(false);
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      setIsSigningIn(false);
+      handleAuthError(error);
+    }
+  };
                 });
               }
             }

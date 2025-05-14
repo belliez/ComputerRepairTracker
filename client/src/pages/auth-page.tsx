@@ -54,23 +54,39 @@ const AuthPage: React.FC = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      console.log("Starting registration with email:", email);
       await signUp(email, password, name);
+      console.log("Registration completed successfully");
       toast({
         title: 'Sign up successful',
         description: 'Welcome to RepairTrack!',
       });
       setLocation('/');
     } catch (error: any) {
-      // Error handling is done in the auth provider
+      console.error("Registration error in auth-page:", error);
+      // Show fallback error message
+      toast({
+        title: "Registration Failed",
+        description: error.message || "Could not create your account. Please try again with a different email.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleGoogleSignIn = async () => {
     try {
+      console.log("Starting Google sign-in from Auth page");
       await signInWithGoogle();
+      console.log("Google sign-in completed successfully");
       setLocation('/');
     } catch (error: any) {
-      // Error handling is done in the auth provider
+      console.error("Google sign-in error in auth-page:", error);
+      // Show fallback error message
+      toast({
+        title: "Google Sign-In Failed",
+        description: error.message || "Could not sign in with Google. Please try again or use another method.",
+        variant: "destructive",
+      });
     }
   };
   
