@@ -43,18 +43,11 @@ export function CurrencySymbol({ currencyCode, className = "mr-1" }: CurrencySym
       // First, look for exact match
       let selectedCurrency = currencies.find(c => c.code === currencyCode);
       
-      // If no exact match and currencyCode doesn't have _CORE suffix, check for core version
-      if (!selectedCurrency && !currencyCode.includes('_CORE')) {
-        // Try to find a core currency that starts with the provided code
+      // If no exact match, check if it's a core currency
+      if (!selectedCurrency) {
         selectedCurrency = currencies.find(c => 
-          c.isCore && c.code.startsWith(currencyCode)
+          c.code === currencyCode && c.isCore === true
         );
-      }
-      
-      // If the currency has _CORE suffix, also try with just the base code
-      if (!selectedCurrency && currencyCode.includes('_CORE')) {
-        const baseCode = currencyCode.split('_')[0];
-        selectedCurrency = currencies.find(c => c.code === baseCode);
       }
       
       console.log("CURRENCY SYMBOL DEBUG: Selected currency by code:", selectedCurrency);
