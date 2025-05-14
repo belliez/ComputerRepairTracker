@@ -442,16 +442,28 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
     console.log("DEBUG: Form onSubmit triggered with values:", values);
     
     try {
-      // Ensure currency code includes _CORE suffix if it's not already there
-      let currencyCode = values.currencyCode;
-      if (currencyCode && !currencyCode.includes('_CORE')) {
-        currencyCode = `${currencyCode}_CORE`;
+      // Log the actual currencies data to check what we're dealing with
+      console.log("QUOTE FORM DEBUG: Available currencies:", currencies);
+      
+      // Ensure currency code matches exactly one in the database
+      // Important: The API requires the EXACT currency code that exists in the database (with _CORE suffix)
+      const dbCurrencyCode = currencies?.find(c => c.code === values.currencyCode)?.code;
+      
+      if (!dbCurrencyCode) {
+        console.log(`QUOTE FORM DEBUG: Currency code ${values.currencyCode} not found in available currencies, will append _CORE suffix`);
+        // If currencyCode doesn't exist in our list, append _CORE (fallback behavior)
+        values.currencyCode = values.currencyCode.includes('_CORE') 
+          ? values.currencyCode 
+          : `${values.currencyCode}_CORE`;
+      } else {
+        // Use the exact code from the database to ensure it matches
+        console.log(`QUOTE FORM DEBUG: Found exact match for currency code in database: ${dbCurrencyCode}`);
+        values.currencyCode = dbCurrencyCode;
       }
       
       // Ensure dates are in ISO string format
       const formattedValues = {
         ...values,
-        currencyCode,
         dateCreated: values.dateCreated ? new Date(values.dateCreated).toISOString() : new Date().toISOString(),
         expirationDate: values.expirationDate ? new Date(values.expirationDate).toISOString() : null,
       };
