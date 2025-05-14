@@ -164,22 +164,81 @@ export default function Invoices() {
     }
   });
   
-  // Make separate requests for repairs and customers with higher priority
+  // Make dedicated repair fetch with high priority
   const { data: repairsData, isLoading: repairsLoading } = useQuery<Repair[]>({
-    queryKey: ["/api/repairs"],
-    staleTime: 5000, // Reduce refetching
+    queryKey: ["/api/repairs-direct"],
+    queryFn: async () => {
+      // Using fetch directly to avoid any middleware issues
+      const headers: Record<string, string> = {
+        'X-Organization-ID': localStorage.getItem('currentOrganizationId') || '2',
+        'X-Debug-Client': 'RepairTrackerClient'
+      };
+      
+      // Add Authorization header for auth protected endpoints
+      const firebaseToken = localStorage.getItem('firebase_token');
+      if (firebaseToken) {
+        headers["Authorization"] = `Bearer ${firebaseToken}`;
+      }
+      
+      const response = await fetch('/api/repairs', {
+        headers,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to fetch repairs: ${text}`);
+      }
+      
+      return await response.json();
+    },
+    staleTime: 10000, // 10 seconds
     refetchOnWindowFocus: false,
+    retry: 2, // Retry a few times
     onSuccess: (data) => {
       console.log("REPAIRS DIRECT FETCH: Successfully fetched repairs:", data?.length);
+    },
+    onError: (error) => {
+      console.error("REPAIRS DIRECT FETCH ERROR:", error);
     }
   });
 
+  // Make dedicated customer fetch with high priority
   const { data: customersData, isLoading: customersLoading } = useQuery({
-    queryKey: ["/api/customers"],
-    staleTime: 5000, // Reduce refetching 
+    queryKey: ["/api/customers-direct"],
+    queryFn: async () => {
+      // Using fetch directly to avoid any middleware issues
+      const headers: Record<string, string> = {
+        'X-Organization-ID': localStorage.getItem('currentOrganizationId') || '2',
+        'X-Debug-Client': 'RepairTrackerClient'
+      };
+      
+      // Add Authorization header for auth protected endpoints
+      const firebaseToken = localStorage.getItem('firebase_token');
+      if (firebaseToken) {
+        headers["Authorization"] = `Bearer ${firebaseToken}`;
+      }
+      
+      const response = await fetch('/api/customers', {
+        headers,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to fetch customers: ${text}`);
+      }
+      
+      return await response.json();
+    },
+    staleTime: 10000, // 10 seconds 
     refetchOnWindowFocus: false,
+    retry: 2, // Retry a few times
     onSuccess: (data) => {
       console.log("CUSTOMERS DIRECT FETCH: Successfully fetched customers:", data?.length);
+    },
+    onError: (error) => {
+      console.error("CUSTOMERS DIRECT FETCH ERROR:", error);
     }
   });
   
@@ -192,6 +251,9 @@ export default function Invoices() {
   const availableRepairs = repairsData || repairs || [];
   const availableCustomers = customersData || customers || [];
   
+  // Use combined loading state to determine if we're still loading data
+  const isDataLoading = repairsLoading || customersLoading || isLoading || invoiceLoading;
+  
   // Find repair and customer info for each invoice
   const invoicesWithRepairInfo = combinedInvoices.map(invoice => {
     console.log(`INVOICES DEBUG: Processing invoice ${invoice.invoiceNumber} with repairId ${invoice.repairId}`);
@@ -201,8 +263,23 @@ export default function Invoices() {
     const customer = repair ? availableCustomers.find(c => c.id === repair.customerId) : null;
     console.log(`INVOICES DEBUG: Found customer:`, customer);
     
-    const customerName = customer ? `${customer.firstName} ${customer.lastName}` : "Unknown";
-    return { ...invoice, repair, customer, customerName };
+    // If we're still loading data, show "Loading..." instead of "Unknown"
+    const customerName = isDataLoading 
+      ? "Loading..." 
+      : (customer ? `${customer.firstName} ${customer.lastName}` : "Unknown");
+    
+    // Same for repair ticket
+    const repairTicket = isDataLoading
+      ? "Loading..."
+      : (repair ? repair.ticketNumber : "Unknown");
+      
+    return { 
+      ...invoice, 
+      repair, 
+      customer, 
+      customerName,
+      repairTicket
+    };
   });
 
   // Apply search filter
@@ -342,11 +419,9 @@ export default function Invoices() {
                         <div className="text-sm font-medium">{invoice.customerName}</div>
                       </TableCell>
                       <TableCell>
-                        {invoice.repair ? (
-                          <div className="text-sm">{invoice.repair.ticketNumber}</div>
-                        ) : (
-                          <div className="text-sm text-gray-500">Unknown</div>
-                        )}
+                        <div className="text-sm">
+                          {invoice.repairTicket}
+                        </div>
                       </TableCell>
                       <TableCell>
                         {format(new Date(invoice.dateIssued), "MMM d, yyyy")}
