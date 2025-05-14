@@ -2473,17 +2473,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Enhance the currency objects with organization-specific settings
       console.log('Organization currency settings for org', organizationId, ':', orgSettings);
       
-      // First, set all currencies' isDefault to false if they're core currencies
+      // First, set all currencies' isDefault to false
       // We'll then apply the organization-specific settings
       const currenciesWithDefaults = allCurrencies.map(currency => {
-        if (currency.isCore) {
-          // For core currencies, default to false initially
-          return {
-            ...currency,
-            isDefault: false
-          };
-        }
-        return currency;
+        // Always default to false initially
+        return {
+          ...currency,
+          isDefault: false
+        };
       });
       
       console.log(`DEBUG: After setting defaults to false, currencies:`, 
