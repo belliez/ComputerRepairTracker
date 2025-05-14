@@ -252,11 +252,23 @@ export const authenticateJWT = async (req: Request, res: Response, next: NextFun
   }
   
   // Normal JWT token flow
-  const token = authHeader.startsWith('Bearer ') ? authHeader.substring(7) : authHeader;
+  // If token starts with "Bearer Bearer ", remove the extra prefix
+  let token = '';
+  if (authHeader.startsWith('Bearer Bearer ')) {
+    token = authHeader.substring(14); // Remove double "Bearer " prefix
+    console.log('Fixed double Bearer prefix in token');
+  } else if (authHeader.startsWith('Bearer ')) {
+    token = authHeader.substring(7); // Remove single "Bearer " prefix
+  } else {
+    token = authHeader; // Use as is if no prefix
+  }
   
   if (!token) {
     return res.status(401).json({ message: 'Bearer token required' });
   }
+  
+  // Additional debug logging
+  console.log(`Token length: ${token.length}, First 20 chars: ${token.substring(0, 20)}...`);
   
   try {
     const auth = getAdminAuth();

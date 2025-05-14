@@ -3189,8 +3189,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { type, ...data } = req.body;
       
       // Log the request details for debugging
-      console.log('DEBUG: Settings for organization:', req.organizationId, 'type:', type, 'isDevelopmentMode:', process.env.NODE_ENV === 'development');
+      console.log('DEBUG: Settings for organization route:', req.organizationId, 'type:', type, 'isDevelopmentMode:', process.env.NODE_ENV === 'development');
       console.log('Received data:', JSON.stringify(data, null, 2));
+      console.log('Headers:', JSON.stringify(req.headers, null, 2));
       
       // Special handling for development mode
       const authHeader = req.headers.authorization;
@@ -3200,12 +3201,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For new organizations during onboarding, get the organization ID from user organizations
       let organizationId = isDevelopmentMode ? 1 : req.organizationId;
       
-      // Get organization ID from headers if available
+      // Always check for organization ID in headers with highest priority
       const orgIdHeader = req.headers['x-organization-id'];
-      if (orgIdHeader && !organizationId) {
+      if (orgIdHeader) {
         const parsedOrgId = parseInt(orgIdHeader as string, 10);
         if (!isNaN(parsedOrgId)) {
-          console.log(`Using organization ID ${parsedOrgId} from X-Organization-ID header`);
+          console.log(`Using organization ID ${parsedOrgId} from X-Organization-ID header for settings update`);
           organizationId = parsedOrgId;
         }
       }
@@ -3277,6 +3278,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Processing settings for organization: ${organizationId}, type: ${type}, isDevelopmentMode: ${isDevelopmentMode}`);
       console.log(`Received data:`, JSON.stringify(data, null, 2));
+      
+      // If no organization ID found, try to get from header one more time
+      if (!organizationId) {
+        const orgIdHeader = req.headers['x-organization-id'];
+        if (orgIdHeader) {
+          const parsedOrgId = parseInt(orgIdHeader as string, 10);
+          if (!isNaN(parsedOrgId)) {
+            console.log(`Last chance: Using organization ID ${parsedOrgId} from X-Organization-ID header`);
+            organizationId = parsedOrgId;
+          }
+        }
+      }
+      
+      // If still no organization ID, use default for development mode
+      if (!organizationId && process.env.NODE_ENV === 'development') {
+        console.log('No organization ID found but in development mode - using default organization 2');
+        organizationId = 2; // Default to organization 2 in development mode
+      }
       
       if (!organizationId) {
         return res.status(403).json({ message: "No organization selected" });
