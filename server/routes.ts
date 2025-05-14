@@ -2196,9 +2196,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { name, symbol, isDefault } = req.body;
       const organizationId = (global as any).currentOrganizationId;
       
-      console.log(`Updating currency for organization ID: ${organizationId}`);
+      console.log(`Updating currency for organization ID: ${organizationId}, currency code: ${code}`);
       
-      // If setting as default, unset any existing defaults for this organization
+      // Check if this is a core currency by examining the code
+      const isCoreCurrency = code.includes('_CORE');
+      
+      // If setting as default, unset any existing defaults for this organization,
+      // regardless of whether we're updating a core or organization-specific currency
       if (isDefault) {
         await db.update(currencies)
           .set({ isDefault: false })
@@ -2210,18 +2214,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
       }
       
-      const [updatedCurrency] = await db.update(currencies)
-        .set({ name, symbol, isDefault })
-        .where(
-          and(
-            eq(currencies.code, code),
-            eq(currencies.organizationId, organizationId)
+      let updatedCurrency;
+      
+      // Handle core currencies differently than organization-specific currencies
+      if (isCoreCurrency) {
+        console.log(`Updating a core currency: ${code}`);
+        
+        // For core currencies, we need to create an organization-specific default setting record
+        // First, find the core currency
+        const [coreCurrency] = await db.select().from(currencies)
+          .where(eq(currencies.code, code));
+          
+        if (!coreCurrency) {
+          return res.status(404).json({ error: "Core currency not found" });
+        }
+        
+        // Find if we already have an organization-specific setting for this currency
+        const [orgCurrencySetting] = await db.select().from(organizationCurrencySettings)
+          .where(
+            and(
+              eq(organizationCurrencySettings.currencyCode, code),
+              eq(organizationCurrencySettings.organizationId, organizationId)
+            )
+          );
+          
+        if (orgCurrencySetting) {
+          // Update existing setting
+          const [updatedSetting] = await db.update(organizationCurrencySettings)
+            .set({ isDefault })
+            .where(
+              and(
+                eq(organizationCurrencySettings.currencyCode, code),
+                eq(organizationCurrencySettings.organizationId, organizationId)
+              )
+            )
+            .returning();
+            
+          // Combine the core currency and the organization setting
+          updatedCurrency = {
+            ...coreCurrency,
+            isDefault: updatedSetting.isDefault,
+          };
+        } else {
+          // Create new setting
+          const [newSetting] = await db.insert(organizationCurrencySettings)
+            .values({
+              organizationId,
+              currencyCode: code,
+              isDefault
+            })
+            .returning();
+            
+          // Combine the core currency and the organization setting
+          updatedCurrency = {
+            ...coreCurrency,
+            isDefault: newSetting.isDefault,
+          };
+        }
+      } else {
+        // Regular update for organization-specific currencies
+        const [updated] = await db.update(currencies)
+          .set({ name, symbol, isDefault })
+          .where(
+            and(
+              eq(currencies.code, code),
+              eq(currencies.organizationId, organizationId)
+            )
           )
-        )
-        .returning();
+          .returning();
+          
+        updatedCurrency = updated;
+      }
         
       if (!updatedCurrency) {
-        return res.status(404).json({ error: "Currency not found for this organization" });
+        return res.status(404).json({ 
+          error: "Currency not found for this organization",
+          details: {
+            code,
+            organizationId,
+            isCoreCurrency
+          }
+        });
       }
       
       res.json(updatedCurrency);
