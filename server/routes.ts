@@ -2031,11 +2031,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Getting currencies for organization ID:", (global as any).currentOrganizationId);
       
-      // Get organization-specific currencies or global ones
+      // Get both organization-specific currencies and core currencies
       const allCurrencies = await db.select().from(currencies)
         .where(
-          // Get either organization-specific currencies or global ones
-          sql`(${currencies.organizationId} = ${(global as any).currentOrganizationId} OR ${currencies.organizationId} IS NULL)`
+          or(
+            // Get organization-specific currencies
+            eq(currencies.organizationId, (global as any).currentOrganizationId),
+            // Get core currencies that are available to all organizations
+            eq(currencies.isCore, true)
+          )
         );
       
       console.log("Currencies found:", allCurrencies.length, allCurrencies);

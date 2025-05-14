@@ -18,10 +18,17 @@ export async function setupCoreCurrencies() {
       WHERE table_name = 'currencies' AND column_name = 'is_core'
     `);
     
-    // If the column doesn't exist yet, schema hasn't been updated
+    // If the column doesn't exist yet, add it
     if (columns.rows.length === 0) {
-      console.log("Column 'is_core' doesn't exist yet. Schema needs to be updated.");
-      return false;
+      console.log("Column 'is_core' doesn't exist yet. Adding it now...");
+      
+      // Add the isCore column to the currencies table
+      await db.execute(sql`
+        ALTER TABLE currencies 
+        ADD COLUMN is_core BOOLEAN NOT NULL DEFAULT FALSE
+      `);
+      
+      console.log("Added 'is_core' column to currencies table");
     }
     
     // 2. Get all existing currencies to see what we're working with

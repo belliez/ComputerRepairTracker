@@ -31,14 +31,14 @@ export async function initializeDemo() {
     await runSettingsOrganizationMigration();
     await fixOrganizationRelations();
     
+    // Add isCore column to currencies table first
+    await setupCoreCurrencies();
+    
     // Initialize currencies and tax rates - basic setup data
     await initializeSettingsData();
     
     // Fix any missing currencies or tax rates for organizations
     await fixCurrenciesAndTaxRates();
-    
-    // Set up core currencies
-    await setupCoreCurrencies();
     
     // Skip the creation of development user and sample data
     console.log('Skipping development user and demo data creation as requested.');
@@ -83,33 +83,63 @@ async function initializeDevEnvironment() {
 
 // Initialize settings data (currencies and tax rates)
 async function initializeSettingsData() {
-  // Check if currencies already exist
-  const existingCurrencies = await db.select().from(currencies);
-  if (existingCurrencies.length === 0) {
-    console.log('Initializing currencies...');
-    await db.insert(currencies).values([
-      { code: 'USD', name: 'US Dollar', symbol: '$', isDefault: true },
-      { code: 'EUR', name: 'Euro', symbol: '€', isDefault: false },
-      { code: 'GBP', name: 'British Pound', symbol: '£', isDefault: false },
-      { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', isDefault: false },
-      { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', isDefault: false },
-      { code: 'JPY', name: 'Japanese Yen', symbol: '¥', isDefault: false },
-    ]);
-  }
-  
-  // Check if tax rates already exist
-  const existingTaxRates = await db.select().from(taxRates);
-  if (existingTaxRates.length === 0) {
-    console.log('Initializing tax rates...');
-    await db.insert(taxRates).values([
-      { countryCode: 'US', regionCode: null, name: 'No Tax', rate: 0, isDefault: false },
-      { countryCode: 'US', regionCode: 'CA', name: 'California Sales Tax', rate: 7.25, isDefault: true },
-      { countryCode: 'US', regionCode: 'NY', name: 'New York Sales Tax', rate: 8.875, isDefault: false },
-      { countryCode: 'US', regionCode: 'TX', name: 'Texas Sales Tax', rate: 6.25, isDefault: false },
-      { countryCode: 'CA', regionCode: null, name: 'Canada GST', rate: 5, isDefault: false },
-      { countryCode: 'GB', regionCode: null, name: 'UK VAT', rate: 20, isDefault: false },
-      { countryCode: 'AU', regionCode: null, name: 'Australia GST', rate: 10, isDefault: false },
-    ]);
+  try {
+    // Check if the isCore column exists in the currencies table
+    const columns = await db.execute(sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'currencies' AND column_name = 'is_core'
+    `);
+    
+    // Check if currencies already exist
+    let existingCurrenciesQuery;
+    if (columns.rows.length > 0) {
+      // isCore column exists, use the full schema
+      existingCurrenciesQuery = await db.select().from(currencies);
+    } else {
+      // isCore column doesn't exist yet, use raw SQL to avoid schema errors
+      existingCurrenciesQuery = await db.execute(sql`
+        SELECT * FROM currencies
+      `);
+      existingCurrenciesQuery = existingCurrenciesQuery.rows;
+    }
+    
+    if (existingCurrenciesQuery.length === 0) {
+      console.log('Initializing currencies...');
+      
+      // Use raw SQL to insert currencies, which is safer during schema changes
+      await db.execute(sql`
+        INSERT INTO currencies (code, name, symbol, decimals, is_default)
+        VALUES 
+          ('USD', 'US Dollar', '$', 2, true),
+          ('EUR', 'Euro', '€', 2, false),
+          ('GBP', 'British Pound', '£', 2, false),
+          ('CAD', 'Canadian Dollar', 'C$', 2, false),
+          ('AUD', 'Australian Dollar', 'A$', 2, false),
+          ('JPY', 'Japanese Yen', '¥', 2, false)
+      `);
+      
+      console.log('Currencies initialized successfully');
+    }
+    
+    // Check if tax rates already exist
+    const existingTaxRates = await db.select().from(taxRates);
+    if (existingTaxRates.length === 0) {
+      console.log('Initializing tax rates...');
+      await db.insert(taxRates).values([
+        { countryCode: 'US', regionCode: null, name: 'No Tax', rate: 0, isDefault: false },
+        { countryCode: 'US', regionCode: 'CA', name: 'California Sales Tax', rate: 7.25, isDefault: true },
+        { countryCode: 'US', regionCode: 'NY', name: 'New York Sales Tax', rate: 8.875, isDefault: false },
+        { countryCode: 'US', regionCode: 'TX', name: 'Texas Sales Tax', rate: 6.25, isDefault: false },
+        { countryCode: 'CA', regionCode: null, name: 'Canada GST', rate: 5, isDefault: false },
+        { countryCode: 'GB', regionCode: null, name: 'UK VAT', rate: 20, isDefault: false },
+        { countryCode: 'AU', regionCode: null, name: 'Australia GST', rate: 10, isDefault: false },
+      ]);
+      console.log('Tax rates initialized successfully');
+    }
+  } catch (error) {
+    console.error('Error initializing settings data:', error);
+    throw error;
   }
 }
 
