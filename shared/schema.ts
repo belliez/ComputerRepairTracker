@@ -263,6 +263,7 @@ export const currencies = pgTable("currencies", {
   name: text("name").notNull(), // US Dollar, Euro, British Pound
   symbol: text("symbol").notNull(), // $, €, £
   isDefault: boolean("is_default").default(false),
+  isCore: boolean("is_core").default(false), // Core currencies are available to all organizations and cannot be deleted
   organizationId: integer("organization_id").references(() => organizations.id),
 });
 
