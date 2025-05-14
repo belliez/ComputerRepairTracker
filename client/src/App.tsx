@@ -14,6 +14,7 @@ import CreateRepairInvoice from "@/pages/create-repair-invoice";
 import Customers from "@/pages/customers";
 import Inventory from "@/pages/inventory";
 import Invoices from "@/pages/invoices";
+import InvoiceDetail from "@/pages/invoice-detail";
 import Reports from "@/pages/reports";
 import Settings from "@/pages/settings";
 import Services from "@/pages/services";
@@ -67,6 +68,7 @@ function Router() {
       <ProtectedRoute path="/inventory" component={Inventory} />
       <ProtectedRoute path="/services" component={Services} />
       <ProtectedRoute path="/invoices" component={Invoices} />
+      <ProtectedRoute path="/invoice/:id" component={InvoiceDetail} />
       <ProtectedRoute path="/reports" component={Reports} />
       <ProtectedRoute path="/settings" component={Settings} />
       
