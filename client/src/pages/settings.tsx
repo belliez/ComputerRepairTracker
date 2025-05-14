@@ -779,30 +779,8 @@ const SettingsPage = () => {
   const [isLoadingOrganization, setIsLoadingOrganization] = useState(true);
   const [organizationError, setOrganizationError] = useState<Error | null>(null);
   
-  // Helper function to get current organization ID
-  const getCurrentOrgId = useCallback(() => {
-    return organization?.id || Number(localStorage.getItem('currentOrganizationId')) || 3;
-  }, [organization]);
-  
-  // Helper function to get standard request headers with current organization ID
-  const getStandardHeaders = useCallback((authToken?: string | null) => {
-    const orgId = getCurrentOrgId();
-    
-    const headers: Record<string, string> = {
-      'X-Debug-Client': 'RepairTrackerClient',
-      'X-Organization-ID': orgId.toString(),
-      'Content-Type': 'application/json',
-      'Pragma': 'no-cache',
-      'Cache-Control': 'no-cache'
-    };
-    
-    // Add authorization header if token exists
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
-    }
-    
-    return headers;
-  }, [getCurrentOrgId]);
+  // Use the organization utilities from the shared lib
+  const { getStandardHeaders, getCurrentOrgId } = require('@/lib/organization-utils');
 
   // Function to fetch organization with proper headers
   const fetchOrganization = async () => {
@@ -1345,19 +1323,10 @@ const SettingsPage = () => {
       // Get the auth token
       const authToken = getAuthToken();
       
-      const headers: Record<string, string> = {
-        'X-Debug-Client': 'RepairTrackerClient',
-        'X-Organization-ID': '2', // Hardcoded ID for now
-        'Content-Type': 'application/json'
-      };
+      // Get standardized headers with organization ID and auth token
+      const headers = getStandardHeaders(authToken);
       
-      // Add authorization header if token exists
-      if (authToken) {
-        headers['Authorization'] = `Bearer ${authToken}`;
-        console.log('Adding auth token to tax rate update request');
-      } else {
-        console.warn('No authentication token found for tax rate update');
-      }
+      console.log('Updating tax rate with headers:', headers);
       
       const response = await fetch(`/api/settings/tax-rates/${data.id}`, {
         method: 'PUT',
@@ -1424,11 +1393,8 @@ const SettingsPage = () => {
     mutationFn: async (data: z.infer<typeof technicianSchema>) => {
       console.log('Creating technician:', data);
       
-      const headers = {
-        'X-Debug-Client': 'RepairTrackerClient',
-        'X-Organization-ID': '2', // Hardcoded ID for now
-        'Content-Type': 'application/json'
-      };
+      // Get standardized headers with organization ID
+      const headers = getStandardHeaders();
       
       const response = await fetch('/api/technicians', {
         method: 'POST',
