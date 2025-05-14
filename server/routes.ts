@@ -2220,7 +2220,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             <p>If you're receiving this email, your email configuration is working correctly!</p>
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
               <h3>Your Email Configuration</h3>
-              <p><strong>Provider:</strong> ${emailSettings.provider === 'smtp' ? 'SMTP Server' : 'SendGrid API'}</p>
+              <p><strong>Provider:</strong> ${
+                emailSettings.provider === 'smtp' ? 'SMTP Server' : 
+                emailSettings.provider === 'mailgun' ? 'Mailgun API' : 
+                'SendGrid API'
+              }</p>
               <p><strong>From Email:</strong> ${emailSettings.fromEmail}</p>
               <p><strong>From Name:</strong> ${emailSettings.fromName}</p>
               <p><strong>Reply-To:</strong> ${emailSettings.replyTo || 'Same as From Email'}</p>
@@ -2232,6 +2236,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 <p><strong>Host:</strong> ${emailSettings.smtpHost || 'Not set'}</p>
                 <p><strong>Port:</strong> ${emailSettings.smtpPort || '587'}</p>
                 <p><strong>Secure:</strong> ${emailSettings.smtpSecure ? 'Yes (TLS/SSL)' : 'No'}</p>
+              </div>
+              ` : ''}
+              
+              ${emailSettings.provider === 'mailgun' ? `
+              <div style="margin-top: 15px; background-color: #f8f9fa; padding: 10px; border-radius: 5px;">
+                <h4 style="margin-top: 0;">Mailgun Settings</h4>
+                <p><strong>Domain:</strong> ${emailSettings.mailgunDomain || 'Not set'}</p>
+                <p><strong>Region:</strong> ${emailSettings.mailgunRegion === 'eu' ? 'EU' : 'US'}</p>
               </div>
               ` : ''}
             </div>
