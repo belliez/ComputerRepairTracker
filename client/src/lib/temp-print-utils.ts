@@ -3,6 +3,7 @@
  * Fixed version to correctly handle currency symbols in print documents
  */
 import { Currency } from "@/hooks/use-currency";
+import { getStandardHeaders, getCurrentOrgId } from "@/lib/organization-utils";
 
 export interface PrintableDocument {
   title: string;

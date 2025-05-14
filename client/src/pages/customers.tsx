@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Customer } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { getStandardHeaders, getCurrentOrgId } from "@/lib/organization-utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -168,9 +169,8 @@ export default function Customers() {
                 
                 fetch('/api/customers', {
                   headers: {
-                    'Authorization': `Bearer ${firebaseToken}`,
-                    'X-Organization-ID': orgId || '2',
-                    'X-Debug-Client': 'RepairTrackerClient'
+                    ...getStandardHeaders(),
+                    'Authorization': `Bearer ${firebaseToken}`
                   }
                 })
                 .then(res => {
