@@ -18,6 +18,7 @@ import {
 import { runMultiTenancyMigration } from './migrations/001-add-multi-tenancy';
 import { runSettingsOrganizationMigration } from './migrations/002-add-settings-organization-id';
 import { fixOrganizationRelations } from './migrations/003-fix-organization-relations';
+import { fixCurrenciesAndTaxRates } from './migrations/004-fix-currencies-tax-rates';
 
 // Initialize database structure and migrations
 export async function initializeDemo() {
@@ -31,6 +32,9 @@ export async function initializeDemo() {
     
     // Initialize currencies and tax rates - basic setup data
     await initializeSettingsData();
+    
+    // Fix any missing currencies or tax rates for organizations
+    await fixCurrenciesAndTaxRates();
     
     // Skip the creation of development user and sample data
     console.log('Skipping development user and demo data creation as requested.');

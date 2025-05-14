@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import * as admin from 'firebase-admin';
 import { db } from './db';
-import { users, organizations, organizationUsers } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { users, organizations, organizationUsers, currencies, taxRates } from '@shared/schema';
+import { eq, and, or, isNull } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { getFirebaseAdmin, getAdminAuth } from './firebase-admin';
 
@@ -470,6 +470,92 @@ export const createOrganization = async (req: Request, res: Response) => {
         role: 'owner',
         inviteAccepted: true,
       });
+    
+    // Now, set up default currencies for this organization
+    console.log(`Setting up default currencies for new organization ${organization.id}`);
+    
+    // 1. First, check if global currencies exist to copy from
+    const globalCurrencies = await db
+      .select()
+      .from(currencies)
+      .where(or(
+        isNull(currencies.organizationId),
+        eq(currencies.organizationId, 1) // Fallback to org 1 if no global currencies
+      ));
+    
+    if (globalCurrencies.length > 0) {
+      // Copy global currencies to this organization
+      console.log(`Found ${globalCurrencies.length} global currencies to copy to org ${organization.id}`);
+      
+      for (const currency of globalCurrencies) {
+        // Create a copy for this organization
+        await db
+          .insert(currencies)
+          .values({
+            code: currency.code,
+            name: currency.name,
+            symbol: currency.symbol,
+            isDefault: currency.isDefault,
+            organizationId: organization.id
+          });
+      }
+    } else {
+      // No global currencies found, create standard defaults
+      console.log(`No global currencies found, creating standard defaults for org ${organization.id}`);
+      
+      await db.insert(currencies).values([
+        { code: 'USD', name: 'US Dollar', symbol: '$', isDefault: true, organizationId: organization.id },
+        { code: 'EUR', name: 'Euro', symbol: '€', isDefault: false, organizationId: organization.id },
+        { code: 'GBP', name: 'British Pound', symbol: '£', isDefault: false, organizationId: organization.id },
+        { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', isDefault: false, organizationId: organization.id },
+        { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', isDefault: false, organizationId: organization.id },
+        { code: 'JPY', name: 'Japanese Yen', symbol: '¥', isDefault: false, organizationId: organization.id },
+      ]);
+    }
+    
+    // 2. Now set up default tax rates for this organization
+    console.log(`Setting up default tax rates for new organization ${organization.id}`);
+    
+    // Check if global tax rates exist to copy from
+    const globalTaxRates = await db
+      .select()
+      .from(taxRates)
+      .where(or(
+        isNull(taxRates.organizationId),
+        eq(taxRates.organizationId, 1) // Fallback to org 1 if no global tax rates
+      ));
+    
+    if (globalTaxRates.length > 0) {
+      // Copy global tax rates to this organization
+      console.log(`Found ${globalTaxRates.length} global tax rates to copy to org ${organization.id}`);
+      
+      for (const taxRate of globalTaxRates) {
+        // Create a copy for this organization
+        await db
+          .insert(taxRates)
+          .values({
+            countryCode: taxRate.countryCode,
+            regionCode: taxRate.regionCode,
+            name: taxRate.name,
+            rate: taxRate.rate,
+            isDefault: taxRate.isDefault,
+            organizationId: organization.id
+          });
+      }
+    } else {
+      // No global tax rates found, create standard defaults
+      console.log(`No global tax rates found, creating standard defaults for org ${organization.id}`);
+      
+      await db.insert(taxRates).values([
+        { countryCode: 'US', regionCode: null, name: 'No Tax', rate: 0, isDefault: false, organizationId: organization.id },
+        { countryCode: 'US', regionCode: 'CA', name: 'California Sales Tax', rate: 7.25, isDefault: true, organizationId: organization.id },
+        { countryCode: 'US', regionCode: 'NY', name: 'New York Sales Tax', rate: 8.875, isDefault: false, organizationId: organization.id },
+        { countryCode: 'US', regionCode: 'TX', name: 'Texas Sales Tax', rate: 6.25, isDefault: false, organizationId: organization.id },
+        { countryCode: 'CA', regionCode: null, name: 'Canada GST', rate: 5, isDefault: false, organizationId: organization.id },
+        { countryCode: 'GB', regionCode: null, name: 'UK VAT', rate: 20, isDefault: false, organizationId: organization.id },
+        { countryCode: 'AU', regionCode: null, name: 'Australia GST', rate: 10, isDefault: false, organizationId: organization.id },
+      ]);
+    }
     
     res.status(201).json(organization);
   } catch (error) {
