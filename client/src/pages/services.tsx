@@ -345,7 +345,7 @@ export default function ServicesPage() {
 
   // Filter services by category
   const filteredServices = services 
-    ? selectedCategory 
+    ? (selectedCategory && selectedCategory !== 'all')
       ? services.filter(service => service.category === selectedCategory)
       : services
     : [];
@@ -392,16 +392,16 @@ export default function ServicesPage() {
           {/* Category filter */}
           <div className="mb-6 flex gap-4">
             <Select 
-              value={selectedCategory || ''} 
-              onValueChange={(value) => setSelectedCategory(value || null)}
+              value={selectedCategory || 'all'} 
+              onValueChange={(value) => setSelectedCategory(value === 'all' ? null : value)}
             >
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
+                <SelectItem value="all">All Categories</SelectItem>
                 {categories.map((category) => (
-                  <SelectItem key={category} value={category || ''}>
+                  <SelectItem key={category} value={category || `category-${Math.random()}`}>
                     {category}
                   </SelectItem>
                 ))}
