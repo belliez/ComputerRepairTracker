@@ -1836,12 +1836,7 @@ const SettingsPage = () => {
           <TabsTrigger value="organization">Organization</TabsTrigger>
           <TabsTrigger value="email">Email</TabsTrigger>
           <TabsTrigger value="currencies">
-            Currencies 
-            {currencies && currencies.find(c => c.isDefault) && (
-              <span className="ml-2 text-xs px-2 py-0.5 bg-primary/10 rounded-full">
-                {currencies.find(c => c.isDefault)?.code}
-              </span>
-            )}
+            Currencies
           </TabsTrigger>
           <TabsTrigger value="tax-rates">Tax Rates</TabsTrigger>
           <TabsTrigger value="technicians">Technicians</TabsTrigger>
@@ -2530,31 +2525,10 @@ const SettingsPage = () => {
                   Manage currencies for quotes and invoices
                 </CardDescription>
                 {currencies && currencies.find(c => c.isDefault) && (
-                  <div className="flex items-center space-x-2 mt-2">
+                  <div className="flex items-center mt-2">
                     <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
                       Default: {currencies.find(c => c.isDefault)?.code}
                     </Badge>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-8 px-2 text-xs"
-                      onClick={() => {
-                        // Force refresh all currency data with a cleaner approach
-                        fetchCurrencies();
-                        
-                        // Selectively invalidate only currency-related queries
-                        queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies'] });
-                        queryClient.invalidateQueries({ queryKey: ['/api/settings/currencies/default'] });
-                        
-                        // More accurate description in the toast
-                        toast({
-                          title: "Currency data updated",
-                          description: "Latest currency information loaded"
-                        });
-                      }}
-                    >
-                      <RefreshCw className="h-3 w-3 mr-1" /> Refresh Data
-                    </Button>
                   </div>
                 )}
               </div>

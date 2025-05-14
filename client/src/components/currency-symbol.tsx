@@ -6,6 +6,8 @@ interface Currency {
   name: string;
   symbol: string;
   isDefault: boolean;
+  isCore?: boolean;
+  organizationId?: number | null;
 }
 
 interface CurrencySymbolProps {
