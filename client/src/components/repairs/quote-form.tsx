@@ -442,9 +442,16 @@ export default function QuoteForm({ repairId, quoteId, isOpen, onClose }: QuoteF
     console.log("DEBUG: Form onSubmit triggered with values:", values);
     
     try {
+      // Ensure currency code includes _CORE suffix if it's not already there
+      let currencyCode = values.currencyCode;
+      if (currencyCode && !currencyCode.includes('_CORE')) {
+        currencyCode = `${currencyCode}_CORE`;
+      }
+      
       // Ensure dates are in ISO string format
       const formattedValues = {
         ...values,
+        currencyCode,
         dateCreated: values.dateCreated ? new Date(values.dateCreated).toISOString() : new Date().toISOString(),
         expirationDate: values.expirationDate ? new Date(values.expirationDate).toISOString() : null,
       };

@@ -415,9 +415,17 @@ export default function InvoiceForm({
         }
       }
       
+      // Ensure currency code includes _CORE suffix if it's not already there
+      let currencyCode = values.currencyCode;
+      if (currencyCode && !currencyCode.includes('_CORE')) {
+        currencyCode = `${currencyCode}_CORE`;
+        console.log("INVOICE FORM DEBUG: Updated currency code to include _CORE suffix:", currencyCode);
+      }
+      
       // Ensure dates are in ISO string format
       const formattedValues = {
         ...values,
+        currencyCode,
         dateCreated: values.dateCreated ? new Date(values.dateCreated).toISOString() : new Date().toISOString(),
         dueDate: values.dueDate ? new Date(values.dueDate).toISOString() : null,
         paymentDate: values.paymentDate ? new Date(values.paymentDate).toISOString() : null,
