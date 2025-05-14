@@ -2,7 +2,6 @@ import express, { type Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
-import { initializeDemo } from "./init-db";
 import { db } from "./db";
 import { and, eq, desc, isNull, ne, not, or, sql } from "drizzle-orm";
 
@@ -58,13 +57,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ? new Stripe(process.env.STRIPE_SECRET_KEY) 
     : null;
   
-  // Initialize demo data
-  try {
-    await initializeDemo();
-    console.log("Database initialization completed");
-  } catch (error) {
-    console.error("Error initializing database:", error);
-  }
+  // Initialize demo data - disabled to preserve custom currencies
+  console.log("Database initialization skipped to preserve custom currencies");
   
   // Create API router
   const apiRouter = express.Router();
