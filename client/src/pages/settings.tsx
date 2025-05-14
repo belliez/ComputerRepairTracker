@@ -485,11 +485,8 @@ const SettingsPage = () => {
     setIsSendingTestEmail(true);
     
     try {
-      const headers = {
-        'X-Debug-Client': 'RepairTrackerClient',
-        'X-Organization-ID': '2', // Hardcoded ID for now
-        'Content-Type': 'application/json'
-      };
+      // Get standardized headers with organization ID
+      const headers = getStandardHeaders();
       
       const response = await fetch('/api/test-email', {
         method: 'POST',
@@ -568,12 +565,8 @@ const SettingsPage = () => {
         token = `Bearer ${token}`;
       }
       
-      const headers = {
-        'X-Debug-Client': 'RepairTrackerClient',
-        'X-Organization-ID': '2', // Hardcoded ID for now
-        'Content-Type': 'application/json',
-        'Authorization': token
-      };
+      // Get standardized headers with organization ID and auth token
+      const headers = getStandardHeaders(token);
       
       console.log(`Making API ${method} request to ${url}`);
       
