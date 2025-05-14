@@ -2441,6 +2441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const organizationId = (global as any).currentOrganizationId;
       console.log("Getting currencies for organization ID:", organizationId);
+      console.log("Request headers:", req.headers);
       
       // Get both organization-specific currencies and core currencies
       const allCurrencies = await db.select().from(currencies)
@@ -2453,14 +2454,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           )
         );
       
+      console.log(`Found ${allCurrencies.length} total currencies for org ${organizationId}`);
+      
       // Get organization-specific settings for core currencies
       const orgSettings = await db.select().from(organizationCurrencySettings)
         .where(eq(organizationCurrencySettings.organizationId, organizationId));
+      
+      console.log(`DEBUG: Organization ${organizationId} has ${orgSettings.length} currency settings:`);
+      console.log(JSON.stringify(orgSettings, null, 2));
       
       // Create a map of currency code -> settings for quick lookup
       const settingsMap = new Map();
       for (const setting of orgSettings) {
         settingsMap.set(setting.currencyCode, setting);
+        console.log(`DEBUG: Setting currency ${setting.currencyCode} has isDefault=${setting.isDefault}`);
       }
       
       // Enhance the currency objects with organization-specific settings
@@ -2479,12 +2486,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return currency;
       });
       
+      console.log(`DEBUG: After setting defaults to false, currencies:`, 
+        currenciesWithDefaults.map(c => ({ code: c.code, isDefault: c.isDefault })));
+      
       // Now apply organization-specific settings
       const enhancedCurrencies = currenciesWithDefaults.map(currency => {
         // For core currencies, check if we have organization-specific settings
         if (currency.isCore && settingsMap.has(currency.code)) {
           const settings = settingsMap.get(currency.code);
-          console.log(`Enhancing ${currency.code} with org settings: isDefault=${settings.isDefault}`);
+          console.log(`DEBUG: Enhancing ${currency.code} with org settings: isDefault=${settings.isDefault}`);
           return {
             ...currency,
             isDefault: settings.isDefault  // Override the isDefault with org-specific setting
@@ -2493,6 +2503,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         return currency;
       });
+      
+      console.log(`DEBUG: Final currencies with settings applied:`, 
+        enhancedCurrencies.map(c => ({ code: c.code, isDefault: c.isDefault })));
       
       console.log(`Found ${allCurrencies.length} currencies for organization ${organizationId}`);
       return res.json(enhancedCurrencies);
@@ -2506,6 +2519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const orgId = (global as any).currentOrganizationId;
       console.log("Getting default currency for organization ID:", orgId);
+      console.log("Request headers:", req.headers);
       
       // First try to find an organization-specific default currency
       const [orgDefaultCurrency] = await db.select()
