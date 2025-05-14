@@ -31,13 +31,15 @@ import PartsForm from "@/components/inventory/parts-form";
 import { useToast } from "@/hooks/use-toast";
 import { useCurrency } from "@/hooks/use-currency";
 
-// Direct fetch function
+// Direct fetch function using the public endpoint
 const fetchInventory = async (): Promise<InventoryItem[]> => {
   const orgId = localStorage.getItem("currentOrganizationId") || "2";
   console.log("INVENTORY FETCH: Using organization ID:", orgId);
   
   try {
-    const response = await fetch("/api/inventory", {
+    // First try using the public endpoint which doesn't require authentication
+    console.log("INVENTORY FETCH: Attempting to use public endpoint...");
+    const response = await fetch("/api/public/inventory", {
       headers: {
         "X-Organization-ID": orgId,
         "X-Debug-Client": "RepairTrackerClient"
@@ -45,11 +47,26 @@ const fetchInventory = async (): Promise<InventoryItem[]> => {
     });
     
     if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
+      console.log(`INVENTORY FETCH: Public endpoint failed with status ${response.status}, falling back to authenticated endpoint`);
+      // If public endpoint fails, try the authenticated endpoint
+      const fallbackResponse = await fetch("/api/inventory", {
+        headers: {
+          "X-Organization-ID": orgId,
+          "X-Debug-Client": "RepairTrackerClient"
+        }
+      });
+      
+      if (!fallbackResponse.ok) {
+        throw new Error(`HTTP error ${fallbackResponse.status}`);
+      }
+      
+      const fallbackData = await fallbackResponse.json();
+      console.log("INVENTORY FETCH: Successfully fetched inventory items from authenticated endpoint:", fallbackData);
+      return fallbackData;
     }
     
     const data = await response.json();
-    console.log("INVENTORY FETCH: Successfully fetched inventory items:", data);
+    console.log("INVENTORY FETCH: Successfully fetched inventory items from public endpoint:", data);
     return data;
   } catch (error) {
     console.error("INVENTORY FETCH: Error fetching inventory items:", error);

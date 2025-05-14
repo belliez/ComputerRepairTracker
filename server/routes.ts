@@ -3598,6 +3598,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   }
   
+  // Add public inventory endpoint that doesn't require authentication
+  app.get('/api/public/inventory', async (req: Request, res: Response) => {
+    try {
+      console.log("PUBLIC INVENTORY DEBUG: Request URL:", req.originalUrl);
+      
+      // Get organization ID from headers
+      const orgIdHeader = req.header('X-Organization-ID');
+      console.log("PUBLIC INVENTORY DEBUG: Setting organization ID from header:", orgIdHeader);
+      
+      if (!orgIdHeader) {
+        console.log("PUBLIC INVENTORY DEBUG: No organization ID header found");
+        return res.status(400).json({ error: "Organization ID is required" });
+      }
+      
+      const orgId = parseInt(orgIdHeader);
+      if (isNaN(orgId)) {
+        console.log("PUBLIC INVENTORY DEBUG: Invalid organization ID format:", orgIdHeader);
+        return res.status(400).json({ error: "Invalid organization ID format" });
+      }
+      
+      console.log(`PUBLIC INVENTORY DEBUG: Fetching inventory items for organization ${orgId}...`);
+      const inventoryItems = await storage.getInventoryItems(orgId);
+      
+      console.log(`PUBLIC INVENTORY DEBUG: Found ${inventoryItems.length} items`);
+      if (inventoryItems.length > 0) {
+        console.log(`PUBLIC INVENTORY DEBUG: First item:`, inventoryItems[0]);
+      }
+      
+      res.json(inventoryItems);
+    } catch (error) {
+      console.error("PUBLIC INVENTORY DEBUG: Error fetching inventory items:", error);
+      res.status(500).json({ error: "Failed to fetch inventory items" });
+    }
+  });
+
   // Mount API router - This needs to happen after all routes are defined
   app.use("/api", apiRouter);
   
