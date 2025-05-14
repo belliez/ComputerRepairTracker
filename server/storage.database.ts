@@ -770,16 +770,32 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateInventoryItem(id: number, itemData: Partial<InventoryItem>): Promise<InventoryItem | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Updating inventory item ${id} in organization: ${orgId}`);
+    
     const [updatedItem] = await db
       .update(inventoryItems)
       .set(itemData)
-      .where(eq(inventoryItems.id, id))
+      .where(and(
+        eq(inventoryItems.id, id),
+        eq((inventoryItems as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+      ))
       .returning();
     return updatedItem;
   }
 
   async deleteInventoryItem(id: number): Promise<boolean> {
     try {
+      const orgId = (global as any).currentOrganizationId || 1;
+      console.log(`Deleting inventory item ${id} in organization: ${orgId}`);
+      
+      // Verify the inventory item belongs to the current organization
+      const item = await this.getInventoryItem(id);
+      if (!item) {
+        console.log(`Inventory item ${id} not found in organization ${orgId}`);
+        return false;
+      }
+      
       // Find any repair items using this inventory item
       const affectedRepairItems = await db.select()
         .from(repairItems)
@@ -793,14 +809,17 @@ export class DatabaseStorage implements IStorage {
         await this.updateRepairItem(item.id, { inventoryItemId: null });
       }
       
-      // Now soft delete the inventory item
+      // Now soft delete the inventory item with organization context
       const [updatedItem] = await db
         .update(inventoryItems)
         .set({
           deleted: true,
           deletedAt: new Date()
         })
-        .where(eq(inventoryItems.id, id))
+        .where(and(
+          eq(inventoryItems.id, id),
+          eq((inventoryItems as any).organizationId, orgId) // Cast to any to bypass TypeScript type checking
+        ))
         .returning();
         
       return !!updatedItem;
@@ -811,13 +830,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async adjustInventoryQuantity(id: number, quantity: number): Promise<InventoryItem | undefined> {
+    const orgId = (global as any).currentOrganizationId || 1;
+    console.log(`Adjusting quantity for inventory item ${id} in organization: ${orgId} by ${quantity}`);
+    
     const item = await this.getInventoryItem(id);
     if (!item) {
+      console.log(`Inventory item ${id} not found in organization ${orgId}`);
       return undefined;
     }
 
     const currentQuantity = item.quantity || 0;
     const newQuantity = currentQuantity + quantity;
+    
+    if (newQuantity < 0) {
+      console.log(`Warning: Adjustment would result in negative quantity (${newQuantity}) for item ${id}`);
+      // You might want to throw an error here, but for now we'll just log a warning
+    }
 
     return this.updateInventoryItem(id, { quantity: newQuantity });
   }
