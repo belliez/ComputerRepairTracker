@@ -6,6 +6,7 @@ import { RepairTab, repairStatuses, statusConfigs, URGENT_PRIORITY_LEVELS, prior
 import { Link, useLocation } from "wouter";
 import RepairList from "@/components/repairs/repair-list";
 import RepairDetail from "@/components/repairs/repair-detail";
+import { getStandardHeaders, getCurrentOrgId } from "@/lib/organization-utils";
 
 export default function Repairs() {
   const [activeTab, setActiveTab] = useState<RepairTab>("all");

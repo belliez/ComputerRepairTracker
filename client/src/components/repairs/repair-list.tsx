@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Repair, Customer, Device } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { getStandardHeaders, getCurrentOrgId } from "@/lib/organization-utils";
 import StatusBadge from "./status-badge";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";

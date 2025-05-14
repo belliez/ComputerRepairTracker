@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Repair, Customer, Device } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { getStandardHeaders, getCurrentOrgId } from "@/lib/organization-utils";
 import StatusBadge from "./status-badge";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
@@ -29,521 +30,418 @@ interface RepairListProps {
   onViewRepair?: (repairId: number) => void;
   onEditRepair?: (repairId: number) => void;
   filterStatus?: string;
-  technicianId?: number;
-  customerId?: number;
-  priorityLevel?: string;
+  filterPriority?: string;
+  searchQuery?: string;
+  searchTechnician?: number;
+  showButtons?: boolean;
+  showDetailButton?: boolean;
+  simpleView?: boolean;
+  limitRows?: number;
+  showSearch?: boolean;
+  standalone?: boolean;
+  onRefreshNeeded?: () => void;
 }
 
 export default function RepairList({
   onViewRepair,
   onEditRepair,
   filterStatus,
-  technicianId,
-  customerId,
-  priorityLevel,
+  filterPriority,
+  searchQuery = '',
+  searchTechnician,
+  showButtons = true,
+  showDetailButton = true,
+  simpleView = false,
+  limitRows,
+  showSearch = true,
+  standalone = false,
+  onRefreshNeeded,
 }: RepairListProps) {
-  const [timeFilter, setTimeFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 5;
-  const queryClient = useQueryClient();
-  const [location, navigate] = useLocation();
+  const [location, setLocation] = useLocation();
+  const [internalSearch, setInternalSearch] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [repairs, setRepairs] = useState<Repair[]>([]);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Get customer data for displaying names with manual fetch
-  const { data: customers } = useQuery<Customer[]>({
-    queryKey: ["/api/customers"],
-    staleTime: 0,
-    queryFn: async () => {
-      console.log("REPAIR LIST DEBUG: Fetching customers data");
-      const headers: Record<string, string> = {
-        "X-Debug-Client": "RepairTrackerClient",
-        "Pragma": "no-cache",
-        "Cache-Control": "no-cache"
-      };
-      
-      // Get organization ID from localStorage for proper multi-tenancy
-      const orgId = localStorage.getItem('currentOrganizationId');
-      if (orgId) {
-        console.log(`REPAIR LIST DEBUG: Using organization ID ${orgId} for customers fetch`);
-        headers["X-Organization-ID"] = orgId;
-      } else {
-        console.warn("REPAIR LIST DEBUG: No organization ID found in localStorage for customers fetch");
-      }
-      
-      const token = localStorage.getItem("authToken");
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      
-      const response = await fetch("/api/customers", { headers });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch customers: ${response.status}`);
-      }
-      
-      const text = await response.text();
-      console.log("REPAIR LIST DEBUG: Customers response:", text.substring(0, 100) + "...");
-      
-      const data = JSON.parse(text);
-      console.log("REPAIR LIST DEBUG: Parsed customers data:", data);
-      return data;
-    }
-  });
-
-  // Get device data for displaying details with manual fetch
-  const { data: devices } = useQuery<Device[]>({
-    queryKey: ["/api/devices"],
-    staleTime: 0,
-    queryFn: async () => {
-      console.log("REPAIR LIST DEBUG: Fetching devices data");
-      const headers: Record<string, string> = {
-        "X-Debug-Client": "RepairTrackerClient",
-        "Pragma": "no-cache",
-        "Cache-Control": "no-cache"
-      };
-      
-      // Get organization ID from localStorage for proper multi-tenancy
-      const orgId = localStorage.getItem('currentOrganizationId');
-      if (orgId) {
-        console.log(`REPAIR LIST DEBUG: Using organization ID ${orgId} for devices fetch`);
-        headers["X-Organization-ID"] = orgId;
-      } else {
-        console.warn("REPAIR LIST DEBUG: No organization ID found in localStorage for devices fetch");
-      }
-      
-      const token = localStorage.getItem("authToken");
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      
-      const response = await fetch("/api/devices", { headers });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch devices: ${response.status}`);
-      }
-      
-      const text = await response.text();
-      console.log("REPAIR LIST DEBUG: Devices response:", text.substring(0, 100) + "...");
-      
-      const data = JSON.parse(text);
-      console.log("REPAIR LIST DEBUG: Parsed devices data:", data);
-      return data;
-    }
-  });
-
-  // Build query params for better caching and proper server-side filtering
-  const buildQueryParams = () => {
-    const params = new URLSearchParams();
+  // Fetch customers for name resolution
+  useEffect(() => {
+    console.log('REPAIR LIST DEBUG: Fetching customers data');
     
-    if (filterStatus) params.append('status', filterStatus);
-    if (technicianId) params.append('technicianId', technicianId.toString());
-    if (customerId) params.append('customerId', customerId.toString());
-    if (priorityLevel) params.append('priority', priorityLevel);
-    
-    const paramString = params.toString();
-    return paramString ? `?${paramString}` : '';
-  };
-
-  const queryPath = `/api/repairs${buildQueryParams()}`;
-  console.log("REPAIRS DEBUG: Fetching repairs with path:", queryPath);
-  
-  const { data: repairs, isLoading, error, refetch } = useQuery<Repair[]>({
-    queryKey: [queryPath],
-    // Ensure fresh data is fetched every time
-    staleTime: 0,
-    // Use manual query function to ensure proper headers
-    queryFn: async () => {
-      console.log("REPAIR LIST DEBUG: Starting manual fetch for repairs");
-      
-      // Add organization ID header and other necessary headers
-      const headers: Record<string, string> = {
-        "X-Debug-Client": "RepairTrackerClient",
-        "Pragma": "no-cache",
-        "Cache-Control": "no-cache"
-      };
-      
-      // Get organization ID from localStorage for proper multi-tenancy
-      const orgId = localStorage.getItem('currentOrganizationId');
-      if (orgId) {
-        console.log(`REPAIR LIST DEBUG: Using organization ID ${orgId} for repairs fetch`);
-        headers["X-Organization-ID"] = orgId;
-      } else {
-        console.warn("REPAIR LIST DEBUG: No organization ID found in localStorage for repairs fetch");
-      }
-      
-      // Add auth token if available 
-      const token = localStorage.getItem("authToken");
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      
-      console.log("REPAIR LIST DEBUG: Making fetch with headers:", headers);
-      
+    const fetchCustomers = async () => {
       try {
-        const response = await fetch(queryPath, { headers });
-        console.log("REPAIR LIST DEBUG: Response status:", response.status);
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch repairs: ${response.status}`);
+        const headers: any = {
+          ...getStandardHeaders(),
+          'X-Debug-Client': 'RepairTrackerClient',
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache'
+        };
+      
+        const token = localStorage.getItem("authToken");
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
         }
+    
+        const response = await fetch('/api/customers', { headers });
+        console.log('REPAIR LIST DEBUG: Customers response:', response.text().slice(0, 20) + '...');
         
-        const text = await response.text();
-        console.log("REPAIR LIST DEBUG: Response text preview:", text.substring(0, 100) + "...");
-        
-        const data = JSON.parse(text);
-        console.log("REPAIR LIST DEBUG: Parsed repairs data:", data);
-        return data;
-      } catch (err) {
-        console.error("REPAIR LIST DEBUG: Error fetching repairs:", err);
-        throw err;
+        if (response.ok) {
+          const data = await response.json();
+          console.log('REPAIR LIST DEBUG: Parsed customers data:', data);
+          setCustomers(data);
+        }
+      } catch (error) {
+        console.error('Error fetching customer data:', error);
       }
-    },
-    onSuccess: (data) => {
-      console.log("REPAIR LIST DEBUG: Successfully loaded repairs:", data?.length || 0);
-      if (data?.length) {
-        console.log("REPAIR LIST DEBUG: Sample repair:", data[0]);
-      }
-    },
-    onError: (err) => {
-      console.error("REPAIR LIST DEBUG: Error loading repairs:", err);
-    }
-  });
-
-  if (isLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Repairs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Filter repairs by time selected and priority if needed
-  const getFilteredRepairs = () => {
-    if (!repairs) return [];
+    };
     
-    // Create a copy of repairs to sort and filter
-    let filtered = [...repairs];
-    
-    // Filter by date
-    switch (timeFilter) {
-      case 'today':
-        filtered = filtered.filter(repair => 
-          isToday(new Date(repair.intakeDate))
-        );
-        break;
-      case 'yesterday':
-        filtered = filtered.filter(repair => 
-          isYesterday(new Date(repair.intakeDate))
-        );
-        break;
-      case '7':
-        filtered = filtered.filter(repair => 
-          new Date(repair.intakeDate) >= subDays(new Date(), 7)
-        );
-        break;
-      case '30':
-        filtered = filtered.filter(repair => 
-          new Date(repair.intakeDate) >= subDays(new Date(), 30)
-        );
-        break;
-      // 'all' - no filtering needed
-    }
-    
-    // Filter by priority level if not already filtered server-side
-    // This is a client-side fallback if server filter wasn't applied
-    if (priorityLevel && priorityLevel !== 'all' && 
-        !buildQueryParams().includes('priority')) {
-      filtered = filtered.filter(repair => 
-        repair.priorityLevel === parseInt(priorityLevel, 10)
-      );
-    }
-    
-    // Sort by intake date, newest first
-    filtered.sort((a, b) => 
-      new Date(b.intakeDate).getTime() - new Date(a.intakeDate).getTime()
-    );
-    
-    return filtered;
-  };
-
-  const filteredRepairs = getFilteredRepairs();
+    fetchCustomers();
+  }, []);
   
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredRepairs.length / pageSize);
-  const paginatedRepairs = filteredRepairs.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize
-  );
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  const handleTimeFilterChange = (value: string) => {
-    setTimeFilter(value);
-    setCurrentPage(1); // Reset to first page when filter changes
+  // Fetch devices for detail resolution
+  useEffect(() => {
+    console.log('REPAIR LIST DEBUG: Fetching devices data');
     
-    // Only invalidate queries if we're not just time-filtering already loaded data
-    if (value === 'all') {
-      // For "all time" view, we might need fresher data
-      queryClient.invalidateQueries({ queryKey: [queryPath] });
+    const fetchDevices = async () => {
+      try {
+        const headers: any = {
+          ...getStandardHeaders(),
+          'X-Debug-Client': 'RepairTrackerClient',
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache'
+        };
+      
+        const token = localStorage.getItem("authToken");
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+    
+        const response = await fetch('/api/devices', { headers });
+        console.log('REPAIR LIST DEBUG: Devices response:', response.text().slice(0, 20) + '...');
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('REPAIR LIST DEBUG: Parsed devices data:', data);
+          setDevices(data);
+        }
+      } catch (error) {
+        console.error('Error fetching device data:', error);
+      }
+    };
+    
+    fetchDevices();
+  }, []);
+
+  // Manually fetch repairs instead of using react-query to have more control over loading states
+  const fetchRepairs = async () => {
+    console.log('REPAIR LIST DEBUG: Starting manual fetch for repairs');
+    setIsLoading(true);
+    
+    try {
+      let path = '/api/repairs';
+      
+      const params = new URLSearchParams();
+      if (filterStatus) {
+        params.append('status', filterStatus);
+      }
+      if (filterPriority) {
+        params.append('priority', filterPriority);
+      }
+      if (searchTechnician) {
+        params.append('technicianId', searchTechnician.toString());
+      }
+      
+      const queryString = params.toString();
+      if (queryString) {
+        path += `?${queryString}`;
+      }
+      
+      console.log('REPAIR LIST DEBUG: Making fetch with headers:', getStandardHeaders());
+      
+      const response = await fetch(path, { 
+        headers: {
+          ...getStandardHeaders(),
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache'
+        }
+      });
+      
+      console.log('REPAIR LIST DEBUG: Response status:', response.status);
+      console.log('REPAIR LIST DEBUG: Response text preview:', await response.text().slice(0, 20) + '...');
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('REPAIR LIST DEBUG: Parsed repairs data:', data);
+        setRepairs(data);
+      } else {
+        console.error('Failed to fetch repairs:', response.status);
+        toast({
+          title: "Error fetching repairs",
+          description: `Server returned: ${response.status}`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching repairs:', error);
+      toast({
+        title: "Error fetching repairs",
+        description: "Check your connection and try again",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
+  
+  // Initial fetch and refresh on filter changes
+  useEffect(() => {
+    fetchRepairs();
+  }, [filterStatus, filterPriority, searchTechnician]);
+  
+  // Handle repair deletion
+  const handleDeleteRepair = async (repairId: number) => {
+    if (!window.confirm("Are you sure you want to delete this repair? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/repairs/${repairId}`, {
+        method: 'DELETE',
+        headers: {
+          ...getStandardHeaders(),
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Repair deleted",
+          description: "The repair has been successfully deleted",
+        });
+        
+        // Refresh repairs
+        fetchRepairs();
+        
+        // Notify parent if needed
+        if (onRefreshNeeded) {
+          onRefreshNeeded();
+        }
+      } else {
+        toast({
+          title: "Error deleting repair",
+          description: "The repair could not be deleted. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting repair:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Format date for display
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    
+    const date = new Date(dateString);
+    
+    if (isToday(date)) {
+      return `Today, ${format(date, 'h:mm a')}`;
+    } else if (isYesterday(date)) {
+      return `Yesterday, ${format(date, 'h:mm a')}`;
+    } else if (date > subDays(new Date(), 7)) {
+      return format(date, 'EEE, MMM d');
+    } else {
+      return format(date, 'MMM d, yyyy');
+    }
+  };
+  
+  // Get customer name from ID
+  const getCustomerName = (customerId: number) => {
+    const customer = customers.find(c => c.id === customerId);
+    return customer ? `${customer.firstName} ${customer.lastName}` : 'Unknown Customer';
+  };
+  
+  // Get device info from ID
+  const getDeviceInfo = (deviceId: number | null) => {
+    if (!deviceId) return 'No device';
+    const device = devices.find(d => d.id === deviceId);
+    return device ? `${device.brand} ${device.model}` : 'Unknown Device';
+  };
+  
+  // Filter and search repairs
+  const filteredRepairs = repairs
+    .filter(repair => {
+      // Skip deleted items
+      if (repair.deleted) return false;
+      
+      // Apply status filter if set
+      if (filterStatus && repair.status !== filterStatus) return false;
+      
+      // Apply priority filter if set
+      if (filterPriority && repair.priority !== filterPriority) return false;
+      
+      // Apply technician filter if set
+      if (searchTechnician && repair.technicianId !== searchTechnician) return false;
+      
+      // Apply search query (checks ticket number, customer name, device info)
+      const searchTermLower = (searchQuery || internalSearch).toLowerCase();
+      if (searchTermLower) {
+        const customerName = getCustomerName(repair.customerId).toLowerCase();
+        const deviceInfo = getDeviceInfo(repair.deviceId).toLowerCase();
+        const ticketNumber = repair.ticketNumber.toLowerCase();
+        
+        return customerName.includes(searchTermLower) || 
+               deviceInfo.includes(searchTermLower) || 
+               ticketNumber.includes(searchTermLower) ||
+               (repair.notes && repair.notes.toLowerCase().includes(searchTermLower));
+      }
+      
+      return true;
+    })
+    // Sort by creation date, newest first
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    // Apply limit if set
+    .slice(0, limitRows || repairs.length);
+    
+  // Handle "View Repair" button click
+  const handleViewClick = (repairId: number) => {
+    if (onViewRepair) {
+      onViewRepair(repairId);
+    } else {
+      setLocation(`/repairs/${repairId}`);
+    }
+  };
+  
+  // Handle "Edit Repair" button click
+  const handleEditClick = (repairId: number) => {
+    if (onEditRepair) {
+      onEditRepair(repairId);
+    } else {
+      setLocation(`/repairs/edit/${repairId}`);
+    }
+  };
+  
+  // Determine if repairs are loading
+  const loading = isLoading || !repairs;
 
   return (
-    <Card className="col-span-2">
-      <CardHeader className="p-4 border-b border-gray-200 flex flex-row justify-between items-center">
-        <CardTitle className="text-lg font-medium text-gray-800">Recent Repairs</CardTitle>
-        <div className="flex items-center space-x-2">
-          <Select
-            value={timeFilter}
-            onValueChange={handleTimeFilterChange}
-          >
-            <SelectTrigger className="text-sm border-gray-300 rounded-md w-[150px]">
-              <SelectValue placeholder="Filter by time" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="yesterday">Yesterday</SelectItem>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="all">All time</SelectItem>
-              </SelectGroup>
-            </SelectContent>
-          </Select>
-        </div>
-      </CardHeader>
-
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader className="bg-gray-50">
-            <TableRow>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ticket</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</TableHead>
-              <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className="bg-white divide-y divide-gray-200">
-            {paginatedRepairs.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-4 text-gray-500">
-                  No repairs found
-                </TableCell>
-              </TableRow>
-            ) : (
-              paginatedRepairs.map((repair) => (
-                <TableRow
-                  key={repair.id}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => navigate(`/repairs/view/${repair.id}`)}
-                >
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <span className="text-sm font-medium text-gray-900">{repair.ticketNumber}</span>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="text-sm font-medium text-gray-900">
-                        {(() => {
-                          // Find the customer
-                          const customer = customers?.find(c => c.id === repair.customerId);
-                          if (customer) {
-                            return `${customer.firstName} ${customer.lastName}`;
-                          } else {
-                            // Force a specific query for this customer data
-                            const fetchCustomer = async () => {
-                              try {
-                                console.log(`REPAIR LIST DEBUG: Fetching specific customer #${repair.customerId}`);
-                                const headers = {
-                                  "X-Debug-Client": "RepairTrackerClient",
-                                  "Pragma": "no-cache",
-                                  "Cache-Control": "no-cache"
-                                };
-                                
-                                // Get organization ID from localStorage for proper multi-tenancy
-                                const orgId = localStorage.getItem('currentOrganizationId');
-                                if (orgId) {
-                                  console.log(`REPAIR LIST DEBUG: Using organization ID ${orgId} for customer ${repair.customerId} fetch`);
-                                  headers["X-Organization-ID"] = orgId;
-                                } else {
-                                  console.warn(`REPAIR LIST DEBUG: No organization ID found in localStorage for customer ${repair.customerId} fetch`);
-                                }
-                                
-                                const token = localStorage.getItem("authToken");
-                                if (token) {
-                                  headers["Authorization"] = `Bearer ${token}`;
-                                }
-                                
-                                const response = await fetch(`/api/customers/${repair.customerId}`, { headers });
-                                if (response.ok) {
-                                  const customerData = await response.json();
-                                  console.log(`REPAIR LIST DEBUG: Specific customer data fetched:`, customerData);
-                                  // Update the cache with this customer
-                                  const existingCustomers = queryClient.getQueryData<any[]>(["/api/customers"]) || [];
-                                  queryClient.setQueryData(["/api/customers"], 
-                                    existingCustomers.filter(c => c.id !== customerData.id).concat([customerData])
-                                  );
-                                }
-                              } catch (err) {
-                                console.error(`REPAIR LIST DEBUG: Error fetching customer #${repair.customerId}:`, err);
-                              }
-                            };
-                            
-                            // Trigger fetch but don't wait for it
-                            fetchCustomer();
-                            
-                            return `Loading customer #${repair.customerId}...`;
-                          }
-                        })()}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {(() => {
-                        if (!repair.deviceId) return "No Device";
-                        
-                        // Find the device
-                        const device = devices?.find(d => d.id === repair.deviceId);
-                        if (device) {
-                          return `${device.brand} ${device.model}`;
-                        } else {
-                          // Force a specific query for this device data
-                          const fetchDevice = async () => {
-                            try {
-                              console.log(`REPAIR LIST DEBUG: Fetching specific device #${repair.deviceId}`);
-                              const headers = {
-                                "X-Debug-Client": "RepairTrackerClient",
-                                "Pragma": "no-cache",
-                                "Cache-Control": "no-cache"
-                              };
-                              
-                              // Get organization ID from localStorage for proper multi-tenancy
-                              const orgId = localStorage.getItem('currentOrganizationId');
-                              if (orgId) {
-                                console.log(`REPAIR LIST DEBUG: Using organization ID ${orgId} for device ${repair.deviceId} fetch`);
-                                headers["X-Organization-ID"] = orgId;
-                              } else {
-                                console.warn(`REPAIR LIST DEBUG: No organization ID found in localStorage for device ${repair.deviceId} fetch`);
-                              }
-                              
-                              const token = localStorage.getItem("authToken");
-                              if (token) {
-                                headers["Authorization"] = `Bearer ${token}`;
-                              }
-                              
-                              const response = await fetch(`/api/devices/${repair.deviceId}`, { headers });
-                              if (response.ok) {
-                                const deviceData = await response.json();
-                                console.log(`REPAIR LIST DEBUG: Specific device data fetched:`, deviceData);
-                                // Update the cache with this device
-                                const existingDevices = queryClient.getQueryData<any[]>(["/api/devices"]) || [];
-                                queryClient.setQueryData(["/api/devices"], 
-                                  existingDevices.filter(d => d.id !== deviceData.id).concat([deviceData])
-                                );
-                              }
-                            } catch (err) {
-                              console.error(`REPAIR LIST DEBUG: Error fetching device #${repair.deviceId}:`, err);
-                            }
-                          };
-                          
-                          // Trigger fetch but don't wait for it
-                          fetchDevice();
-                          
-                          return `Loading device #${repair.deviceId}...`;
-                        }
-                      })()}
-                    </div>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <StatusBadge status={repair.status} />
-                  </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap">
-                    <span className="text-sm text-gray-500">
-                      {repair.estimatedCompletionDate ? 
-                        format(new Date(repair.estimatedCompletionDate), 'MMM dd, yyyy') 
-                        : 'Not set'}
-                    </span>
-                  </TableCell>
-                  <TableCell className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onViewRepair) onViewRepair(repair.id);
-                        else navigate(`/repairs/view/${repair.id}`);
-                      }}
-                    >
-                      View
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (onEditRepair) onEditRepair(repair.id);
-                        else navigate(`/repairs/edit/${repair.id}`);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-between items-center p-4 border-t border-gray-200">
-          <div className="text-sm text-gray-700">
-            Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{" "}
-            <span className="font-medium">
-              {Math.min(currentPage * pageSize, filteredRepairs.length)}
-            </span>{" "}
-            of <span className="font-medium">{filteredRepairs.length}</span> results
-          </div>
-          <div className="flex space-x-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-            >
-              Previous
-            </Button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <Button
-                key={i + 1}
-                variant={currentPage === i + 1 ? "default" : "outline"}
-                size="sm"
-                onClick={() => handlePageChange(i + 1)}
-              >
-                {i + 1}
-              </Button>
-            ))}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-              disabled={currentPage === totalPages}
-            >
-              Next
-            </Button>
-          </div>
+    <div className={`w-full ${standalone ? 'p-4' : ''}`}>
+      {standalone && (
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">Repairs</h2>
+          <Button onClick={() => setLocation('/repairs/new')}>
+            New Repair
+          </Button>
         </div>
       )}
-    </Card>
+      
+      {showSearch && (
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search repairs..."
+            className="w-full p-2 border rounded"
+            value={internalSearch}
+            onChange={(e) => setInternalSearch(e.target.value)}
+          />
+        </div>
+      )}
+      
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-lg text-gray-600">Loading repairs...</p>
+        </div>
+      ) : filteredRepairs.length === 0 ? (
+        <div className="text-center py-12 border border-dashed rounded-lg">
+          <p className="text-lg text-gray-600 mb-2">No repairs found</p>
+          <p className="text-gray-500">
+            {filterStatus || filterPriority || searchQuery || internalSearch 
+              ? "Try adjusting your filters or search terms"
+              : "Create your first repair ticket to get started"}
+          </p>
+        </div>
+      ) : (
+        <div className={`overflow-x-auto ${simpleView ? '' : 'border rounded-lg'}`}>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Ticket</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Device</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created</TableHead>
+                {!simpleView && <TableHead>Updated</TableHead>}
+                {showButtons && <TableHead className="w-28">Actions</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredRepairs.map((repair) => (
+                <TableRow
+                  key={repair.id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => showDetailButton ? handleViewClick(repair.id) : null}
+                >
+                  <TableCell className="font-medium">{repair.ticketNumber}</TableCell>
+                  <TableCell>{getCustomerName(repair.customerId)}</TableCell>
+                  <TableCell>{getDeviceInfo(repair.deviceId)}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={repair.status} />
+                  </TableCell>
+                  <TableCell>{formatDate(repair.createdAt as unknown as string)}</TableCell>
+                  {!simpleView && (
+                    <TableCell>{formatDate(repair.updatedAt as unknown as string)}</TableCell>
+                  )}
+                  {showButtons && (
+                    <TableCell className="space-x-2">
+                      {showDetailButton && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewClick(repair.id);
+                          }}
+                        >
+                          View
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditClick(repair.id);
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-destructive hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteRepair(repair.id);
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
   );
 }
