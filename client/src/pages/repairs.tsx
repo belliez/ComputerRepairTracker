@@ -15,8 +15,7 @@ export default function Repairs() {
   const [filterTechnicianId, setFilterTechnicianId] = useState<number | undefined>(undefined);
   const [filterCustomerId, setFilterCustomerId] = useState<number | undefined>(undefined);
   const [showFilter, setShowFilter] = useState(false);
-  const [selectedRepairId, setSelectedRepairId] = useState<number | null>(null);
-  const [showRepairDetail, setShowRepairDetail] = useState(false);
+  // State for repair details is no longer needed as we're navigating to a dedicated page
   const [location, navigate] = useLocation();
   
   // Parse URL query parameters
@@ -155,8 +154,8 @@ export default function Repairs() {
   };
 
   const handleViewRepair = (repairId: number) => {
-    setSelectedRepairId(repairId);
-    setShowRepairDetail(true);
+    // Navigate to the repair detail page
+    navigate(`/repairs/${repairId}`);
   };
 
   const handleEditRepair = (repairId: number) => {
@@ -268,14 +267,7 @@ export default function Repairs() {
         />
       </div>
 
-      {/* Repair Detail Modal - Will be replaced by a standalone page in future updates */}
-      {showRepairDetail && selectedRepairId && (
-        <RepairDetail 
-          repairId={selectedRepairId} 
-          isOpen={showRepairDetail} 
-          onClose={() => setShowRepairDetail(false)}
-        />
-      )}
+      {/* Repair details are now handled via the repair-detail.tsx page */}
     </>
   );
 }

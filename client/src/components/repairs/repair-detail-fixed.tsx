@@ -704,4 +704,23 @@ export default function RepairDetail({
       </AlertDialog>
     </div>
   );
+  
+  // Return either a dialog or standalone page based on isStandalonePage
+  if (isStandalonePage) {
+    return repairContent;
+  }
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Repair Details</DialogTitle>
+          <DialogDescription>
+            View and manage repair information
+          </DialogDescription>
+        </DialogHeader>
+        {repairContent}
+      </DialogContent>
+    </Dialog>
+  );
 }
