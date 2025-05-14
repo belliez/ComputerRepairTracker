@@ -2478,7 +2478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let defaultCurrencyCode = null;
       for (const row of orgSettings.rows) {
         console.log(`DEBUG: Checking row: ${JSON.stringify(row)}, is_default: ${row.is_default}, type: ${typeof row.is_default}`);
-        if (row.is_default === true || row.is_default === 't') {
+        if (isPostgresTrue(row.is_default)) {
           defaultCurrencyCode = row.currency_code;
           console.log(`DEBUG: Found default currency code in DB: ${defaultCurrencyCode}`);
           break;
@@ -4053,7 +4053,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let defaultCurrencyCode = null;
       for (const row of orgSettings.rows) {
         console.log(`DEBUG: Checking row: ${JSON.stringify(row)}, is_default: ${row.is_default}, type: ${typeof row.is_default}`);
-        if (row.is_default === true || row.is_default === 't') {
+        if (isPostgresTrue(row.is_default)) {
           defaultCurrencyCode = row.currency_code;
           console.log(`DEBUG: Found default currency code in DB: ${defaultCurrencyCode}`);
           break;
