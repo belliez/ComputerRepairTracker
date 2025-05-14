@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Invoice, Repair } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ export default function Invoices() {
   const [manualInvoices, setManualInvoices] = useState<Invoice[]>([]);
   const [invoiceLoading, setInvoiceLoading] = useState(true);
   const [invoiceError, setInvoiceError] = useState<Error | null>(null);
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const { formatCurrency } = useCurrency();
 
@@ -126,10 +128,8 @@ export default function Invoices() {
     setShowInvoiceForm(true);
   };
 
-  const handleEditInvoice = (invoiceId: number, repairId: number) => {
-    setSelectedInvoiceId(invoiceId);
-    setSelectedRepairId(repairId);
-    setShowInvoiceForm(true);
+  const handleViewInvoice = (invoiceId: number) => {
+    navigate(`/invoice/${invoiceId}`);
   };
 
   const handleMarkPaid = async (invoiceId: number) => {
@@ -458,7 +458,7 @@ export default function Invoices() {
                             variant="ghost"
                             size="icon"
                             className="text-blue-600 hover:text-blue-900"
-                            onClick={() => handleEditInvoice(invoice.id, invoice.repairId)}
+                            onClick={() => handleViewInvoice(invoice.id)}
                           >
                             <i className="fas fa-eye"></i>
                           </Button>
