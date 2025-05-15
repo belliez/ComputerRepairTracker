@@ -40,14 +40,43 @@ export default function CreateRepairPage() {
     queryKey: ["/api/customers"],
   });
 
-  const { data: technicians } = useQuery<Technician[]>({
-    queryKey: ["/api/technicians"],
-    select: (data) => {
-      // Filter technicians by the current organization
+  // Directly fetch technicians with organization header using manual fetch  
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  
+  const fetchTechnicians = async () => {
+    try {
+      // Add organization ID to headers
       const orgId = parseInt(localStorage.getItem('currentOrganizationId') || '2');
-      return data.filter(tech => tech.organizationId === orgId);
+      const headers = {
+        'X-Organization-ID': orgId.toString(),
+        'X-Debug-Client': 'RepairTrackerClient',
+      };
+      
+      console.log("CREATE REPAIR DEBUG: Fetching technicians with headers:", headers);
+      const response = await fetch('/api/technicians', { headers });
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching technicians: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("CREATE REPAIR DEBUG: All technicians:", data);
+      
+      // Filter by organization ID as a secondary precaution
+      const filtered = data.filter((tech: any) => tech.organizationId === orgId);
+      console.log("CREATE REPAIR DEBUG: Filtered technicians:", filtered);
+      
+      setTechnicians(filtered);
+    } catch (error) {
+      console.error("Error fetching technicians:", error);
+      setTechnicians([]);
     }
-  });
+  };
+  
+  // Fetch technicians on component mount
+  useEffect(() => {
+    fetchTechnicians();
+  }, []);
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   

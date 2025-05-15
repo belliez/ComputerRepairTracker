@@ -970,6 +970,7 @@ const SettingsPage = () => {
     try {
       // Get standardized headers with organization ID
       const headers = getStandardHeaders();
+      const currentOrgId = getCurrentOrgId();
       
       console.log('SETTINGS DEBUG: Fetching technicians with headers:', headers);
       const response = await fetch('/api/technicians', { headers });
@@ -980,7 +981,14 @@ const SettingsPage = () => {
       
       const data = await response.json();
       console.log('✅ Technicians loaded successfully:', data);
-      setTechnicians(Array.isArray(data) ? data : []);
+      
+      // Filter technicians by current organization ID
+      const filteredTechnicians = Array.isArray(data) 
+        ? data.filter(tech => tech.organizationId === currentOrgId)
+        : [];
+        
+      console.log(`✅ Filtered ${filteredTechnicians.length} technicians for organization ${currentOrgId}`);
+      setTechnicians(filteredTechnicians);
     } catch (error) {
       console.error('❌ Error loading technicians:', error);
       setTechniciansError(error instanceof Error ? error : new Error(String(error)));
