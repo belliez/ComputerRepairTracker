@@ -503,7 +503,9 @@ export default function RepairDetail({
             <p><span className="font-medium">Intake Date:</span> {formatDate(repair.intakeDate)}</p>
             <p><span className="font-medium">Est. Completion:</span> {formatDate(repair.estimatedCompletionDate)}</p>
             <p>
-              <span className="font-medium">Technician:</span> {repair.technicianName || 'Not assigned'}
+              <span className="font-medium">Technician:</span> {repair.technicianName 
+                ? `${repair.technicianName}${repair.technicianRole ? ` - ${repair.technicianRole}` : ''}${repair.technicianSpecialty ? ` (${repair.technicianSpecialty})` : ''}`
+                : 'Unassigned'}
             </p>
           </div>
         </div>
