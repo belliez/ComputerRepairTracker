@@ -42,6 +42,11 @@ export default function CreateRepairPage() {
 
   const { data: technicians } = useQuery<Technician[]>({
     queryKey: ["/api/technicians"],
+    select: (data) => {
+      // Filter technicians by the current organization
+      const orgId = parseInt(localStorage.getItem('currentOrganizationId') || '2');
+      return data.filter(tech => tech.organizationId === orgId);
+    }
   });
 
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);

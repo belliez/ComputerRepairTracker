@@ -46,6 +46,11 @@ export default function RepairInformation({
   // Get technicians for the form
   const { data: technicians = [] } = useQuery<any[]>({
     queryKey: ["/api/technicians"],
+    select: (data) => {
+      // Filter technicians by the current organization
+      const orgId = parseInt(localStorage.getItem('currentOrganizationId') || '2');
+      return data.filter(tech => tech.organizationId === orgId);
+    }
   });
   
   // Form validation schema

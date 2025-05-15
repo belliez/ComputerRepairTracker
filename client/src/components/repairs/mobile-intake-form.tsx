@@ -62,6 +62,11 @@ export default function MobileIntakeForm({ repairId, isOpen, onClose }: IntakeFo
 
   const { data: technicians } = useQuery<Technician[]>({
     queryKey: ["/api/technicians"],
+    select: (data) => {
+      // Filter technicians by the current organization
+      const orgId = parseInt(localStorage.getItem('currentOrganizationId') || '2');
+      return data.filter(tech => tech.organizationId === orgId);
+    }
   });
 
   const { data: devices } = useQuery<Device[]>({
