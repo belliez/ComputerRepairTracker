@@ -61,9 +61,43 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
     queryKey: ["/api/customers"],
   });
 
-  const { data: technicians } = useQuery<Technician[]>({
-    queryKey: ["/api/technicians"],
-  });
+  // Directly fetch technicians with organization header using manual fetch  
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  
+  const fetchTechnicians = async () => {
+    try {
+      // Add organization ID to headers
+      const orgId = parseInt(localStorage.getItem('currentOrganizationId') || '2');
+      const headers = {
+        'X-Organization-ID': orgId.toString(),
+        'X-Debug-Client': 'RepairTrackerClient',
+      };
+      
+      console.log("INTAKE FORM DEBUG: Fetching technicians with headers:", headers);
+      const response = await fetch('/api/technicians', { headers });
+      
+      if (!response.ok) {
+        throw new Error(`Error fetching technicians: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("INTAKE FORM DEBUG: All technicians:", data);
+      
+      // Filter by organization ID as a secondary precaution
+      const filtered = data.filter((tech: any) => tech.organizationId === orgId);
+      console.log("INTAKE FORM DEBUG: Filtered technicians:", filtered);
+      
+      setTechnicians(filtered);
+    } catch (error) {
+      console.error("Error fetching technicians:", error);
+      setTechnicians([]);
+    }
+  };
+  
+  // Fetch technicians on component mount
+  useEffect(() => {
+    fetchTechnicians();
+  }, []);
 
   const { data: devices } = useQuery<Device[]>({
     queryKey: ["/api/devices", selectedCustomerId ? { customerId: selectedCustomerId } : null],
@@ -712,6 +746,8 @@ export default function IntakeForm({ repairId, isOpen, onClose }: IntakeFormProp
                       {technicians?.map(tech => (
                         <SelectItem key={tech.id} value={tech.id.toString()}>
                           {tech.firstName} {tech.lastName}
+                          {tech.role ? ` - ${tech.role}` : ''}
+                          {tech.specialty ? ` (${tech.specialty})` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
