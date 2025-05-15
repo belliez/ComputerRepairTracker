@@ -335,10 +335,12 @@ export default function RepairInformation({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="null">None</SelectItem>
+                  <SelectItem value="null">Unassigned</SelectItem>
                   {technicians.map((tech) => (
                     <SelectItem key={tech.id} value={tech.id.toString()}>
-                      {tech.firstName} {tech.lastName} ({tech.role})
+                      {tech.firstName} {tech.lastName}
+                      {tech.role ? ` - ${tech.role}` : ''}
+                      {tech.specialty ? ` (${tech.specialty})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
